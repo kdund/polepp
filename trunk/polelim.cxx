@@ -20,6 +20,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> sTrue(     "","strue",   "s_true, only used if -C is active",false,1.0,"float");
     SwitchArg        coverage(  "C","coverage", "For coverage studies",false);
     SwitchArg        doNLR("N","nlr", "Use NLR",false);
+    SwitchArg        useTabulated("T","tab","Use tabulated poisson",false);
     //
     ValueArg<double> effSigma(  "", "esigma","sigma of efficiency",false,0.2,"float");
     ValueArg<double> effMeas(   "", "emeas",  "measured efficiency",false,1.0,"float");
@@ -48,6 +49,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     //
     cmd.add(doVerbose);
     cmd.add(doNLR);
+    cmd.add(useTabulated);
     //
     cmd.add(hypTestMin);
     cmd.add(hypTestMax);
@@ -99,8 +101,10 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     pole->setBeltMax(belt.getValue()*2); // maximum allocated
     pole->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
     //
-    pole->initPoisson(50000,60,200);
-    pole->initGauss(10000,10.0);
+    if (useTabulated.getValue()) {
+      pole->initPoisson(1000000,60,50);
+      pole->initGauss(1000000,10.0);
+    }
     pole->initIntArrays();
     pole->initBeltArrays();
     //
