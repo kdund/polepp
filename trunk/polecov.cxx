@@ -87,6 +87,7 @@ void processArgs(int argc, char *argv[]) {
     SwitchArg        doStats("C","stats", "Collect statistics",false);
     SwitchArg        doFixSig("S","fixsig", "Fixed meas. n_observed",false);
     SwitchArg        doNLR("N","nlr", "Use NLR",false);
+    SwitchArg        useTabulated("K","notab","Do not use tabulated poisson",true);
     //
     ValueArg<std::string> dump("","dump",    "dump filename",false,"","string");
     //
@@ -95,6 +96,7 @@ void processArgs(int argc, char *argv[]) {
     ValueArg<int>    verboseCov(   "V","verbcov", "verbose coverage",false,0,"int");
     ValueArg<int>    verbosePol(   "P","verbpol", "verbose pole",    false,0,"int");
     //
+    cmd.add(useTabulated);
     cmd.add(verboseCov);
     cmd.add(verbosePol);
     cmd.add(dump);
@@ -163,8 +165,10 @@ void processArgs(int argc, char *argv[]) {
     gPole.setBeltMax(nBelt.getValue()*2);
     gPole.setTestHyp(muTestMin.getValue(), muTestMax.getValue(), muTestStep.getValue());
     gPole.printSetup();
-    gPole.initPoisson(50000,60,200);
-    gPole.initGauss(10000,10.0);
+    if (useTabulated.getValue()) {
+      gPole.initPoisson(1000000,60,50);
+      //      gPole.initGauss(1000000,10.0);
+    }
     gPole.initIntArrays();
     gPole.initBeltArrays();
 
