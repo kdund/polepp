@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <cmath>
 #include <ctime>
+#include <sstream>
 
 #include "Coverage.h"
 
@@ -24,7 +25,6 @@ inline char *yesNo(bool var) {
 ////////////////////////////////////////////////////////////////////////
 
 Coverage::Coverage() {
-  m_saveExperiments = false;
   m_pole = 0;
   m_nLoops = 1;
   m_fixedSig = false;
@@ -185,11 +185,6 @@ void Coverage::generateExperiment() {
     m_measNobs = static_cast<int>(m_effMean*m_sTrueMean+m_bkgMean+0.5);
   } else {
     m_measNobs   = m_rnd.poisson(m_effMean*m_sTrueMean+m_bkgMean);
-  }
-  if (m_saveExperiments) {
-    m_allNobs.push_back(m_measNobs);
-    m_allEff.push_back(m_measEff);
-    m_allBkg.push_back(m_measBkg);
   }
   //
 }
@@ -371,7 +366,32 @@ void Coverage::printStatistics() {
   }
 }
 
-void Coverage::dumpExperiments(std::string name) {
+bool Coverage::makeDumpName(std::string base, std::string & name) {
+  bool rval=false;
+  if (base=="") return rval;
+  int eind = static_cast<int>(100.0*m_effMean);
+  int bind = static_cast<int>(100.0*m_bkgMean);
+  int sind = static_cast<int>(100.0*m_sTrueMean);
+  int we = (eind>999 ? 4:3);
+  int wb = (bind>999 ? 4:3);
+  int ws = (sind>999 ? 4:3);
+  std::ostringstream ostr;
+  ostr << std::fixed << std::setfill('0') << "_s" << std::setw(ws) << sind
+       << "_e" << std::setw(we) << eind
+       << "_b" << std::setw(wb) << bind;
+  name = base+ostr.str()+".dat";
+  rval=true;
+  return rval;
+}
+
+void Coverage::dumpExperiments() {
+  if (makeDumpName(m_dumpFileNameBase,m_dumpFileName)) {
+    std::cout << "Dumping data to file : " << m_dumpFileName << std::endl;
+    dumpExperiments(m_dumpFileName,true);
+  }
+}
+
+void Coverage::dumpExperiments(std::string name, bool limits) {
   unsigned i,sz;
   sz = m_effStat.size();
   if (sz==0) return;
@@ -385,13 +405,20 @@ void Coverage::dumpExperiments(std::string name) {
   } else {
     os = &std::cout;
   }
+  bool dumpLimits=false;
+  if (limits) {
+    dumpLimits = (m_UL.size() == sz);
+  }
   *os << "#" << std::endl;
   *os << "# N         = " << m_nLoops << std::endl;
   *os << "# s_true    = " << m_sTrue.min() << std::endl;
   *os << "# eff       = " << m_effTrue.min() << std::endl;
   *os << "# eff sigma = " << m_effSigma << std::endl;
+  *os << "# eff dist  = " << distTypeStr(m_effDist) << std::endl;
   *os << "# bkg       = " << m_bkgTrue.min() << std::endl;
   *os << "# bkg sigma = " << m_bkgSigma << std::endl;
+  *os << "# bkg dist  = " << distTypeStr(m_bkgDist) << std::endl;
+  *os << "# corr.     = " << m_beCorr << std::endl;
   *os << "#" << std::endl;
   *os << "# N_obs   Efficiency     Background" << std::endl;
   *os << "#-----------------------------------" << std::endl;
@@ -402,13 +429,28 @@ void Coverage::dumpExperiments(std::string name) {
 	<< m_nobsStat[i] << '\t'
 	<< std::setprecision(6)
 	<< m_effStat[i] << '\t'
-        << m_bkgStat[i] << std::endl;
+        << m_bkgStat[i];
+    if (dumpLimits) {
+      *os << std::fixed
+	  << std::setprecision(2)
+	  << '\t'
+	  << m_LL[i] << '\t'
+	  << m_UL[i];
+    }
+    *os << std::endl;
   }
 #else
   for (i=0; i<sz; i++) {
     *os << m_nobsStat[i] << '\t'
 	<< m_effStat[i] << '\t'
-        << m_bkgStat[i] << std::endl;
+        << m_bkgStat[i];
+    if (dumpLimits) {
+
+      *os << '\t'
+	  << m_LL[i] << '\t'
+	  << m_UL[i];
+    }
+    *os << m_std::endl;
   }
 #endif
   *os << "#EOF" << std::endl;
@@ -514,7 +556,7 @@ void Coverage::doLoop() {
   bool first = true;
   bool timingDone = false;
   //
-  m_pole->setCoverage(true);
+  m_pole->setCoverage(!m_collectStats); // make full limits when collecting statistics
   //
   for (is=0; is<m_sTrue.n(); is++) { // loop over all s_true
     m_sTrueMean = m_sTrue.getVal(is);
@@ -562,6 +604,7 @@ void Coverage::doLoop() {
 	outputCoverageResult(); // print the result
 	calcStatistics();       // dito for the statistics...
 	printStatistics();
+	dumpExperiments();
       }
     }
   }

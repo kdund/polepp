@@ -52,6 +52,11 @@ public:
   void updateCoverage();	// Update coverage counters
   void resetCoverage();		// Reset dito
   //
+  bool makeDumpName(std::string base, std::string & name);
+  void setDumpBase(const char *base) {m_dumpFileNameBase = (base!=0 ? base:"");}
+  const char *getDumpBase() {return m_dumpFileNameBase.c_str();}
+  const char *getDumpName() {return m_dumpFileName.c_str();}
+  //
   void collectStats(bool flag) { m_collectStats = flag; } // if true, then collect statistics
   void pushMeas();
   void pushLimits();
@@ -60,7 +65,8 @@ public:
   void calcStatistics();	// calculate collected stats
   void printStatistics();	// print calculated stuff
   //  void dumpExperiments(const char *name=0);
-  void dumpExperiments(std::string name="");
+  void dumpExperiments(std::string name, bool dumpLimits=true);
+  void dumpExperiments();
   void calcCoverage();		// Calculate coverage
   virtual void outputCoverageResult(const int flag=0);	// Output coverage
   //
@@ -116,6 +122,8 @@ private:
   //
   // Some statistics
   //
+  std::string m_dumpFileNameBase;
+  std::string m_dumpFileName;
   bool m_collectStats;
   std::vector<double> m_UL;
   std::vector<double> m_LL;
@@ -134,10 +142,6 @@ private:
   double m_aveNobs;
   double m_varNobs;
 
-  bool m_saveExperiments;
-  std::vector<double> m_allNobs;
-  std::vector<double> m_allEff;
-  std::vector<double> m_allBkg;
   // some timing stuff
   time_t m_startTime;  // start time
   time_t m_stopTime;   // stop time
