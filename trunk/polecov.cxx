@@ -29,7 +29,8 @@ void my_sighandler(int a) {
     header += " ) : ";
     gCoverage.outputCoverageResult(header.c_str());
   } else {
-    std::cout << "WARNING (" << timestamp << " ) Job aborting (signal = " << a << " ). Will output data from unfinnished loop.\n" << std::endl;
+    std::cout << "WARNING (" << timestamp << " ) Job aborting (signal = " << a
+	      << " ). Will output data from unfinnished loop.\n" << std::endl;
     gCoverage.calcCoverage();
     gCoverage.outputCoverageResult();
     exit(-1);
@@ -191,14 +192,20 @@ void processArgs(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
-  
-  for (int i=0; i<SIGSYS; i++) {
-    if ( (i!=18) &&  // 
-	 (i!=20) &&  // 
-	 (i!=27) ) { // profiling - ignore that one
-      signal(i,my_sighandler);
-    }
-  }
+  // Trap LSF specific signals
+  //                                value  bkill  memlimit  runlimit  cpulimit  filelimit  job_starter
+  //                               ====================================================================
+  signal(SIGINT, my_sighandler); //   2      2nd      1st       -         -         -        failure
+  // SIGKILL not trapable        //   9      3rd      3rd       -         -         -           -
+  signal(SIGUSR2,my_sighandler); //  12       -        -     reached      -         -           -
+  signal(SIGTERM,my_sighandler); //  15      1st      2nd       -         -         -           -
+  signal(SIGXCPU,my_sighandler); //  24       -        -        -      reached      -           -
+  signal(SIGXFSZ,my_sighandler); //  25       -        -        -         -      reached        -
+  //                               ====================================================================
+  // General signals
+  signal(SIGSEGV,my_sighandler); // Segmentation fault
+  signal(SIGIO,  my_sighandler); // Directory access error
+  //
   processArgs(argc,argv);
   //
   if (gPole.checkParams()) {
