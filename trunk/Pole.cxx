@@ -26,17 +26,19 @@ inline char *yesNo(bool var) {
 ////////////////////////////////////////////////////////////////////////
 
 Pole::Pole() {
-  m_useLogNormal = false;
+  m_effDist = DIST_GAUS;
+  m_bkgDist = DIST_GAUS;
+  //
   m_stepMin = 0.001;
-  m_s2pi = sqrt(2.0L*M_PIl);
   //
   m_dmus = 0.01;
   //
   m_nObserved = -1;
   m_nBeltMax = 50;
   //
-  m_effScaleInt = 5.0;
-  m_bkgScaleInt = 5.0;
+  m_intNdef = 20;    // default number of points (when step<=0)
+  m_effIntScale = 5.0;
+  m_bkgIntScale = 5.0;
   //
   m_validInt  = false;
   m_nInt      = 0;
@@ -77,155 +79,247 @@ Pole::~Pole() {
   if (m_lhRatio)    delete [] m_lhRatio;
 }
 
-void Pole::setEffDist(double mean,double sigma, bool nodist) {
+void Pole::setEffMeas(double mean,double sigma, DISTYPE dist) {
   m_effMeas   = mean;
   m_effSigma  = sigma;
-  m_effNoDist = nodist;
+  m_effDist   = dist;
   m_validInt    = false;
   m_validBestMu = false;
 }
 
-void Pole::setBkgDist(double mean,double sigma, bool nodist) {
+void Pole::setBkgMeas(double mean,double sigma, DISTYPE dist) {
   m_bkgMeas   = mean;
   m_bkgSigma  = sigma;
-  m_bkgNoDist = nodist;
+  m_bkgDist   = dist;
   m_validInt    = false;
   m_validBestMu = false;
 }
-
-void Pole::setEffInt(double low, double high, double step) {
-  if (step<0) {
-    setEffInt();
+bool Pole::checkEffBkgDists() {
+  bool change=false;
+  // If ONLY one is DIST_GAUSCORR, make bkgDist == effDist
+  if ( ((m_effDist == DIST_GAUSCORR) && (m_bkgDist != DIST_GAUSCORR)) ||
+       ((m_effDist != DIST_GAUSCORR) && (m_bkgDist == DIST_GAUSCORR)) ) {
+    m_bkgDist = m_effDist;
+    change = true;
+  }
+  if (m_effDist != DIST_GAUSCORR) {
+    m_beCorr = 0;
+    change = true;
+  }
+  //
+  if (m_effDist==DIST_NONE) {
+    m_effSigma = 0.0;
+    change = true;
+  }
+  if (m_bkgDist==DIST_NONE) {
+    m_bkgSigma = 0.0;
+    change = true;
+  }
+  return change;
+}
+//
+// Calculates the range for integration.
+//
+void Pole::setInt(double & low, double & high, double & step, double scale, double mean, double sigma, DISTYPE dist) {
+  //
+  double dx;
+  double nsigma;
+  double nmean;
+  //
+  if (dist==DIST_NONE) {
+    low  = mean;
+    high = mean;
+    step = 1.0;
   } else {
-    m_validInt = false;
-    m_validBestMu = false;
-    //
-    // Will set the range for the efficiency integration.
-    // If step<0, then set range according to the selected efficiency distribution.
-    // If fixed, force it to the fixed mean value.
-    //
-    if (m_effNoDist) {
-      //      std::cout << "Efficiency known exactly, excluding it from integral" << std::endl;
-      low  = m_effMeas;
-      high = m_effMeas;
-      step = 1.0;
-    } else {
-      if (high>low) {
-	if (step<m_stepMin) step=m_stepMin;
-      } else {
-	high = low;
-	step = 1.0;
-      }
+    switch (dist) {
+    case DIST_GAUSCORR:
+    case DIST_GAUS:
+      low  = mean - scale*sigma;
+      high = mean + scale*sigma;
+      if (low<0) low = 0;
+      break;
+    case DIST_FLAT:
+      dx=sigma*sqrt(12)*0.5; // ignore scale - always use full range
+      low  = mean-dx;
+      high = mean+dx;
+      break;
+    case DIST_LOGN:
+      nmean  = m_gauss.getLNMean(mean,sigma);
+      nsigma = m_gauss.getLNSigma(mean,sigma);
+      low  = exp(nmean - scale*nsigma);
+      high = exp(nmean + scale*nsigma);
+      break;
+    default: // ERROR STATE
+      break;
     }
-    if (m_effSigma>0) m_effScaleInt = 0.5*(high-low)/m_effSigma;
-    m_effRangeInt.setRange(low,high,step,m_stepMin);
-    m_effIntMin = m_effRangeInt.min();
-    m_effIntMax = m_effRangeInt.max();
+    if (step<=0.0) step = (high-low)/m_intNdef;     // default N pts
   }
 }
 
-void Pole::setEffInt(double scale, double step) {
-  double low,high;
+void Pole::setEffInt(double scale,double step) {
   m_validInt = false;
   m_validBestMu = false;
   //
-  // Will set the range for the efficiency integration.
-  // If step<0, then set range according to the selected efficiency distribution.
-  // If fixed, force it to the fixed mean value.
-  //
-  if (m_effNoDist) {
-    //    std::cout << "Efficiency known exactly, excluding it from integral" << std::endl;
-    low  = m_effMeas;
-    high = m_effMeas;
-    step = 1.0;
-  } else {
-    if (scale<1.0) {
-      scale = m_effScaleInt;
-    } else {
-      m_effScaleInt = scale;
-    }
-    low  = m_effMeas - scale*m_effSigma;
-    high = m_effMeas + scale*m_effSigma;
-    if (low<0) low = 0;
-    if (step<=0.0) {
-      step = (high-low)/20.0;     // minimum 21 pts
-      if (step>0.1) step = 0.1; // not too coarse
-    }
-    if (step<m_stepMin) step = m_stepMin;
-
-  }
-  m_effRangeInt.setRange(low,high,step,m_stepMin);
-  m_effIntMin = m_effRangeInt.min();
-  m_effIntMax = m_effRangeInt.max();
-}
-
-void Pole::setBkgInt(double low, double high, double step) {
-  if (step<0) {
-    setBkgInt();
-  } else {
-    m_validInt = false;
-    m_validBestMu = false;
-
-    if (m_bkgNoDist) {
-      low  = m_bkgMeas;
-      high = m_bkgMeas;
-      step = 1.0;
-    } else {
-      if (high>low) {
-	if (step<m_stepMin) step=m_stepMin;
-      } else {
-	low = high;
-	step = 1.0;
-      }
-    }
-    if (m_bkgSigma>0) m_bkgScaleInt = 0.5*(high-low)/m_bkgSigma;
-    m_bkgRangeInt.setRange(low,high,step,m_stepMin);
-    m_bkgIntMin = m_bkgRangeInt.min();
-    m_bkgIntMax = m_bkgRangeInt.max();
-  }
-}
-
-void Pole::setBkgInt(double scale, double step) {
   double low,high;
+  if (step<=0) step = m_effRangeInt.step();
+  if (scale<=0) {
+    scale = m_effIntScale;
+  } else {
+    m_effIntScale = scale;
+  }
+  setInt(low,high,step,scale,m_effMeas,m_effSigma,m_effDist);
+  //
+  m_effRangeInt.setRange(low,high,step);
+}
+
+void Pole::setBkgInt(double scale,double step) {
   m_validInt = false;
   m_validBestMu = false;
-
-  if (m_bkgNoDist) {
-    low  = m_bkgMeas;
-    high = m_bkgMeas;
-    step = 1.0;
+  //
+  double low,high;
+  if (step<=0)  step  = m_bkgRangeInt.step();
+  if (scale<=0) {
+    scale = m_bkgIntScale;
   } else {
-    if (scale<1.0) {
-      scale = m_bkgScaleInt;
-    } else {
-      m_bkgScaleInt = scale;
-    }
-    low  = m_bkgMeas - scale*m_bkgSigma;
-    high = m_bkgMeas + scale*m_bkgSigma;
-    if (low<0) low = 0;
-    if (step<=0.0) {
-      step = (high-low)/20.0;     // minimum 21 points
-      if (step>0.1) step = 0.1; // not too coarse
-    }
-    if (step<m_stepMin) step = m_stepMin;
+    m_bkgIntScale = scale;
   }
-  m_bkgRangeInt.setRange(low,high,step,m_stepMin);
-  m_bkgIntMin = m_bkgRangeInt.min();
-  m_bkgIntMax = m_bkgRangeInt.max();
+  setInt(low,high,step,scale,m_bkgMeas,m_bkgSigma,m_bkgDist);
+  //
+  m_bkgRangeInt.setRange(low,high,step);
 }
+
+// void Pole::setEffInt_OLD(double low, double high, double step) {
+//   if (step<0) {
+//     setEffInt();
+//   } else {
+//     m_validInt = false;
+//     m_validBestMu = false;
+//     //
+//     // Will set the range for the efficiency integration.
+//     // If step<0, then set range according to the selected efficiency distribution.
+//     // If fixed, force it to the fixed mean value.
+//     //
+//     if (m_effDist==DIST_NONE) {
+//       //      std::cout << "Efficiency known exactly, excluding it from integral" << std::endl;
+//       low  = m_effMeas;
+//       high = m_effMeas;
+//       step = 1.0;
+//     } else {
+//       if (high>low) {
+// 	if (step<m_stepMin) step=m_stepMin;
+//       } else {
+// 	high = low;
+// 	step = 1.0;
+//       }
+//     }
+//     if (m_effSigma>0) m_effScaleInt = 0.5*(high-low)/m_effSigma;
+//     m_effRangeInt.setRange(low,high,step,m_stepMin);
+//     m_effIntMin = m_effRangeInt.min();
+//     m_effIntMax = m_effRangeInt.max();
+//   }
+// }
+
+// void Pole::setEffInt(double scale, double step) {
+//   double low,high;
+//   m_validInt = false;
+//   m_validBestMu = false;
+//   //
+//   // Will set the range for the efficiency integration.
+//   // If step<0, then set range according to the selected efficiency distribution.
+//   // If fixed, force it to the fixed mean value.
+//   //
+//   if (m_effDist==DIST_NONE) {
+//     //    std::cout << "Efficiency known exactly, excluding it from integral" << std::endl;
+//     low  = m_effMeas;
+//     high = m_effMeas;
+//     step = 1.0;
+//   } else {
+//     if (scale<1.0) {
+//       scale = m_effScaleInt;
+//     } else {
+//       m_effScaleInt = scale;
+//     }
+//     low  = m_effMeas - scale*m_effSigma;
+//     high = m_effMeas + scale*m_effSigma;
+//     if (low<0) low = 0;
+//     if (step<=0.0) {
+//       step = (high-low)/20.0;     // minimum 21 pts
+//       if (step>0.1) step = 0.1; // not too coarse
+//     }
+//     if (step<m_stepMin) step = m_stepMin;
+
+//   }
+//   m_effRangeInt.setRange(low,high,step,m_stepMin);
+//   m_effIntMin = m_effRangeInt.min();
+//   m_effIntMax = m_effRangeInt.max();
+// }
+
+// void Pole::setBkgInt(double low, double high, double step) {
+//   if (step<0) {
+//     setBkgInt();
+//   } else {
+//     m_validInt = false;
+//     m_validBestMu = false;
+
+//     if (m_bkgDist==DIST_NONE) {
+//       low  = m_bkgMeas;
+//       high = m_bkgMeas;
+//       step = 1.0;
+//     } else {
+//       if (high>low) {
+// 	if (step<m_stepMin) step=m_stepMin;
+//       } else {
+// 	low = high;
+// 	step = 1.0;
+//       }
+//     }
+//     if (m_bkgSigma>0) m_bkgScaleInt = 0.5*(high-low)/m_bkgSigma;
+//     m_bkgRangeInt.setRange(low,high,step,m_stepMin);
+//     m_bkgIntMin = m_bkgRangeInt.min();
+//     m_bkgIntMax = m_bkgRangeInt.max();
+//   }
+// }
+
+// void Pole::setBkgInt(double scale, double step) {
+//   double low,high;
+//   m_validInt = false;
+//   m_validBestMu = false;
+
+//   if (m_bkgDist==DIST_NONE) {
+//     low  = m_bkgMeas;
+//     high = m_bkgMeas;
+//     step = 1.0;
+//   } else {
+//     if (scale<1.0) {
+//       scale = m_bkgScaleInt;
+//     } else {
+//       m_bkgScaleInt = scale;
+//     }
+//     low  = m_bkgMeas - scale*m_bkgSigma;
+//     high = m_bkgMeas + scale*m_bkgSigma;
+//     if (low<0) low = 0;
+//     if (step<=0.0) {
+//       step = (high-low)/20.0;     // minimum 21 points
+//       if (step>0.1) step = 0.1; // not too coarse
+//     }
+//     if (step<m_stepMin) step = m_stepMin;
+//   }
+//   m_bkgRangeInt.setRange(low,high,step,m_stepMin);
+//   m_bkgIntMin = m_bkgRangeInt.min();
+//   m_bkgIntMax = m_bkgRangeInt.max();
+// }
 
 void Pole::setTestHyp(double low, double high, double step) {
-  int n;
   if (high>low) {
     if (step<m_stepMin) step=m_stepMin;
   } else {
     low = high;
     step = 1.0;
-    n = 1;
   }
-  m_hypTest.setRange(low,high,step,m_stepMin);
+  m_hypTest.setRange(low,high,step);
 }
 //
+// MAYBE REMOVE THIS // HERE
 bool Pole::checkParams() {
   bool rval=true;
   // check efficiency distribution
@@ -237,8 +331,8 @@ bool Pole::checkParams() {
   double dsLow, dsHigh;
   dsLow  = (m_effMeas - m_effRangeInt.min())/m_effSigma;
   dsHigh = (m_effRangeInt.max()  - m_effMeas)/m_effSigma;
-  if ( (!m_effNoDist) && ( ((dsLow<4.0)&&(m_effRangeInt.min()>0)) ||
-			    (dsHigh<4.0) ) ) {
+  if ( (m_effDist!=DIST_NONE) && ( ((dsLow<4.0)&&(m_effRangeInt.min()>0)) ||
+                                   (dsHigh<4.0) ) ) {
     std::cout << "Not OK" << std::endl;
     std::cout << "  Efficiency range for integration does not cover 4 sigma around the true efficiency." << std::endl;
     std::cout << "  Change range or efficiency distribution." << std::endl;
@@ -250,7 +344,7 @@ bool Pole::checkParams() {
   std::cout << "Checking background integration - ";
   dsLow  = (m_bkgMeas - m_bkgRangeInt.min())/m_bkgSigma;
   dsHigh = (m_bkgRangeInt.max()  - m_bkgMeas)/m_bkgSigma;
-  if ( (!m_bkgNoDist) && ( ((dsLow<4.0)&&(m_bkgRangeInt.min()>0)) ||
+  if ( (m_bkgDist!=DIST_NONE) && ( ((dsLow<4.0)&&(m_bkgRangeInt.min()>0)) ||
 			    (dsHigh<4.0) ) ) {
     std::cout << "Not OK" << std::endl;
     std::cout << "  Background range for integration does not cover 4 sigma around the true background." << std::endl;
@@ -273,7 +367,7 @@ void Pole::initGauss(int ndata, double mumax) {
 }
 
 //
-// Must be called after setEffInt, setBkfInt and setTestHyp
+// Must be called after setEffInt, setBkgInt and setTestHyp
 //
 void Pole::initIntArrays() {
   m_nInt = m_effRangeInt.n()*m_bkgRangeInt.n();
@@ -322,23 +416,34 @@ void Pole::initIntegral() {
   //
   int i,j;
   double effs;
-  double bg;
+  double bkgs;
   double eff_prob, bkg_prob, norm_prob;
   int count=0;
   norm_prob = 1.0;
-  //////////////////////////////////
-  double effMean,effSigma;   //TMP
-  double bkgMean,bkgSigma;   //TMP
-  if (m_useLogNormal) {  //TMP
-    effMean  = log(m_effMeas*m_effMeas/sqrt(m_effSigma*m_effSigma + m_effMeas*m_effMeas));
-    effSigma = sqrt(log(m_effSigma*m_effSigma/m_effMeas/m_effMeas+1));
-    bkgMean  = log(m_bkgMeas*m_bkgMeas/sqrt(m_bkgSigma*m_bkgSigma + m_bkgMeas*m_bkgMeas));
-    bkgSigma = sqrt(log(m_bkgSigma*m_bkgSigma/m_bkgMeas/m_bkgMeas+1));
+  /////////////////////////////////
+  double sdetC=0, detC=0, seff=0, sbkg=0, vceff=0;
+  double effMean,effSigma;
+  double bkgMean,bkgSigma;
+  if (m_effDist==DIST_LOGN) {
+    effMean  = m_gauss.getLNMean(m_effMeas,m_effSigma);
+    effSigma = m_gauss.getLNSigma(m_effMeas,m_effSigma);
   } else {
     effMean  = m_effMeas;
     effSigma = m_effSigma;
+  }
+  if (m_bkgDist==DIST_LOGN) {
+    bkgMean  = m_gauss.getLNMean(m_bkgMeas,m_bkgSigma);
+    bkgSigma = m_gauss.getLNSigma(m_bkgMeas,m_bkgSigma);
+  } else {
     bkgMean  = m_bkgMeas;
     bkgSigma = m_bkgSigma;
+  }
+  if (m_effDist==DIST_GAUSCORR) {
+    detC = sqrt(m_gauss.getDetC(m_effSigma,m_bkgSigma,m_beCorr));
+    sdetC = sqrt(detC);
+    vceff = m_gauss.getVeffCorr(detC,m_effSigma,m_bkgSigma,m_beCorr);
+    seff  = sqrt(m_gauss.getVeff(detC,m_bkgSigma)); // effective sigma for efficiency v1eff = detC/(s2*s2)
+    sbkg  = sqrt(m_gauss.getVeff(detC,m_effSigma)); // dito for background            v2eff = detC/(s1*s1)
   }
   //////////////////////////////////
   //
@@ -365,21 +470,51 @@ void Pole::initIntegral() {
     if ( m_effRangeInt.n() == 1 ) {
       eff_prob = 1.0;
     } else {
-      if (m_useLogNormal) {
-	eff_prob = logNormal(effs,effMean,effSigma); // TMP
-      } else {
+      switch(m_effDist) {
+      case DIST_GAUS:
 	eff_prob = m_gauss.getVal(effs,m_effMeas,m_effSigma);
+	break;
+      case DIST_LOGN:
+	eff_prob = m_gauss.getValLogN(effs,effMean,effSigma);
+	break;
+      case DIST_GAUSCORR:
+	eff_prob = 1.0;
+	break;
+      case DIST_FLAT:
+	eff_prob = 1.0;
+	break;
+      case DIST_NONE:
+	eff_prob = 1.0;
+	break;
+      default:
+	eff_prob = 1.0;
+	break;
       }
     }
     for (j=0;j<m_bkgRangeInt.n();j++) { // Loop over all background points
-      bg =  j*m_bkgRangeInt.step() + m_bkgRangeInt.min();
+      bkgs =  j*m_bkgRangeInt.step() + m_bkgRangeInt.min();
       if ( m_bkgRangeInt.n() == 1 ) {
 	bkg_prob = 1.0;
       } else {
-	if (m_useLogNormal) {
-	  bkg_prob = logNormal(bg,bkgMean,bkgSigma);
-	} else {
-	  bkg_prob = m_gauss.getVal(bg,m_bkgMeas,m_bkgSigma);
+	switch(m_bkgDist) {
+	case DIST_GAUS:
+	  bkg_prob = m_gauss.getVal(bkgs,m_bkgMeas,m_bkgSigma);
+	  break;
+	case DIST_LOGN:
+	  bkg_prob = m_gauss.getValLogN(bkgs,bkgMean,bkgSigma);
+	  break;
+	case DIST_GAUSCORR:
+	  bkg_prob = m_gauss.getVal2D(effs,m_effMeas,bkgs,m_bkgMeas,sdetC,seff,sbkg,vceff);
+	  break;
+	case DIST_FLAT:
+	  bkg_prob = 1.0;
+	  break;
+	case DIST_NONE:
+	  bkg_prob = 1.0;
+	  break;
+	default:
+	  bkg_prob = 1.0;
+	  break;
 	}
       }
       norm_prob = eff_prob*bkg_prob*dedb;
@@ -391,7 +526,7 @@ void Pole::initIntegral() {
 	m_effInt[count]    = m_effMeas;
 	m_weightInt[count] = 1.0;
       } else {
-	m_bkgInt[count]    = bg;
+	m_bkgInt[count]    = bkgs;
 	m_effInt[count]    = effs;
 	m_weightInt[count] = norm_prob;
       }
@@ -435,7 +570,7 @@ void Pole::findBestMu(int n) {
     mu_s_max = double(n)-m_bkgMeas;
     //    mu_s_max = (double(n) - m_bkgRangeInt.min())/m_effRangeInt.min();
     //    mu_s_min = (double(n) - m_bkgRangeInt.max())/m_effRangeInt.max();
-    mu_s_min = (double(n) - m_bkgIntMax)/m_effIntMax;
+    mu_s_min = (double(n) - m_bkgRangeInt.max())/m_effRangeInt.max();
     if(mu_s_min<0) {mu_s_min = 0.0;}
     //    dmu_s = 0.01; // HARDCODED:: Change!
     int ntst = 1+int((mu_s_max-mu_s_min)/m_dmus);
@@ -632,11 +767,13 @@ void Pole::printSetup() {
   std::cout << "----------------------------------------------\n";
   std::cout << " Efficiency meas    : " << m_effMeas << std::endl;
   std::cout << " Efficiency sigma   : " << m_effSigma << std::endl;
-  std::cout << " Efficiency no dist : " << yesNo(m_effNoDist) << std::endl;
+  std::cout << " Efficiency dist    : " << distTypeStr(m_effDist) << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Background meas    : " << m_bkgMeas << std::endl;
   std::cout << " Background sigma   : " << m_bkgSigma << std::endl;
-  std::cout << " Background no dist : " << yesNo(m_bkgNoDist) << std::endl;
+  std::cout << " Background dist    : " << distTypeStr(m_bkgDist) << std::endl;
+  std::cout << "----------------------------------------------\n";
+  std::cout << " Bkg-Eff correlation: " << m_beCorr << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Int. eff. min      : " << m_effRangeInt.min() << std::endl;
   std::cout << " Int. eff. max      : " << m_effRangeInt.max() << std::endl;
@@ -654,7 +791,4 @@ void Pole::printSetup() {
   std::cout << " Step mu_best       : " << m_dmus << std::endl;
   std::cout << "==============================================\n";
   //
-  if (m_useLogNormal) {
-    std::cout << "\nNOTE: USING LOG-NORMAL!!\n" << std::endl;
-  }
 }

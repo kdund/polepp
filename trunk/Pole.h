@@ -34,29 +34,62 @@
 #include <vector>
 #include <cmath>
 #include <sys/times.h>
+#include <utility>
+#include <map>
 
 #include "Range.h"
 #include "Tabulated.h"
 
-// enum DISTYPE {
-//   DIST_NONE, DIST_GAUS, DIST_POIS, DIST_FLAT;
-// };
+//! Distribution type of nuisance parameters
+enum DISTYPE {
+  DIST_NONE=0,   //! No distrubution
+  DIST_GAUS,     //! Gaussian
+  DIST_FLAT,     //! Flat
+  DIST_LOGN,     //! Log-Normal
+  DIST_GAUSCORR  //! Correlated gauss (eff,bkg)
+};
+
+inline const std::string distTypeStr(DISTYPE dt) {
+  std::string rval;
+  switch (dt) {
+  case DIST_NONE:
+    rval = "None";
+    break;
+  case DIST_GAUS:
+    rval = "Gauss";
+    break;
+  case DIST_FLAT:
+    rval = "Flat";
+    break;
+  case DIST_LOGN:
+    rval = "LogN";
+    break;
+  case DIST_GAUSCORR:
+    rval = "GaussCorr";
+    break;
+  default:
+    rval = "Unknown";
+    break;
+  }
+  return rval;
+}
+
+
 class Pole {
 public:
   Pole();
   ~Pole();
   // Main parameters
-  void useLogNormal(bool flag) { m_useLogNormal=flag;} //TMP
-  //
   void setCL(double cl)    { m_cl = cl; }
   void setNobserved(int nobs) {m_nObserved = nobs;}
-  void setEffDist(double mean,double sigma, bool dist=true); // dists - if dist=false then no distribution!
-  void setBkgDist(double mean,double sigma, bool dist=true);
+  //! distribution info on eff and bkg
+  void setEffMeas(double mean,double sigma, DISTYPE dist=DIST_GAUS);
+  void setBkgMeas(double mean,double sigma, DISTYPE dist=DIST_GAUS);
+  void setEffBkgCorr(double corr) {m_beCorr = corr;}
+  bool checkEffBkgDists();
   // POLE construction
-  void setEffInt(double low, double high, double step); // efficiency range for integral (7) [AFTER the previous]
-  void setEffInt(double scale=5.0, double step=-1.0);   // dito but range given in no. sigma
-  void setBkgInt(double low, double high, double step); // dito background
-  void setBkgInt(double scale=5.0, double step=-1.0);   // dito but range given in no. sigma
+  void setEffInt(double scale=0,double step=0); // efficiency range for integral (7) [AFTER the previous]
+  void setBkgInt(double scale=0,double step=0); // dito background
   // Checks the integration range for eff and bkg
   bool checkParams();
   // Set belt max value
@@ -73,8 +106,6 @@ public:
   void setVerbose(int v=0) { m_verbose=v; }
   void initPoisson(int nlambda=10000, int nn=51, double lmbmax=100); // will init poisson table
   void initGauss(int ndata  =10000, double mumax=1000.0); // will init gauss table
-  ////// TEMPORARY SOLUTION /////
-  double logNormal(double x, double nmean, double nsigma);
   ///////////////////////////////
   //
   void initIntArrays();   // will initialise integral arrays (if needed)
@@ -100,16 +131,20 @@ public:
   double getSTrue()      { return m_sTrue; }
   bool   getCoverage()   { return m_coverage; }
   int    getNObserved()  { return m_nObserved; }
+  // Efficiency
   double getEffMeas()    { return m_effMeas; }
   double getEffSigma()   { return m_effSigma; }
-  bool   isEffNoDist()   { return m_effNoDist; }
-  // Background, gaussian
-  double getBkgMeas()  { return m_bkgMeas; }
-  double getBkgSigma() { return m_bkgSigma; }
-  bool   isBkgNoDist() { return m_bkgNoDist; }
+  DISTYPE getEffDist()   { return m_effDist; }
+  // Background
+  double  getBkgMeas()   { return m_bkgMeas; }
+  double  getBkgSigma()  { return m_bkgSigma; }
+  DISTYPE getBkgDist()   { return m_bkgDist; }
+  double  getEffBkgCorr() { return m_beCorr; }
   // range and steps in double integral (7), in principle infinite
+  double  getEffIntScale() { return m_effIntScale; }
   Range  *getEffRangeInt() { return &m_effRangeInt; }
   // range and steps in double integral (7)
+  double  getBkgIntScale() { return m_bkgIntScale; }
   Range  *getBkgRangeInt() { return &m_bkgRangeInt; }
   // Test range for the likelihood ratio calculation (4)
   Range  *getHypTest()     { return &m_hypTest; }
@@ -135,7 +170,7 @@ public:
   double getUpperLimit() { return m_upperLimit; }
   //  
 private:
-  bool m_useLogNormal; //TMP
+  void setInt(double & low, double & high, double & step, double scale, double mean, double sigma, DISTYPE dt);
 
   Poisson m_poisson;
   Gauss   m_gauss;
@@ -143,7 +178,6 @@ private:
   int    m_verbose;
   //
   double m_stepMin;
-  double m_s2pi;
   // CL, confidence limit
   double m_cl;
   // True signal - used in coverage studies
@@ -152,23 +186,25 @@ private:
   // Number of observed events
   int    m_nObserved;
   // Efficiency, gaussian
-  double m_effMeas;
-  double m_effSigma;
-  bool   m_effNoDist;
+  double  m_effMeas;
+  double  m_effSigma;
+  bool    m_effNoDist;
+  DISTYPE m_effDist;
   // Background, gaussian
-  double m_bkgMeas;
-  double m_bkgSigma;
-  bool   m_bkgNoDist;
+  double  m_bkgMeas;
+  double  m_bkgSigma;
+  bool    m_bkgNoDist;
+  DISTYPE m_bkgDist;
+  // correlation between eff and bkg [-1.0..1.0]
+  double  m_beCorr;
+  //
+  int    m_intNdef;
   // range and steps in double integral (7), in principle infinite
   Range  m_effRangeInt;
-  double m_effIntMin;
-  double m_effIntMax;
-  double m_effScaleInt;
+  double m_effIntScale;
   // range and steps in double integral (7)
   Range  m_bkgRangeInt;
-  double m_bkgIntMin;
-  double m_bkgIntMax;
-  double m_bkgScaleInt;
+  double m_bkgIntScale;
   // Test range for the likelihood ratio calculation (4)
   Range  m_hypTest;
   double m_hypTestMin;
@@ -206,18 +242,13 @@ private:
 };
 
 inline double Pole::calcProb(int n, double s) {  
-  int i;
   double p = 0.0; 
   //
-  for(i=0;i<m_nInt;i++) {
+  for(int i=0;i<m_nInt;i++) {
     p += m_weightInt[i]*m_poisson.getVal(n,m_effInt[i]*s + m_bkgInt[i]);
   }
   return p;
 }
 
-// TEMPORARY solution!!!
-inline double Pole::logNormal(double x, double nmean, double nsigma) {
-  return (x>0.0 ? m_gauss.getVal(log(x),nmean,nsigma)/x:0.0);
-}
 #endif
 
