@@ -67,6 +67,7 @@ Pole::Pole() {
   m_nBeltList.push_back(38);
   m_nBeltList.push_back(40); //10
 }
+
 Pole::~Pole() {
   // delete arrays
   if (m_weightInt)  delete [] m_weightInt;
@@ -139,7 +140,7 @@ void Pole::setInt(double & low, double & high, double & step, double scale, doub
       if (low<0) low = 0;
       break;
     case DIST_FLAT:
-      dx=sigma*sqrt(12)*0.5; // ignore scale - always use full range
+      dx=sigma*1.73205081; // == sqrt(12)*0.5; ignore scale - always use full range
       low  = mean-dx;
       high = mean+dx;
       break;
@@ -478,10 +479,14 @@ void Pole::initIntegral() {
 	eff_prob = m_gauss.getValLogN(effs,effMean,effSigma);
 	break;
       case DIST_GAUSCORR:
-	eff_prob = 1.0;
+	eff_prob = 1.0; // will be set in the bkg loop
 	break;
       case DIST_FLAT:
-	eff_prob = 1.0;
+	if (m_effSigma>0) {
+	  eff_prob = 1.0/(m_effSigma*3.46410161513775);
+	} else {
+	  eff_prob = 1.0;
+	}
 	break;
       case DIST_NONE:
 	eff_prob = 1.0;
@@ -507,7 +512,11 @@ void Pole::initIntegral() {
 	  bkg_prob = m_gauss.getVal2D(effs,m_effMeas,bkgs,m_bkgMeas,sdetC,seff,sbkg,vceff);
 	  break;
 	case DIST_FLAT:
+	if (m_bkgSigma>0) {
+	  bkg_prob = 1.0/(m_bkgSigma*3.46410161513775);
+	} else {
 	  bkg_prob = 1.0;
+	}
 	  break;
 	case DIST_NONE:
 	  bkg_prob = 1.0;
@@ -667,10 +676,12 @@ bool Pole::findLimits() {
   }
   if (m_verbose>1) {
     if (m_foundUpper) {
-      std::cout << std::ios::fixed << std::setprecision(4)
-		<< "LIMITS(N,e,b,l,u): " << m_nObserved << "\t"
-		<< m_effMeas << "\t" << m_bkgMeas << "\t"
-		<< m_lowerLimit << "\t" << m_upperLimit << std::endl;
+      std::cout << "LIMITS(N,e,b,l,u): ";
+      coutFixed(4,m_nObserved);  std::cout << "\t";
+      coutFixed(4,m_effMeas);    std::cout << "\t";
+      coutFixed(4,m_bkgMeas);    std::cout << "\t";
+      coutFixed(4,m_lowerLimit); std::cout << "\t";
+      coutFixed(4,m_upperLimit); std::cout << std::endl;
     } else {
       std::cout << "Limits NOT OK!" << std::endl;
     }
@@ -712,10 +723,13 @@ bool Pole::findCoverageLimits() {
   }
   if (m_verbose>1) {
     if (m_foundUpper) {
-      std::cout << std::ios::fixed << std::setprecision(4)
-		<< "COVLIMITS(N,s,e,b,l,u): " << m_nObserved << "\t" << m_sTrue << "\t"
-		<< m_effMeas << "\t" << m_bkgMeas << "\t"
-		<< m_lowerLimit << "\t" << m_upperLimit << std::endl;
+      std::cout << "COVLIMITS(N,s,e,b,l,u): ";
+      coutFixed(4,m_nObserved);  std::cout << "\t";
+      coutFixed(4,m_sTrue);      std::cout << "\t";
+      coutFixed(4,m_effMeas);    std::cout << "\t";
+      coutFixed(4,m_bkgMeas);    std::cout << "\t";
+      coutFixed(4,m_lowerLimit); std::cout << "\t";
+      coutFixed(4,m_upperLimit); std::cout << std::endl;;
     } else {
       std::cout << "Limits NOT OK!" << std::endl;
     }
@@ -744,16 +758,15 @@ void Pole::printLimit(bool doTitle) {
     std::cout << " Nobs  \t  Eff   \t Bkg" << std::endl;
     std::cout << "-------------------------------------------------" << std::endl;
   }
-  std::cout << std::ios::fixed << std::setw(4)
-	    << m_nObserved << "\t"
-	    << std::ios::fixed << std::setprecision(6)
-	    << m_effMeas << "\t"
-	    << m_effSigma << "\t"
-	    << m_bkgMeas << "\t"
-	    << m_bkgSigma << "\t[ "
-	    << std::ios::fixed << std::setprecision(2)
-	    << m_lowerLimit << ", "
-	    << m_upperLimit << " ]" << std::endl;
+  coutFixed(4,m_nObserved); std::cout << "\t";
+  coutFixed(6,m_effMeas); std::cout << "\t";
+  coutFixed(6,m_effSigma); std::cout << "\t";
+  coutFixed(6,m_bkgMeas); std::cout << "\t";
+  coutFixed(6,m_bkgSigma); std::cout << "\t";
+  std::cout << "[ ";
+  coutFixed(2,m_lowerLimit); std::cout << ", ";
+  coutFixed(2,m_upperLimit);
+  std::cout << " ]";
 }
 
 void Pole::printSetup() {

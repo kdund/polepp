@@ -38,6 +38,10 @@
 #include <map>
 #include <string>
 
+#if __GNUC__ < 3
+#include <cstdio>
+#endif
+
 #include "Range.h"
 #include "Tabulated.h"
 
@@ -250,6 +254,29 @@ inline double Pole::calcProb(int n, double s) {
   }
   return p;
 }
+//
+// allow for gcc 2.96 fix
+//
+# if __GNUC__ > 2
+inline void coutFixed(int precision, double val) {
+  std::cout << std::fixed << std::setprecision(precision) << val;
+}
+inline void coutFixed(int precision, int val) {
+  std::cout << std::fixed << std::setprecision(precision) << val;
+}
+# else
+void coutFixed(int precision, double val) {
+  static char fmt[32];
+  sprintf(&fmt[0],"%%.%df",precision);
+  printf(fmt,val);
+}
+
+void coutFixed(int precision, int val) {
+  static char fmt[32];
+  sprintf(&fmt[0],"%%%dd",precision);
+  printf(fmt,val);
+}
+#endif
 
 #endif
 

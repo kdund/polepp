@@ -38,7 +38,7 @@ Coverage::~Coverage() {
 
 void Coverage::setSeed(unsigned int r) {
   m_rndSeed = r;
-  m_rnd.SetSeed(r);
+  m_rnd.setSeed(r);
 }
 
 void Coverage::setSTrue(double low, double high, double step) {
@@ -133,22 +133,23 @@ void Coverage::generateExperiment() {
   case DIST_GAUSCORR:
     notOk = true;
     while (notOk) {
-      double z1 = m_rnd.Gaus(0.0,1.0);
-      double z2 = m_rnd.Gaus(0.0,1.0);
+      double z1 = m_rnd.gaus(0.0,1.0);
+      double z2 = m_rnd.gaus(0.0,1.0);
       m_measEff = m_effMean + z1*m_effSigma;
       m_measBkg = m_bkgMean + m_bkgSigma*(m_beCorr*z1 + m_beCorrInv*z2);
       notOk = ((m_measEff<0.0)||(m_measBkg<0.0));
     }
     break;
   case DIST_LOGN:
-    m_measEff = m_rnd.LogNormal(m_effMean,m_effSigma);
+    m_measEff = m_rnd.logNormal(m_effMean,m_effSigma);
     break;
   case DIST_FLAT:
+    m_measEff = m_rnd.flat(m_effMean, m_effSigma);
     break;
   case DIST_GAUS:
     notOk = true;
     while (notOk) {
-      m_measEff    = m_rnd.Gaus(m_effMean,m_effSigma); // measured efficiency
+      m_measEff    = m_rnd.gaus(m_effMean,m_effSigma); // measured efficiency
       notOk = (m_measEff<0.0);
     }
     break;
@@ -162,14 +163,15 @@ void Coverage::generateExperiment() {
     m_measBkg = m_bkgMean;
     break;
   case DIST_LOGN:
-    m_measBkg    = m_rnd.LogNormal(m_bkgMean,m_bkgSigma);
+    m_measBkg = m_rnd.logNormal(m_bkgMean,m_bkgSigma);
     break;
   case DIST_FLAT:
+    m_measBkg = m_rnd.flat(m_bkgMean, m_bkgSigma);
     break;
   case DIST_GAUS:
     notOk = true;
     while (notOk) {
-      m_measBkg    = m_rnd.Gaus(m_bkgMean,m_bkgSigma); // measured background
+      m_measBkg    = m_rnd.gaus(m_bkgMean,m_bkgSigma); // measured background
       notOk = (m_measBkg<0.0);
     }
   case DIST_GAUSCORR: // already taken care of above
@@ -182,7 +184,7 @@ void Coverage::generateExperiment() {
   if (m_fixedSig) {
     m_measNobs = static_cast<int>(m_effMean*m_sTrueMean+m_bkgMean+0.5);
   } else {
-    m_measNobs   = m_rnd.Poisson(m_effMean*m_sTrueMean+m_bkgMean);
+    m_measNobs   = m_rnd.poisson(m_effMean*m_sTrueMean+m_bkgMean);
   }
   if (m_saveExperiments) {
     m_allNobs.push_back(m_measNobs);
@@ -234,18 +236,17 @@ void Coverage::outputCoverageResult(const int flag) { //output coverage result
   } else {       // final result
     header = "DATA: ";
   }
-  std::cout << header.c_str() << std::ios::fixed << std::setprecision(6)
-	    << m_sTrueMean << "\t"
-	    << m_effMean << "\t"
-	    << m_effSigma << "\t"
-	    << m_bkgMean << "\t"
-	    << m_bkgSigma << "\t"
-	    << m_beCorr << "\t"
-	    << m_coverage << "\t"
-	    << m_errCoverage << "\t"
-	    << m_totalCount << "\t"
-	    << m_nLoops
-	    << std::endl;
+  std::cout << header.c_str();
+  coutFixed(6,m_sTrueMean); std::cout << "\t";
+  coutFixed(6,m_effMean); std::cout << "\t";
+  coutFixed(6,m_effSigma); std::cout << "\t";
+  coutFixed(6,m_bkgMean); std::cout << "\t";
+  coutFixed(6,m_bkgSigma); std::cout << "\t";
+  coutFixed(6,m_beCorr); std::cout << "\t";
+  coutFixed(6,m_coverage); std::cout << "\t";
+  coutFixed(6,m_errCoverage); std::cout << "\t";
+  coutFixed(6,m_totalCount); std::cout << "\t";
+  coutFixed(6,m_nLoops); std::cout << std::endl;
 }
 
 
@@ -349,12 +350,23 @@ void Coverage::calcStatistics() {
 void Coverage::printStatistics() {
   if (m_collectStats) {
     std::cout << "====== Statistics ======" << std::endl;
-    std::cout << " N observed (mu,sig) =\t" << std::ios::fixed << std::setprecision(6) << m_aveNobs << "\t" << sqrt(m_varNobs) << std::endl;
-    std::cout << " efficiency (mu,sig) =\t" << std::ios::fixed << std::setprecision(6)<< m_aveEff  << "\t" << sqrt(m_varEff) << std::endl;
-    std::cout << " background (mu,sig) =\t" << std::ios::fixed << std::setprecision(6)<< m_aveBkg  << "\t" << sqrt(m_varBkg) << std::endl;
-    std::cout << " correlation coeff   =\t" << std::ios::fixed << std::setprecision(6) << m_corrEffBkg << std::endl;
-    std::cout << " lower lim. (mu,sig) =\t" << std::ios::fixed << std::setprecision(6) << m_aveLL   << "\t" << sqrt(m_varLL)  << std::endl;
-    std::cout << " upper lim. (mu,sig) =\t" << std::ios::fixed << std::setprecision(6) << m_aveUL   << "\t" << sqrt(m_varUL)  << std::endl;
+    std::cout << " N observed (mu,sig) =\t";
+    coutFixed(6,m_aveNobs); std::cout << "\t";
+    coutFixed(6,sqrt(m_varNobs)); std::cout << std::endl;
+    std::cout << " efficiency (mu,sig) =\t";
+    coutFixed(6,m_aveEff); std::cout << "\t";
+    coutFixed(6,sqrt(m_varEff)); std::cout << std::endl;
+    std::cout << " background (mu,sig) =\t";
+    coutFixed(6,m_aveBkg); std::cout << "\t";
+    coutFixed(6,sqrt(m_varBkg)); std::cout << std::endl;
+    std::cout << " correlation coeff   =\t";
+    coutFixed(6,m_corrEffBkg); std::cout << std::endl;
+    std::cout << " lower lim. (mu,sig) =\t";
+    coutFixed(6,m_aveLL); std::cout << "\t";
+    coutFixed(6,sqrt(m_varLL)); std::cout << std::endl;
+    std::cout << " upper lim. (mu,sig) =\t";
+    coutFixed(6,m_aveUL); std::cout << "\t";
+    coutFixed(6,sqrt(m_varUL)); std::cout << std::endl;
     std::cout << "========================" << std::endl;
   }
 }
@@ -383,14 +395,22 @@ void Coverage::dumpExperiments(std::string name) {
   *os << "#" << std::endl;
   *os << "# N_obs   Efficiency     Background" << std::endl;
   *os << "#-----------------------------------" << std::endl;
+#if __GNUC__ > 2
   for (i=0; i<sz; i++) {
-    *os << std::ios::fixed
+    *os << std::fixed
 	<< std::setprecision(0)
 	<< m_nobsStat[i] << '\t'
 	<< std::setprecision(6)
 	<< m_effStat[i] << '\t'
         << m_bkgStat[i] << std::endl;
   }
+#else
+  for (i=0; i<sz; i++) {
+    *os << m_nobsStat[i] << '\t'
+	<< m_effStat[i] << '\t'
+        << m_bkgStat[i] << std::endl;
+  }
+#endif
   *os << "#EOF" << std::endl;
   if (osdel) delete os;
 }
