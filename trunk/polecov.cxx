@@ -1,11 +1,19 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <signal.h>
 #include <tclap/CmdLine.h> // Command line parser
 #include "Coverage.h"
 
 Coverage gCoverage;
 Pole     gPole;
+
+void my_abort(int a) {
+  std::cout << "WARNING: Job aborting (signal = " << a << " ). Will output data from unfinnished loop.\n" << std::endl;
+  gCoverage.calcCoverage();
+  gCoverage.outputCoverageResult();
+  exit(-1);
+}
 
 using namespace TCLAP;
 void processArgs(int argc, char *argv[]) {
@@ -163,6 +171,10 @@ void processArgs(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
   
+  for (int i=0; i<SIGSYS; i++) {
+    if ( (i!=20) &&
+	 (i!=27) ) signal(i,my_abort);
+  }
   processArgs(argc,argv);
   //
   if (gPole.checkParams()) {
