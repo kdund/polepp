@@ -1,8 +1,10 @@
 ROOTCFLAGS = $(shell root-config --cflags)
 ROOTLIBS   = $(shell root-config --libs)
 LDOBJS   =  Tabulated.o Range.o Random.o Coverage.o Pole.o
-CFLAGS     = -O
-#CFLAGS     = -pg -O
+#CFLAGS     = -O
+CFLAGS     = -g -O
+
+all:		polelim polecov exptest
 
 polelim:	polelim.o $(LDOBJS)
 		g++ $(CFLAGS) -Wall $< $(LDOBJS) -ltclap -o $@
@@ -12,6 +14,11 @@ polelim.o:	polelim.cxx
 polecov:	polecov.o $(LDOBJS)
 		g++ $(CFLAGS) -Wall $< $(LDOBJS) -ltclap -o $@
 polecov.o:	polecov.cxx
+		g++ $(CFLAGS) -Wall -c $<
+
+exptest:	exptest.o $(LDOBJS)
+		g++ $(CFLAGS) -Wall $< $(LDOBJS) -ltclap -o $@
+exptest.o:	exptest.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
 
