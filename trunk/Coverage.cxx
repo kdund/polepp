@@ -241,7 +241,8 @@ void Coverage::outputCoverageResult(const int flag) { //output coverage result
   coutFixed(6,m_coverage); std::cout << "\t";
   coutFixed(6,m_errCoverage); std::cout << "\t";
   coutFixed(6,m_totalCount); std::cout << "\t";
-  coutFixed(6,m_nLoops); std::cout << std::endl;
+  coutFixed(6,m_nLoops); std::cout << "\t";
+  coutFixed(6,(m_stopClock-m_startClock)/1000.0); std::cout << std::endl;
 }
 
 
@@ -410,15 +411,17 @@ void Coverage::dumpExperiments(std::string name, bool limits) {
     dumpLimits = (m_UL.size() == sz);
   }
   *os << "#" << std::endl;
-  *os << "# N         = " << m_nLoops << std::endl;
-  *os << "# s_true    = " << m_sTrue.min() << std::endl;
-  *os << "# eff       = " << m_effTrue.min() << std::endl;
-  *os << "# eff sigma = " << m_effSigma << std::endl;
-  *os << "# eff dist  = " << distTypeStr(m_effDist) << std::endl;
-  *os << "# bkg       = " << m_bkgTrue.min() << std::endl;
-  *os << "# bkg sigma = " << m_bkgSigma << std::endl;
-  *os << "# bkg dist  = " << distTypeStr(m_bkgDist) << std::endl;
-  *os << "# corr.     = " << m_beCorr << std::endl;
+  *os << "# N             = " << m_nLoops << std::endl;
+  *os << "# s_true        = " << m_sTrue.min() << std::endl;
+  *os << "# eff           = " << m_effTrue.min() << std::endl;
+  *os << "# eff sigma     = " << m_effSigma << std::endl;
+  *os << "# eff dist      = " << distTypeStr(m_effDist) << std::endl;
+  *os << "# bkg           = " << m_bkgTrue.min() << std::endl;
+  *os << "# bkg sigma     = " << m_bkgSigma << std::endl;
+  *os << "# bkg dist      = " << distTypeStr(m_bkgDist) << std::endl;
+  *os << "# corr.         = " << m_beCorr << std::endl;
+  *os << "# coverage      = " << m_coverage << std::endl;
+  *os << "# coverage unc. = " << m_errCoverage << std::endl;
   *os << "#" << std::endl;
   *os << "# N_obs   Efficiency     Background" << std::endl;
   *os << "#-----------------------------------" << std::endl;
@@ -491,6 +494,13 @@ void Coverage::endofRunTime() {
   std::cout << "\nEnd of run: " << tstamp << std::endl;
 }
 
+void Coverage::printClockUsage(int norm) {
+  clock_t t = getClockTime();
+  if (norm<1) norm=1;
+  std::cout << "Total CPU time used (ms)     : " << t/1000.0 << std::endl;
+  std::cout << "Per event CPU time used (ms) : " << (t/norm)/1000.0 << std::endl;
+}
+
 void Coverage::printEstimatedTime(int nest) {
   static char tstamp[32];
   if (m_startTime<=m_stopTime) {
@@ -558,6 +568,8 @@ void Coverage::doLoop() {
   //
   m_pole->setCoverage(!m_collectStats); // make full limits when collecting statistics
   //
+  startClock();
+  //
   for (is=0; is<m_sTrue.n(); is++) { // loop over all s_true
     m_sTrueMean = m_sTrue.getVal(is);
     m_pole->setTrueSignal(m_sTrueMean);
@@ -569,6 +581,7 @@ void Coverage::doLoop() {
 	resetCoverage();   // for each s_true, reset coverage
 	resetStatistics(); // dito, statistics
     //
+	startClock();
 	for (j=0; j<m_nLoops; j++) {  // get stats
 	  if (first) {
 	    startTimer();       // used for estimating the time for the run
@@ -601,6 +614,7 @@ void Coverage::doLoop() {
 	  //	  }
 	}
 	calcCoverage();         // calculate coverage and its uncertainty
+	stopClock();
 	outputCoverageResult(); // print the result
 	calcStatistics();       // dito for the statistics...
 	printStatistics();
@@ -609,6 +623,7 @@ void Coverage::doLoop() {
     }
   }
   endofRunTime();
+  //  printClockUsage(m_nLoops*m_sTrue.n()*m_effTrue.n()*m_bkgTrue.n());
 }
 
 void Coverage::doExpTest() {

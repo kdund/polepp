@@ -9,7 +9,6 @@
 #include <string>
 
 #include "Range.h"
-#include "Tabulated.h"
 #include "Random.h"
 #include "Pole.h"
 class Coverage {
@@ -43,6 +42,11 @@ public:
   bool checkTimer(int dt=5);
   void printEstimatedTime(int nest);
   void endofRunTime();
+  //
+  void startClock() { m_startClock =  clock(); }
+  void stopClock()  { m_stopClock  =  clock(); }
+  clock_t getClockTime() { return (m_stopClock - m_startClock); }
+  void printClockUsage(int norm=1);
   //
   void printSetup();
   void generateExperiment();   // creates a set of observables (eff,bkg,s)
@@ -149,5 +153,8 @@ private:
   time_t m_startTime;  // start time
   time_t m_stopTime;   // stop time
   time_t m_estTime;    // estimated time for completion
+
+  clock_t m_startClock;
+  clock_t m_stopClock;
 };
 #endif

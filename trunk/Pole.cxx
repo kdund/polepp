@@ -24,7 +24,9 @@ inline char *yesNo(bool var) {
 
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
-
+/*!
+  Main constructor.
+ */
 Pole::Pole() {
   m_effDist = DIST_GAUS;
   m_bkgDist = DIST_GAUS;
@@ -38,6 +40,8 @@ Pole::Pole() {
   m_intNdef = 20;    // default number of points (when step<=0)
   m_effIntScale = 5.0;
   m_bkgIntScale = 5.0;
+  //
+  m_hypTest.setRange(0.0,35.0,0.01);
   //
   m_validInt  = false;
   m_nInt      = 0;
@@ -196,130 +200,9 @@ void Pole::setBkgInt(double scale,double step) {
   m_bkgRangeInt.setRange(low,high,step);
 }
 
-// void Pole::setEffInt_OLD(double low, double high, double step) {
-//   if (step<0) {
-//     setEffInt();
-//   } else {
-//     m_validInt = false;
-//     m_validBestMu = false;
-//     //
-//     // Will set the range for the efficiency integration.
-//     // If step<0, then set range according to the selected efficiency distribution.
-//     // If fixed, force it to the fixed mean value.
-//     //
-//     if (m_effDist==DIST_NONE) {
-//       //      std::cout << "Efficiency known exactly, excluding it from integral" << std::endl;
-//       low  = m_effMeas;
-//       high = m_effMeas;
-//       step = 1.0;
-//     } else {
-//       if (high>low) {
-// 	if (step<m_stepMin) step=m_stepMin;
-//       } else {
-// 	high = low;
-// 	step = 1.0;
-//       }
-//     }
-//     if (m_effSigma>0) m_effScaleInt = 0.5*(high-low)/m_effSigma;
-//     m_effRangeInt.setRange(low,high,step,m_stepMin);
-//     m_effIntMin = m_effRangeInt.min();
-//     m_effIntMax = m_effRangeInt.max();
-//   }
-// }
-
-// void Pole::setEffInt(double scale, double step) {
-//   double low,high;
-//   m_validInt = false;
-//   m_validBestMu = false;
-//   //
-//   // Will set the range for the efficiency integration.
-//   // If step<0, then set range according to the selected efficiency distribution.
-//   // If fixed, force it to the fixed mean value.
-//   //
-//   if (m_effDist==DIST_NONE) {
-//     //    std::cout << "Efficiency known exactly, excluding it from integral" << std::endl;
-//     low  = m_effMeas;
-//     high = m_effMeas;
-//     step = 1.0;
-//   } else {
-//     if (scale<1.0) {
-//       scale = m_effScaleInt;
-//     } else {
-//       m_effScaleInt = scale;
-//     }
-//     low  = m_effMeas - scale*m_effSigma;
-//     high = m_effMeas + scale*m_effSigma;
-//     if (low<0) low = 0;
-//     if (step<=0.0) {
-//       step = (high-low)/20.0;     // minimum 21 pts
-//       if (step>0.1) step = 0.1; // not too coarse
-//     }
-//     if (step<m_stepMin) step = m_stepMin;
-
-//   }
-//   m_effRangeInt.setRange(low,high,step,m_stepMin);
-//   m_effIntMin = m_effRangeInt.min();
-//   m_effIntMax = m_effRangeInt.max();
-// }
-
-// void Pole::setBkgInt(double low, double high, double step) {
-//   if (step<0) {
-//     setBkgInt();
-//   } else {
-//     m_validInt = false;
-//     m_validBestMu = false;
-
-//     if (m_bkgDist==DIST_NONE) {
-//       low  = m_bkgMeas;
-//       high = m_bkgMeas;
-//       step = 1.0;
-//     } else {
-//       if (high>low) {
-// 	if (step<m_stepMin) step=m_stepMin;
-//       } else {
-// 	low = high;
-// 	step = 1.0;
-//       }
-//     }
-//     if (m_bkgSigma>0) m_bkgScaleInt = 0.5*(high-low)/m_bkgSigma;
-//     m_bkgRangeInt.setRange(low,high,step,m_stepMin);
-//     m_bkgIntMin = m_bkgRangeInt.min();
-//     m_bkgIntMax = m_bkgRangeInt.max();
-//   }
-// }
-
-// void Pole::setBkgInt(double scale, double step) {
-//   double low,high;
-//   m_validInt = false;
-//   m_validBestMu = false;
-
-//   if (m_bkgDist==DIST_NONE) {
-//     low  = m_bkgMeas;
-//     high = m_bkgMeas;
-//     step = 1.0;
-//   } else {
-//     if (scale<1.0) {
-//       scale = m_bkgScaleInt;
-//     } else {
-//       m_bkgScaleInt = scale;
-//     }
-//     low  = m_bkgMeas - scale*m_bkgSigma;
-//     high = m_bkgMeas + scale*m_bkgSigma;
-//     if (low<0) low = 0;
-//     if (step<=0.0) {
-//       step = (high-low)/20.0;     // minimum 21 points
-//       if (step>0.1) step = 0.1; // not too coarse
-//     }
-//     if (step<m_stepMin) step = m_stepMin;
-//   }
-//   m_bkgRangeInt.setRange(low,high,step,m_stepMin);
-//   m_bkgIntMin = m_bkgRangeInt.min();
-//   m_bkgIntMax = m_bkgRangeInt.max();
-// }
-
 void Pole::setTestHyp(double low, double high, double step) {
   if (high>low) {
-    if (step<m_stepMin) step=m_stepMin;
+    if (step<=0) step=(high-low)/1000.0;
   } else {
     low = high;
     step = 1.0;
@@ -692,15 +575,30 @@ double Pole::calcLimit(double s) {
     std::cout << "WARNING:: n_observed is larger than the maximum n used for R(n,s)!!" << std::endl;
     std::cout << "          -> increase nbelt such that it is more than n_obs = " << m_nObserved << std::endl;
   }
-  for(i=0;i<m_nBelt;i++) {
+  // Calculate the probability for all n and the given s.
+  // The Feldman-Cousins method dictates that for each n a
+  // likelihood ratio (R) is calculated. The n's are ranked according
+  // to this ratio. Values of n are included starting with that giving
+  // the highest R and continuing with decreasing R until the total probability
+  // matches the searched CL.
+  // Below, the loop sums the probabilities for a given s and for all n with R>R0.
+  // R0 is the likelihood ratio for n_observed.
+  i=0;
+  bool done=false;
+  while (!done) {
+    //  for(i=0;i<m_nBelt;i++) {
     m_muProb[i] = m_muProb[i]/norm_p;
     //    for(k=0;k<m_nBelt;k++) {
     if(i != k) { 
-      if(m_lhRatio[i]  > m_lhRatio[k])  {
+      if(m_lhRatio[i] > m_lhRatio[k])  {
 	m_sumProb  +=  m_muProb[i];
-      }                
+	//	std::cout << "s= " << s << "   i:k " << i << ":" << k << "    RL(i:k) = " << m_lhRatio[i] << ":" << m_lhRatio[k]
+	//		  << "   prob = " << m_sumProb << std::endl;
+      }
       //    }
     }
+    i++;
+    done = ((i==m_nBelt) || m_sumProb>m_cl);
   }
   if (m_sumProb<m_cl) {
     if (m_foundLower) {
@@ -725,6 +623,115 @@ double Pole::calcLimit(double s) {
   return m_sumProb;
 }
 
+//*********************************************************************//
+//*********************************************************************//
+//*********************************************************************//
+
+// NOTE: Simple sorting - should be put somewhere else...
+
+void sort_index(std::vector<double> & input, std::vector<int> & index, bool reverse=false) {
+  int ndata = input.size();
+  if (ndata<=0) return;
+  //
+  int i;
+  std::list< std::pair<double,int> > dl;
+  //
+  for (i=0; i<ndata; i++) {
+    dl.push_back(std::pair<double,int>(input[i],i));
+  }
+  dl.sort();
+  //
+  if (!reverse) {
+    std::list< std::pair<double,int> >::iterator dliter;
+    for (dliter = dl.begin(); dliter != dl.end(); dliter++) {
+      index.push_back(dliter->second);
+    }
+  } else {
+    std::list< std::pair<double,int> >::reverse_iterator dliter;
+    for (dliter = dl.rbegin(); dliter != dl.rend(); dliter++) {
+      index.push_back(dliter->second);
+    }
+  }
+}
+
+double Pole::calcBelt(double s, int & n1, int & n2) {
+  int i;
+  //
+  double norm_p = 0;
+  double sumProb = 0;
+  double p;
+  std::vector<double> muProb;
+  std::vector<double> lhRatio;
+  std::vector<int> index;
+  //
+  //  std::cout << "calcLimit for " << s << std::endl;
+  if (m_useNLR) { // use method by Gary Hill
+    double pbf;
+    for (int n=0; n<m_nBelt; n++) {
+      p =  calcProb(n, s);
+      if (n>m_bkgMeas) {
+	pbf = static_cast<double>(n);
+      } else {
+	pbf = 0;
+      }
+      pbf = m_poisson.getVal(n,pbf);
+      lhRatio.push_back(p/pbf);
+      muProb.push_back(p);
+      norm_p += p; // needs to be renormalised
+
+    }
+  } else {
+    for (int n=0; n<m_nBelt; n++) {
+      p =  calcProb(n, s);
+      lhRatio.push_back(p/m_bestMuProb[n]);
+      muProb.push_back(p);
+      norm_p += p; // needs to be renormalised
+    }
+  }
+  sort_index(lhRatio,index,true);
+  //
+  // Calculate the probability for all n and the given s.
+  // The Feldman-Cousins method dictates that for each n a
+  // likelihood ratio (R) is calculated. The n's are ranked according
+  // to this ratio. Values of n are included starting with that giving
+  // the highest R and continuing with decreasing R until the total probability
+  // matches the searched CL.
+  // Below, the loop sums the probabilities for a given s and for all n with R>R0.
+  // R0 is the likelihood ratio for n_observed.
+  for (i=0; i<m_nBelt; i++) {
+    muProb[i] = muProb[i]/norm_p;
+  }
+  i=0;
+  bool done=false;
+  int nmin=-1;
+  int nmax=-1;
+  int n;
+
+  while (!done) {
+    n = index[i];
+    p = muProb[i];
+    sumProb +=p;
+    if ((n<nmin)||(nmin<0)) nmin=n;
+    if ((n>nmax)||(nmax<0)) nmax=n;
+    //
+    i++;
+    done = ((i==m_nBelt) || sumProb>m_cl);
+  }
+  if ((nmin<0) || ((nmin==0)&&(nmax==0))) {
+    nmin=0;
+    nmax=1;
+    sumProb=1.0;
+  }
+  n1 = nmin;
+  n2 = nmax;
+  std::cout << "CONFBELT: " << s << "\t" << n1 << "\t" << n2 << "\t" << sumProb << "\t" << lhRatio[n1] << "\t" << lhRatio[n2] << std::endl;
+  return sumProb;
+}
+
+//*********************************************************************//
+//*********************************************************************//
+//*********************************************************************//
+
 bool Pole::findLimits() {
   double mu_test;
   int i = 0;
@@ -736,9 +743,11 @@ bool Pole::findLimits() {
   m_upperLimit = 0;
   //
   double p;
+  //  int n1,n2;
   while (!done) {
     mu_test = m_hypTest.min() + i*m_hypTest.step();
     p=calcLimit(mu_test);
+    //    calcBelt(mu_test,n1,n2);
     if (m_verbose>2) std::cout << "CalcLimit: " << mu_test << " p = " << p << std::endl;
     i++;
     done = (i==m_hypTest.n()); // must loop over all hypothesis
