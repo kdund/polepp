@@ -22,11 +22,11 @@ public:
   //
 private:
   static const double m_sl= 0.4;
-  static const double m_su= 1.8;
+  static const double m_su= 1.9;
   static const double m_bl= 0.2;
-  static const double m_bu= 1.5;
+  static const double m_bu= 1.6;
   static const double m_cl=-0.3;
-  static const double m_cu= 1.2;
+  static const double m_cu= 1.3;
 };
 
 #endif
