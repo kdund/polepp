@@ -5,7 +5,7 @@ LDOBJS   =  Pdf.o Range.o Random.o Coverage.o Pole.o
 # Use -g to include debug info
 # Use -pg for profiling info
 CFLAGS     = -g -O
-SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx estbelt.cxx
+SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx
 INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h
 SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Range.cxx Pdf.cxx
 
