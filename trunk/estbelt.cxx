@@ -12,6 +12,14 @@
 //
 
 int main(int argc, char *argv[]) {
+  if (argc<2) {
+    std::cout << "Usage: estbelt <nobserved> <background>" << std::endl;
+    std::cout << std::endl;
+    std::cout << "This tool estimates the minimum nbelt required using a simple linear model" << std::endl;
+    std::cout << "for a given setup. NOTE: the model ignores uncertainties of the nuisance parameters" << std::endl;
+    std::cout << "since their contributions are small." << std::endl;
+    return 0;
+  }
   int nobs=1;
   double bkg=0.0;
   if (argc>1) {
