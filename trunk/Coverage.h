@@ -72,6 +72,9 @@ public:
   //
   void setVerbose(int v=0) { m_verbose = v; }
   //
+  double getMeasEff()  const {return m_measEff;}
+  double getMeasBkg()  const {return m_measBkg;}
+  double getMeasNobs() const {return m_measNobs;}
 
 private:
   void calcStats(std::vector<double> & vec, double & average, double & variance);
