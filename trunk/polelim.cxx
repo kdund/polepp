@@ -102,8 +102,8 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     pole->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
     //
     if (useTabulated.getValue()) {
-      pole->initPoisson(1000000,60,50);
-      pole->initGauss(1000000,10.0);
+      pole->initPoisson(50000,100,50);
+      pole->initGauss(50000,10.0);
     }
     pole->initIntArrays();
     pole->initBeltArrays();
@@ -124,14 +124,14 @@ int main(int argc, char *argv[]) {
   //
   if (pole.checkParams()) {
     pole.printSetup();
-    pole.analyseExperiment();
-    pole.printLimit(true);
-//     pole.setNobserved(4);
-//     pole.analyseExperiment();
-//     pole.printLimit();
-//     pole.setNobserved(6);
-//     pole.analyseExperiment();
-//     pole.printLimit();
+    if (pole.analyseExperiment()) {
+      pole.printLimit(true);
+    } else {
+      std::cout << "ERROR: limit calculation failed - nbelt is probably too small ("
+		<< pole.getNBelt() << ") for Nobs = " << pole.getNObserved() << std::endl;
+      std::cout << "       probability    = " << pole.getSumProb() << std::endl;
+      std::cout << "       lower lim norm = " << pole.getLowerLimitNorm() << std::endl;
+      std::cout << "       upper lim norm = " << pole.getUpperLimitNorm() << std::endl;
+    }
   }
-  //
 }

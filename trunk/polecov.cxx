@@ -82,7 +82,7 @@ void processArgs(int argc, char *argv[]) {
     ValueArg<double> bkgIntStep("","bintstep",   "bkg step in integral", false,-1.0,"float");
 
     ValueArg<int>    effDist("","effdist",  "Efficiency distribution",false,1,"int");
-    ValueArg<int>    bkgDist("","bkgdist",  "Background distribution",false,1,"int");
+    ValueArg<int>    bkgDist("","bkgdist",  "Background distribution",false,0,"int");
     //
     SwitchArg        doStats("C","stats", "Collect statistics",false);
     SwitchArg        doFixSig("S","fixsig", "Fixed meas. n_observed",false);
@@ -166,8 +166,9 @@ void processArgs(int argc, char *argv[]) {
     gPole.setTestHyp(muTestMin.getValue(), muTestMax.getValue(), muTestStep.getValue());
     gPole.printSetup();
     if (useTabulated.getValue()) {
-      gPole.initPoisson(1000000,60,50);
-      //      gPole.initGauss(1000000,10.0);
+      gPole.initPoisson(50000,100,50);
+      //      gPole.initPoisson(50000,100,200);
+      gPole.initGauss(50000,10.0);
     }
     gPole.initIntArrays();
     gPole.initBeltArrays();
@@ -223,5 +224,4 @@ int main(int argc, char *argv[]) {
     gCoverage.printSetup();
     gCoverage.doLoop();
   }
-  //
 }

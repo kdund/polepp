@@ -34,7 +34,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> beCorr(    "","corr",    "corr(bkg,eff)",false,0.0,"float");
    //
     ValueArg<double> dMus(      "","dmus",    "step size in findBestMu",false,0.002,"float");
-    ValueArg<int>    belt(   "","belt", "maximum n for findBestMu" ,false,50,"int");
+    ValueArg<int>    belt(   "","belt", "maximum n for findBestMu" ,false,-1,"int");
     //
     ValueArg<double> hypTestMin( "","hmin",   "hypothesis test min" ,false,0.0,"float");
     ValueArg<double> hypTestMax( "","hmax",   "hypothesis test max" ,false,35.0,"float");
@@ -102,8 +102,8 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     pole->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
     //
     if (useTabulated.getValue()) {
-      pole->initPoisson(1000000,60,50);
-      pole->initGauss(1000000,10.0);
+      pole->initPoisson(50000,100,50);
+      pole->initGauss(50000,10.0);
     }
     pole->initIntArrays();
     pole->initBeltArrays();

@@ -12,7 +12,10 @@ public:
   ~Poisson();
   //
   void init(int nlambda=100000, int nn=60, double lmbmax=200.0);
+  //
   inline double getVal(int no, double s);
+  const double *getData() { return m_data; }
+  const int getNdata()    { return m_nTot; }
 private:
   unsigned long m_nLambda;
   unsigned long m_nN;

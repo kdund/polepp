@@ -87,10 +87,9 @@ inline const std::string distTypeStr(DISTYPE dt) {
  *
  *  @brief The main class containing the methods for calculating limits.
  *  
- *  This class contains the methods for calculating the limits
- *  using the Feldman & Cousins construction for a Poisson process with
- *  a known background and with known distributions of the signal and
- *  background efficiencies.
+ *  This class calculates confidence intervals for
+ *  a Poisson process with background using a frequentist confidence belt
+ *  construction.
  *  It assumes that the measurement can be described as follows:
  *  \f[N_{obs} = \epsilon s + b\f]
  *  where
@@ -116,10 +115,11 @@ inline const std::string distTypeStr(DISTYPE dt) {
  *  \f$\sum_{n=n_1}^{n_2} q(n)_{s+b} = 1 - \alpha\f$ where \f$1-\alpha\f$ is the confidence limit.
  *  The confidence belt is then given by the set \f$[n_1(s+b,\alpha),n_2(s+b,\alpha)]\f$.
  *  An upper and lower limit is found by finding the intersection of the vertical line \f$n = N_{obs}\f$
- *  and the boundaries of the belt.
+ *  and the boundaries of the belt (not exactly true due to the discreteness of a Poisson).
  *
- *  However, the confidence belt is not unambigously defined. The method for selecting \f$n_1\f$ and
- *  \f$n_2\f$ is based on likelihood ratios. For each n, a \f$s_{best}\f$ is found that
+ *  However, the confidence belt is not unambigously defined. A specific ordering scheme is required.
+ *  The method used for selecting \f$n_1\f$ and
+ *  \f$n_2\f$ is based on likelihood ratios (aka Feldman & Cousins). For each n, a \f$s_{best}\f$ is found that
  *  will maximise the likelihood \f$\mathcal{L}(n)_{s+b}\f$ (mathematically it's just \f$q(n)_{s+b}\f$,
  *  but here it's not used as a PDF but rather as a hypothesis). For a fixed s, a likelihood ratio is calculated
  *  \f[R(n,s)_{\mathcal{L}} = \frac{\mathcal{L}_{s+b}(n)}{\mathcal{L}_{s_{best}+b}(n)}\f]
@@ -149,6 +149,8 @@ inline const std::string distTypeStr(DISTYPE dt) {
  *  - setBelt() : Set the maximum n in the belt construction\n
  *    For large signals and/or events, this value might be increased. 
  *    If the nBelt < 1, then this is automatically selected (see suggestBelt()).
+ *  - findBelt() : Calculates the confidence belt [n1(s,b),n2(s,b)] for all (s,b).
+ *  - calcBelt() : Dito but for a specific (s,b)
  *
  *  Finding \f$s_{best}\f$
  *  - setDmus() : Sets the precision in findBestMu().\n
@@ -224,6 +226,7 @@ public:
 
   // POLE test hypothesis range
   void setTestHyp(double low, double high, double step); // test mu=s+b for likelihood ratio
+  void setNuppLim(int n=-1) { m_nUppLim = n; }
 
   // POLE true signal, used only if coverage run
   void setTrueSignal(double s) { m_sTrue = s; } // true signal
@@ -249,8 +252,13 @@ public:
   inline double calcProb(int n, double s); // calculates probability (7)
   void findBestMu(int n); // finds the best fit (mu=s+b) for a given n. Fills m_bestMu[n] and m_bestMuProb[n].
   void findAllBestMu();   // dito for all n (loop n=0; n<m_nMuUsed)
+  void calcConstruct(double s);
   double calcBelt(double s, int & n1, int & n2); // calculate (4) and find confidence belt
   double calcLimit(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
+  bool limitsOK(); // check if calculated limit is OK using the sum of probs.
+  inline bool normOK(double p);
+  void setNormMaxDiff(double dpmax=0.001) { m_normMaxDiff=dpmax; }
+  void findConstruct();
   void findBelt();
   bool findLimits();        // finds CL limits
   bool findCoverageLimits();//  same as previous but stop if it's obvious that initial true mean is inside or outside
@@ -258,7 +266,7 @@ public:
   // 
   void printSetup();
   // POLE
-  void analyseExperiment();  // makes the double integral and finds the coverage
+  bool analyseExperiment();  // makes the double integral and finds the limits/coverage
   //
   // Access functions
   //
@@ -304,7 +312,9 @@ public:
   double getSumProb()    { return m_sumProb; }
   double getLowerLimit() { return m_lowerLimit; }
   double getUpperLimit() { return m_upperLimit; }
-  //
+  double getLowerLimitNorm() { return m_lowerLimitNorm; }
+  double getUpperLimitNorm() { return m_upperLimitNorm; }
+  int    getNuppLim()    { return m_nUppLim; }
 
 private:
   void setInt(double & low, double & high, double & step, double scale, double mean, double sigma, DISTYPE dt);
@@ -376,9 +386,18 @@ private:
   bool   m_foundUpper; // true if an upper limit is found
   double m_lowerLimit; // lowerlimit obtained from ordering (4)
   double m_upperLimit; // upperlimit
+  double m_lowerLimitNorm; // sum of the probabilities in the belt given by the lower limit
+  double m_upperLimitNorm; // dito upper limit (useful to check whether nbelt was enough or not)
+  double m_maxNorm;  // max probability sum (should be very near 1)
+  double m_normMaxDiff; // max(norm-1.0) allowed before giving a warning
+  int    m_nUppLim;  // number of points to scan the hypothesis after the first upper limit is found
   //
   bool   m_useNLR; // Use Gary Hills likelihood ratio
 };
+
+inline bool Pole::normOK(double p) {
+  return (fabs(p-1.0)<m_normMaxDiff);
+}
 
 inline double Pole::calcProb(int n, double s) {  
   double p = 0.0; 
