@@ -124,7 +124,7 @@ public:
   inline double calcProb(int n, double s); // calculates probability (7)
   void findBestMu(int n); // finds the best fit (mu=s+b) for a given n. Fills m_bestMu[n] and m_bestMuProb[n].
   void findAllBestMu();   // dito for all n (loop n=0; n<m_nMuUsed)
-  doub le calcLimit(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
+  double calcLimit(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
   bool findLimits();        // finds CL limits
   bool findCoverageLimits();//  same as previous but stop if it's obvious that initial true mean is inside or outside
   void printLimit(bool doTitle=false);

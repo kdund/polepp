@@ -773,6 +773,7 @@ bool Pole::findCoverageLimits() {
   m_lowerLimit = 0;
   m_upperLimit = 0;
   //
+  double p;
   while (!done) {
     mu_test = m_hypTest.min() + i*m_hypTest.step();
     p=calcLimit(mu_test);
