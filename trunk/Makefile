@@ -1,11 +1,12 @@
 ROOTCFLAGS = $(shell root-config --cflags)
 ROOTLIBS   = $(shell root-config --libs)
-LDOBJS   =  Tabulated.o Range.o Random.o Coverage.o Pole.o
-CFLAGS     = -O
+LDOBJS   =  Pdf.o Tabulated.o Range.o Random.o Coverage.o Pole.o
+###CFLAGS     = -O
 # Use -g to include debug info
-###CFLAGS     = -g -O
+# Use -pg for profiling info
+CFLAGS     = -pg -O
 SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx
-SRCLIB       = Pole.cxx Pole.h Coverage.cxx Coverage.h Random.cxx Random.h Tabulated.cxx Tabulated.h Range.cxx Range.h
+SRCLIB       = Pole.cxx Pole.h Coverage.cxx Coverage.h Random.cxx Random.h Tabulated.cxx Tabulated.h Range.cxx Range.h Pdf.cxx Pdf.h
 
 all:		polelim polecov exptest plotexp
 
@@ -39,6 +40,8 @@ Coverage.o:	Coverage.cxx Coverage.h Range.h Tabulated.h Random.h Pole.h
 Random.o:	Random.cxx Random.h
 		g++ $(CFLAGS) -Wall -c $<
 Tabulated.o:	Tabulated.cxx Tabulated.h
+		g++ $(CFLAGS) -Wall -c $<
+Pdf.o:		Pdf.cxx Pdf.h
 		g++ $(CFLAGS) -Wall -c $<
 
 package:	$(SRCLIB) $(SRCTOOLS) Makefile
