@@ -7,7 +7,7 @@
 // User input:
 //   * Measured N(observed), efficiency and background
 //   * Distribution of efficiency and background - include the possibility
-//     to have arbitrary distributions (a new class... class Observable)
+//     to have arbitrary distributions (a 
 //   * Optional: an array containing the values of the folded PDF (the double integral)
 //   * Optional: true signal - use it to check if it's in- or outside the CL - <Coverage>
 // Output:
@@ -44,6 +44,7 @@
 
 #include "Range.h"
 #include "Tabulated.h"
+#include "Pdf.h"
 
 //! Distribution type of nuisance parameters
 enum DISTYPE {
@@ -177,8 +178,8 @@ public:
 private:
   void setInt(double & low, double & high, double & step, double scale, double mean, double sigma, DISTYPE dt);
 
-  Poisson m_poisson;
-  Gauss   m_gauss;
+  PDF::Poisson m_poisson;
+  PDF::Gauss   m_gauss;
   //
   int    m_verbose;
   //
