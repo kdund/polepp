@@ -7,7 +7,10 @@ Range::Range(double low, double high, double step, int nmax) {
 }
 
 Range::Range() {
-  setRange(0,0,0,0);
+  m_min  = 0;
+  m_max  = 0;
+  m_n    = 0;
+  m_step = 0;
 }
 
 void Range::setRange(double low, double high, double step, int nmax) {

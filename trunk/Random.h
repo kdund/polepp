@@ -11,21 +11,20 @@
 //
 class Random {
 protected:
-  unsigned int   m_seed;  //Random number generator seed
+  unsigned int m_seed;  //Random number generator seed
   double m_mean;
   double m_sigma;
 public:
   Random(unsigned int seed=65539);
   virtual ~Random();
-  double Gaus(double mean=0.0, double sigma=1.0);
-  double LogNormal(double mean=1.0, double sigma=1.0);
-  int    Poisson(double mean);
-  double Flat(double mean, double sigma=1.0);
-  unsigned int   GetSeed() {return m_seed;}
-  void   SetSeed(unsigned int seed=65539);
+  double gaus(double mean=0.0, double sigma=1.0);
+  double logNormal(double mean=1.0, double sigma=1.0);
+  int    poisson(double mean);
+  double flat(double mean, double sigma=1.0);
+  unsigned int getSeed() {return m_seed;}
+  void   setSeed(unsigned int seed=65539);
   //
-  virtual double Rndm();
-
+  virtual double rndm();
 };
 
 #endif

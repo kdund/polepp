@@ -2,16 +2,16 @@
 /////////////////////////////////////////////////////////////////////
 
 Random::Random(unsigned int seed) {
-  SetSeed(seed);
+  setSeed(seed);
 }
 Random::~Random() {
 }
 
-void Random::SetSeed(unsigned int seed) {
+void Random::setSeed(unsigned int seed) {
   //  Set the random generator seed
   //  if seed is zero, the seed is set to the current  machine clock
   //  Note that the machine clock is returned with a precision of 1 second.
-  //  If one calls SetSeed(0) within a loop and the loop time is less than 1s, 
+  //  If one calls setSeed(0) within a loop and the loop time is less than 1s, 
   //  all generated numbers will be identical!
    
   if( seed==0 ) {
@@ -23,7 +23,7 @@ void Random::SetSeed(unsigned int seed) {
   }
 }
 
-double Random::Rndm() {
+double Random::rndm() {
   //  Machine independent random number generator.
   //  Produces uniformly-distributed floating points between 0 and 1.
   //  Identical sequence on all machines of >= 32 bits.
@@ -37,10 +37,10 @@ double Random::Rndm() {
   m_seed *= 69069;  
   unsigned int jy = (m_seed&kMASK24); // Set lower 8 bits to zero to assure exact float
   if (jy) return kCONS*jy;
-  return Rndm();
+  return rndm();
 }
 
-int Random::Poisson(double mean)
+int Random::poisson(double mean)
 {
   // Generates a random integer N according to a Poisson law.
   // Coded from Los Alamos report LA-5061-MS
@@ -48,7 +48,7 @@ int Random::Poisson(double mean)
   //
   if (mean <= 0) return 0;
   // use a gaussian approximation for large values of mean
-  if (mean > 88) return static_cast<int>(Gaus(0,1)*sqrt(mean) + mean +0.5);
+  if (mean > 88) return static_cast<int>(gaus(0,1)*sqrt(mean) + mean +0.5);
   //
   int N;
   double expmean = exp(-mean);
@@ -56,34 +56,34 @@ int Random::Poisson(double mean)
   N = -1;
   while(1) {
     N++;
-    pir *= Rndm();
+    pir *= rndm();
     if (pir <= expmean) break;
   }
   return N;
 }
 
-double Random::Gaus(double mean, double sigma) {
+double Random::gaus(double mean, double sigma) {
   //      Return a number distributed following a gaussian with mean and sigma
   
   double x, y, z, result;
   
-  y = Rndm();
-  z = Rndm();
+  y = rndm();
+  z = rndm();
   x = z * 6.28318530717958623;
   result = mean + sigma*sin(x)*sqrt(-2*log(y));
 
   return result;
 }
 
-double Random::LogNormal(double mean, double sigma) {
+double Random::logNormal(double mean, double sigma) {
   // Return a number distributed following a lognormal with mean and sigma
   double nmean = log(mean*mean/sqrt(sigma*sigma + mean*mean));
   double nsigma = sqrt(log(sigma*sigma/mean/mean+1));
-  return exp(Gaus() * nsigma + nmean);
+  return exp(gaus() * nsigma + nmean);
 }
 
-double Random::Flat(double mean, double sigma) {
-  double dx=sigma*sqrt(12)*0.5;
+double Random::flat(double mean, double sigma) {
+  double dx=sigma*1.73205081; // == sqrt(12.0)*0.5 => sigma(flat) = (xmax-xmin)/sqrt(12)
   double xmin = mean-dx;
-  return Rndm()*dx*2.0 + xmin;
+  return rndm()*dx*2.0 + xmin;
 }
