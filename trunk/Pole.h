@@ -37,24 +37,26 @@
 #include <utility>
 #include <map>
 #include <string>
+#include <list>
 
 #if __GNUC__ < 3
 #include <cstdio>
 #endif
 
 #include "Range.h"
-#include "Tabulated.h"
 #include "Pdf.h"
 
 //! Distribution type of nuisance parameters
 enum DISTYPE {
-  DIST_NONE=0,   //! No distrubution
-  DIST_GAUS,     //! Gaussian
-  DIST_FLAT,     //! Flat
-  DIST_LOGN,     //! Log-Normal
-  DIST_GAUSCORR  //! Correlated gauss (eff,bkg)
+  DIST_NONE=0,   /*!< No distrubution */
+  DIST_GAUS,     /*!< Gaussian */
+  DIST_FLAT,     /*!< Flat */
+  DIST_LOGN,     /*!< Log-Normal */
+  DIST_GAUSCORR  /*!< Correlated gauss (eff,bkg) */
 };
-
+/*!
+  Returns a string corresponding to the given DISTYPE.
+ */
 inline const std::string distTypeStr(DISTYPE dt) {
   std::string rval;
   switch (dt) {
@@ -80,7 +82,114 @@ inline const std::string distTypeStr(DISTYPE dt) {
   return rval;
 }
 
-
+/*! @class Pole
+ *
+ *  @brief The main class containing the methods for calculating limits.
+ *  
+ *  This class contains the methods for calculating the limits
+ *  using the Feldman & Cousins construction for a Poisson process with
+ *  a known background and with known distributions of the signal and
+ *  background efficiencies.
+ *  It assumes that the measurement can be described as follows:
+ *  \f[N_{obs} = \epsilon s + b\f]
+ *  where
+ *  - \f$N_{obs}\f$ = number of observed events (Poisson)
+ *  - \f$\epsilon\f$ = measured efficiency with a known (or assumed) distribution
+ *  - \f$s\f$ = unknown signal for which the limits are to be found
+ *  - \f$b\f$ = measured background with a known (or assumed) distribution
+ *
+ *  The PDF used for describing the number of observed events is:  
+ *  \f[
+ *  q(n)_{s+b} =  
+ *  \frac{1}{2\pi\sigma_{b}\sigma_{\epsilon}} \times
+ *  \intop_0^{\infty}\intop_0^{\infty}p(n)_{b+ 
+ *  \epsilon's}\;\;
+ *  f_{b,\sigma_b}(b')\;\;
+ *  g_{\epsilon,\sigma_{\epsilon}}(\epsilon')\;\;
+ *  db'd\epsilon'
+ *  \f]
+ *  where \f$f()\f$ and \f$g()\f$ are the PDF for the background and efficiency respectively.
+ *
+ *  In order to find the lower and upper limits, a so called confidence belt is constructed.
+ *  For each value of \f$s\f$, \f$n_1\f$ and \f$n_2\f$ are found such that
+ *  \f$\sum_{n=n_1}^{n_2} q(n)_{s+b} = 1 - \alpha\f$ where \f$1-\alpha\f$ is the confidence limit.
+ *  The confidence belt is then given by the set \f$[n_1(s+b,\alpha),n_2(s+b,\alpha)]\f$.
+ *  An upper and lower limit is found by finding the intersection of the vertical line \f$n = N_{obs}\f$
+ *  and the boundaries of the belt.
+ *
+ *  However, the confidence belt is not unambigously defined. The method for selecting \f$n_1\f$ and
+ *  \f$n_2\f$ is based on likelihood ratios. For each n, a \f$s_{best}\f$ is found that
+ *  will maximise the likelihood \f$\mathcal{L}(n)_{s+b}\f$ (mathematically it's just \f$q(n)_{s+b}\f$,
+ *  but here it's not used as a PDF but rather as a hypothesis). For a fixed s, a likelihood ratio is calculated
+ *  \f[R(n,s)_{\mathcal{L}} = \frac{\mathcal{L}_{s+b}(n)}{\mathcal{L}_{s_{best}+b}(n)}\f]
+ *  and the n are included in the sum starting with the highest rank (ratio) and continuing with decreasing rank until
+ *  the sum (ref) equals the requested confidence.
+ *
+ *  \b SETUP
+ *
+ *  Basic
+ *  - setCL() : Confidence limit, default 0.9
+ *    the requested confidence [0.0,1.0]
+ *  - setNobserved() : Number of observed events
+ *  - setEffMeas() : Measured efficiency\n
+ *    efficiency distribution (mean,sigma and distribution type ( DISTYPE ))
+ *  - setBkgMeas() : Measured background\n
+ *    background distribution (mean,sigma and distribution type ( DISTYPE ))
+ *  - setEffBkgCorr() : Correlation between eff and bkg (if applicable)
+ *    correlation coefficient [-1.0,1.0]
+ *
+ *  Integration
+ *  - setEffInt() : Integration range of efficiency\n
+ *    The integration range must cover the PDF such that the tails are
+ *    negligable.
+ *  - setBkgInt() : Dito, background
+ *
+ *  Belt construction
+ *  - setBelt() : Set the maximum n in the belt construction\n
+ *    For large signals and/or events, this value might be increased. 
+ *    If the nBelt < 1, then this is automatically selected (see suggestBelt()).
+ *
+ *  Finding \f$s_{best}\f$
+ *  - setDmus() : Sets the precision in findBestMu().\n
+ *    Default = 0.01 and it should normally be fine.
+ *  - setNLR() : If true, use an alternate method (Gary Hill)
+ *
+ *  Hypothesis testing
+ *  - setTestHyp() : test range for s+b\n
+ *    This sets the range and step size (precision) for finding the limits.\n
+ *    The default range is [0.0,35.0] with a step size of 0.01.
+ *
+ *  Coverage related
+ *  - setTrueSignal() : Set the true signal.
+ *  - setCoverage() : Set the coverage flag.\n
+ *    Setting this flag causes the limit calculation to terminate the scan as soon as it is
+ *    decided whether the true signal is inside or outside the confidence limit.
+ *
+ *  Tabulated PDFs
+ *  - initPoisson() : Initialises a tabulated poisson.\n
+ *    It is not required but it greatly speeds up the coverage calculations.
+ *  - initGauss() : Dito but for a gauss pdf.\n
+ *    The gain in speed is much less significant (REMOVE???)
+ *
+ *  \b RUNNING
+ *
+ *  Print
+ *  - printSetup() : Prints the setup to stdout.
+ *  - printLimit() : Prints the calculated limit.
+ *
+ *  General
+ *  - analyseExperiment() : Calculates the limit using the current setup.
+ *
+ *  Debug
+ *  - setVerbose() : Sets verbose level.
+ *
+ *  \b EXAMPLES
+ *  see polelim.cxx (limit calculation) and polecov.cxx (coverage study)
+ *
+ * @author Fredrik Tegenfeldt (fredrik.tegenfeldt@cern.ch)
+ */
+//  e^{\frac{-(b-b')^2}{2\sigma_b^2}}\;\;
+//  e^{\frac{- (1 -\epsilon')^2}{2\sigma_{\epsilon}^2}}
 class Pole {
 public:
   Pole();
@@ -88,31 +197,44 @@ public:
   // Main parameters
   void setCL(double cl)    { m_cl = cl; }
   void setNobserved(int nobs) {m_nObserved = nobs;}
+
   //! distribution info on eff and bkg
   void setEffMeas(double mean,double sigma, DISTYPE dist=DIST_GAUS);
   void setBkgMeas(double mean,double sigma, DISTYPE dist=DIST_GAUS);
   void setEffBkgCorr(double corr) {m_beCorr = corr;}
-  bool checkEffBkgDists();
+
   //
+  bool checkEffBkgDists();
   bool isFullyCorrelated() { return (((fabs(fabs(m_beCorr)-1.0)) < 1e-16)); }
   bool isNotCorrelated()   { return (fabs(m_beCorr) < 1e-16); }
+
   // POLE construction
   void setEffInt(double scale=0,double step=0); // efficiency range for integral (7) [AFTER the previous]
   void setBkgInt(double scale=0,double step=0); // dito background
+
   // Checks the integration range for eff and bkg
   bool checkParams();
+
   // Set belt max value
   void setBelt(int v)    { m_nBelt = v; }
   void setBeltMax(int v) { m_nBeltMax = v; } //allocated maximum
   int  suggestBelt();                // will suggest a m_nBelt based on no. observed
   void setDmus(double dmus) { m_dmus = (dmus > 0.0 ? dmus:m_stepMin); }
+
   // POLE test hypothesis range
   void setTestHyp(double low, double high, double step); // test mu=s+b for likelihood ratio
+
   // POLE true signal, used only if coverage run
   void setTrueSignal(double s) { m_sTrue = s; } // true signal
   void setCoverage(bool flag) {m_coverage = flag;} // true if coverage run
-  //
+
+  // Ordering scheme - if true it will use an optional likelihood ratio (Gary Hill)
+  void setNLR(bool flag) { m_useNLR=flag;}
+
+  // Debug
   void setVerbose(int v=0) { m_verbose=v; }
+
+  // Tabulated PDF's
   void initPoisson(int nlambda=10000, int nn=51, double lmbmax=100); // will init poisson table
   void initGauss(int ndata  =10000, double mumax=1000.0); // will init gauss table
   ///////////////////////////////
@@ -120,10 +242,12 @@ public:
   void initIntArrays();   // will initialise integral arrays (if needed)
   void initBeltArrays(bool suggest=false);  // will initialise belt arrays (if needed)
   void initIntegral();    // calculates double integral kernal (eff*bkg*db*de) according to setup (7)
+
   // POLE
   inline double calcProb(int n, double s); // calculates probability (7)
   void findBestMu(int n); // finds the best fit (mu=s+b) for a given n. Fills m_bestMu[n] and m_bestMuProb[n].
   void findAllBestMu();   // dito for all n (loop n=0; n<m_nMuUsed)
+  double calcBelt(double s, int & n1, int & n2); // calculate (4) and find confidence belt
   double calcLimit(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
   bool findLimits();        // finds CL limits
   bool findCoverageLimits();//  same as previous but stop if it's obvious that initial true mean is inside or outside
@@ -178,8 +302,7 @@ public:
   double getLowerLimit() { return m_lowerLimit; }
   double getUpperLimit() { return m_upperLimit; }
   //
-  void setNLR(bool flag) { m_useNLR=flag;}
-  //  
+
 private:
   void setInt(double & low, double & high, double & step, double scale, double mean, double sigma, DISTYPE dt);
 
