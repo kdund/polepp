@@ -45,6 +45,7 @@
 
 #include "Range.h"
 #include "Pdf.h"
+#include "BeltEstimator.h"
 
 //! Distribution type of nuisance parameters
 enum DISTYPE {
@@ -216,7 +217,7 @@ public:
   bool checkParams();
 
   // Set belt max value
-  void setBelt(int v)    { m_nBelt = v; }
+  void setBelt(int v)    { m_nBelt = v; m_suggestBelt = (v<1); }
   void setBeltMax(int v) { m_nBeltMax = v; } //allocated maximum
   int  suggestBelt();                // will suggest a m_nBelt based on no. observed
   void setDmus(double dmus) { m_dmus = (dmus > 0.0 ? dmus:m_stepMin); }
@@ -230,6 +231,7 @@ public:
 
   // Ordering scheme - if true it will use an optional likelihood ratio (Gary Hill)
   void setNLR(bool flag) { m_useNLR=flag;}
+  bool usesNLR() {return m_useNLR;}
 
   // Debug
   void setVerbose(int v=0) { m_verbose=v; }
@@ -240,7 +242,7 @@ public:
   ///////////////////////////////
   //
   void initIntArrays();   // will initialise integral arrays (if needed)
-  void initBeltArrays(bool suggest=false);  // will initialise belt arrays (if needed)
+  void initBeltArrays();  // will initialise belt arrays (if needed)
   void initIntegral();    // calculates double integral kernal (eff*bkg*db*de) according to setup (7)
 
   // POLE
@@ -249,6 +251,7 @@ public:
   void findAllBestMu();   // dito for all n (loop n=0; n<m_nMuUsed)
   double calcBelt(double s, int & n1, int & n2); // calculate (4) and find confidence belt
   double calcLimit(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
+  void findBelt();
   bool findLimits();        // finds CL limits
   bool findCoverageLimits();//  same as previous but stop if it's obvious that initial true mean is inside or outside
   void printLimit(bool doTitle=false);
@@ -361,7 +364,8 @@ private:
   double  m_dmus;       // step size in search for s_best (LHR)
   int     m_nBelt;      // how many Nobs are tested to find R (likelihood ratio)
   int     m_nBeltMax;   // dito allocated
-  std::vector<int> m_nBeltList; // list of suggested nBelt - filled in constructor
+  bool    m_suggestBelt;// if true, always call suggestBelt(); set to true if setBelt(v) is called with v<1
+  //  std::vector<int> m_nBeltList; // list of suggested nBelt - filled in constructor
   bool    m_validBestMu;//
   double *m_bestMuProb; // prob. of best mu=e*s+b, index == (N observed)
   double *m_bestMu;     // best mu=e*s+b

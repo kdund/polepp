@@ -50,25 +50,27 @@ Pole::Pole() {
   m_bkgInt    = 0;
   //
   m_validBestMu = false;
-  m_nBeltMax = 0;
-  m_muProb = 0;
-  m_bestMuProb = 0;
-  m_bestMu = 0;
-  m_lhRatio = 0;
+  m_nBelt       = 0;
+  m_nBeltMax    = 0;
+  m_suggestBelt = true;
+  m_muProb      = 0;
+  m_bestMuProb  = 0;
+  m_bestMu      = 0;
+  m_lhRatio     = 0;
   //
   // init list of suggested nBelt
   //
-  m_nBeltList.push_back(18); //0
-  m_nBeltList.push_back(20);
-  m_nBeltList.push_back(20);
-  m_nBeltList.push_back(22);
-  m_nBeltList.push_back(22);
-  m_nBeltList.push_back(23); //5
-  m_nBeltList.push_back(25);
-  m_nBeltList.push_back(32);
-  m_nBeltList.push_back(38);
-  m_nBeltList.push_back(38);
-  m_nBeltList.push_back(40); //10
+//   m_nBeltList.push_back(18); //0
+//   m_nBeltList.push_back(20);
+//   m_nBeltList.push_back(20);
+//   m_nBeltList.push_back(22);
+//   m_nBeltList.push_back(22);
+//   m_nBeltList.push_back(23); //5
+//   m_nBeltList.push_back(25);
+//   m_nBeltList.push_back(32);
+//   m_nBeltList.push_back(38);
+//   m_nBeltList.push_back(38);
+//   m_nBeltList.push_back(40); //10
   //
   m_useNLR = false;
 }
@@ -278,23 +280,34 @@ void Pole::initIntArrays() {
   }
 }
 
+// int Pole::suggestBelt() {
+//   int rval=50; // default value
+//   int nbelt = static_cast<int>(m_nBeltList.size());
+//   if (m_nObserved>=0) {
+//     if (m_nObserved<nbelt) {
+//       rval = m_nBeltList[m_nObserved];
+//     } else {
+//       rval = m_nObserved*4;
+//     }
+//   }
+//   return rval;
+// }
+
+
 int Pole::suggestBelt() {
-  int rval=50; // default value
-  int nbelt = static_cast<int>(m_nBeltList.size());
+  int rval=50;
   if (m_nObserved>=0) {
-    if (m_nObserved<nbelt) {
-      rval = m_nBeltList[m_nObserved];
-    } else {
-      rval = m_nObserved*4;
-    }
+    rval = BeltEstimator::getBeltMin(m_nObserved, m_bkgMeas);
+    if (rval<20) rval=20; // becomes less reliable for small n
   }
+  if (m_verbose>1) std::cout << "Pole::suggestBelt() : Belt range = " << m_nBelt << std::endl;
   return rval;
 }
 
-void Pole::initBeltArrays(bool suggest) {
-  if (suggest || (m_nBelt<1)) m_nBelt = suggestBelt();
-  if (m_verbose>1) std::cout << "Belt range: " << m_nBelt << std::endl;
-  if ((m_muProb==0) || (m_nBelt>m_nBeltMax) || (m_nBelt<1)) {
+void Pole::initBeltArrays() {
+  if (m_suggestBelt) m_nBelt = suggestBelt();
+  //
+  if ((m_muProb==0) || (m_nBelt>m_nBeltMax)) {
     m_nBeltMax = m_nBelt*2;
     if (m_muProb) { // arrays needs resizing
       delete [] m_muProb;
@@ -732,6 +745,21 @@ double Pole::calcBelt(double s, int & n1, int & n2) {
 //*********************************************************************//
 //*********************************************************************//
 
+void Pole::findBelt() {
+  double mu_test;
+  int i = 0;
+  bool done = (i==m_hypTest.n());
+  //
+  int n1,n2;
+  while (!done) {
+    mu_test = m_hypTest.min() + i*m_hypTest.step();
+    calcBelt(mu_test,n1,n2);
+
+    i++;
+    done = (i==m_hypTest.n()); // must loop over all hypothesis
+  }
+}
+
 bool Pole::findLimits() {
   double mu_test;
   int i = 0;
@@ -882,7 +910,11 @@ void Pole::printSetup() {
   std::cout << " Test hyp. max      : " << m_hypTest.max() << std::endl;
   std::cout << " Test hyp. N pts    : " << m_hypTest.n() << std::endl;
   std::cout << "----------------------------------------------\n";
-  std::cout << " Belt N max         : " << m_nBelt << std::endl;
+  if (m_suggestBelt) {
+    std::cout << " Belt N max         : variable" << std::endl;
+  } else {
+    std::cout << " Belt N max         : " << m_nBelt << std::endl;
+  }
   std::cout << " Step mu_best       : " << m_dmus << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Use NLR            : " << yesNo(m_useNLR) << std::endl;
