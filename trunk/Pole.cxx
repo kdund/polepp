@@ -471,12 +471,6 @@ void Pole::initIntegral() {
   }
   //////////////////////////////////
   //
-  if (m_verbose>1) {
-    std::cout << "eff dist (mu,s)= " << m_effMeas << "\t"
-	      << m_effSigma << std::endl;
-    std::cout << "bkg dist (mu,s)= " << m_bkgMeas << "\t"
-	      << m_bkgSigma << std::endl;
-  }
   double dedb=1.0;
   if ((m_effRangeInt.n() != 1) && (m_bkgRangeInt.n() != 1)) { // both eff and bkg vary
     dedb = m_bkgRangeInt.step()*m_effRangeInt.step();
@@ -489,6 +483,13 @@ void Pole::initIntegral() {
       }
     }
   }
+  if (m_verbose>1) {
+    std::cout << "InitMatrix: eff dist (mu,s)= " << m_effMeas << "\t"
+	      << m_effSigma << std::endl;
+    std::cout << "InitMatrix: bkg dist (mu,s)= " << m_bkgMeas << "\t"
+	      << m_bkgSigma << std::endl;
+    std::cout << "InitMatrix: dedb           = " << dedb << std::endl;
+  }
   for (i=0;i<m_effRangeInt.n();i++) { // Loop over all efficiency points
     effs =  i*m_effRangeInt.step() + m_effRangeInt.min();
     if ( m_effRangeInt.n() == 1 ) {
@@ -497,6 +498,7 @@ void Pole::initIntegral() {
       switch(m_effDist) {
       case DIST_GAUS:
 	eff_prob = m_gauss.getVal(effs,m_effMeas,m_effSigma);
+	//	std::cout << "GAUSSEFF: " << effs << " " << m_effMeas << " " << m_effSigma << " -> " << eff_prob << std::endl;
 	break;
       case DIST_LOGN:
 	eff_prob = m_gauss.getValLogN(effs,effMean,effSigma);
@@ -531,6 +533,7 @@ void Pole::initIntegral() {
 	switch(m_bkgDist) {
 	case DIST_GAUS:
 	  bkg_prob = m_gauss.getVal(bkgs,m_bkgMeas,m_bkgSigma);
+	  //	  std::cout << "GAUSSBKG: " << bkgs << " " << m_bkgMeas << " " << m_bkgSigma << " -> " << bkg_prob << std::endl;
 	  break;
 	case DIST_LOGN:
 	  bkg_prob = m_gauss.getValLogN(bkgs,bkgMean,bkgSigma);
@@ -574,6 +577,9 @@ void Pole::initIntegral() {
 	m_effInt[count]    = effs;
 	m_weightInt[count] = norm_prob;
       }
+      //
+      if (m_verbose>1) std::cout << "Matrix: (" << i << ", " <<  j << ") -> (" << m_effInt[count] << ", " << m_bkgInt[count] << ") " << m_weightInt[count] << "\n";
+      //
       count++;
       if (count>m_nInt) {
 	std::cout << "WARNING: Array index overflow. count = " << count
@@ -618,7 +624,12 @@ void Pole::findBestMu(int n) {
     if(mu_s_min<0) {mu_s_min = 0.0;}
     //    dmu_s = 0.01; // HARDCODED:: Change!
     int ntst = 1+int((mu_s_max-mu_s_min)/m_dmus);
-    if (m_verbose>1) std::cout << "FindBestMu range: " << ntst << " [" << mu_s_min << "," << mu_s_max << "] => ";
+    //// TEMPORARY CODE - REMOVE /////
+    ntst = 1000;
+    m_dmus = (mu_s_max-mu_s_min)/double(ntst);
+    //////////////////////////////////
+    if (m_verbose>1) std::cout << "FindBestMu range: " << " I " << m_bkgRangeInt.max() << " " << m_effRangeInt.max() << " "
+			       << n << " " << m_bkgMeas << " " << ntst << " [" << mu_s_min << "," << mu_s_max << "] => ";
     for (i=0;i<ntst;i++) {
       mu_test = mu_s_min + i*m_dmus;
       lh_test = calcProb(n,mu_test);
@@ -647,7 +658,7 @@ void Pole::findAllBestMu() {
   m_validBestMu = true;
 }
 
-void Pole::calcLimit(double s) {
+double Pole::calcLimit(double s) {
   int k,i;
   //
   double norm_p = 0;
@@ -711,6 +722,7 @@ void Pole::calcLimit(double s) {
 //       }
 //     }
 //   }
+  return m_sumProb;
 }
 
 bool Pole::findLimits() {
@@ -723,9 +735,11 @@ bool Pole::findLimits() {
   m_lowerLimit = 0;
   m_upperLimit = 0;
   //
+  double p;
   while (!done) {
     mu_test = m_hypTest.min() + i*m_hypTest.step();
-    calcLimit(mu_test);
+    p=calcLimit(mu_test);
+    if (m_verbose>2) std::cout << "CalcLimit: " << mu_test << " p = " << p << std::endl;
     i++;
     done = (i==m_hypTest.n()); // must loop over all hypothesis
   }
@@ -761,7 +775,8 @@ bool Pole::findCoverageLimits() {
   //
   while (!done) {
     mu_test = m_hypTest.min() + i*m_hypTest.step();
-    calcLimit(mu_test);
+    p=calcLimit(mu_test);
+    if (m_verbose>2) std::cout << "CalcLimit: " << mu_test << " p = " << p << std::endl;
     i++;
     if ((!m_foundLower) && (mu_test>m_sTrue)) { // for sure outside
       decided = true;
