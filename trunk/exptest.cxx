@@ -30,8 +30,8 @@ void processArgs(int argc, char *argv[]) {
     ValueArg<double> bkgSigma( "","bsigma",  "sigma of background",false,0.2,"float");
     ValueArg<double> bkgTrue(  "","btrue",   "bkg true",false,3.0,"float");
     ValueArg<double> beCorr(   "","corr",    "corr(bkg,eff)",false,0.5,"float");
-    ValueArg<int>    effDist(  "","effdist", "Efficiency distribution",false,4,"int");
-    ValueArg<int>    bkgDist(  "","bkgdist", "Background distribution",false,4,"int");
+    ValueArg<int>    effDist(  "","effdist", "Efficiency distribution",false,1,"int");
+    ValueArg<int>    bkgDist(  "","bkgdist", "Background distribution",false,1,"int");
     ValueArg<std::string> dump("","dump",    "dump filename",false,"","string");
     //
     cmd.add(effSigma);
