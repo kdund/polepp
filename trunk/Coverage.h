@@ -2,6 +2,7 @@
 #define COVERAGE_H
 //
 #include <iostream>
+#include <ostream>
 #include <vector>
 #include <cmath>
 #include <sys/times.h>
@@ -13,11 +14,9 @@
 class Coverage {
 public:
   Coverage();
-  ~Coverage();
+  virtual ~Coverage();
   //
   // Setup basic parameters
-  //
-  void useLogNormal(bool flag) { m_useLogNormal=flag;} //TMP
   //
   void setPole(Pole *pole) { m_pole = pole;}
   void setSeed(unsigned int r=0);
@@ -26,17 +25,16 @@ public:
   void setSTrue(  double smin, double smax, double step);
   void setEffTrue(double emin, double emax, double step);
   void setBkgTrue(double bmin, double bmax, double step);
-  void setCorr(double coef);
   //
-  void setUseCorr(bool flag);
-  void setFixedEff(bool flag);
-  void setFixedBkg(bool flag);
   void setFixedSig(bool flag)  { m_fixedSig  = flag;}
-  void setNoDistEff(bool flag) { m_effNoDist = flag;}
-  void setNoDistBkg(bool flag) { m_bkgNoDist = flag;}
- // ...second...
-  void setEffDist(double mean,double sigma, bool nodist) { m_effMean=mean; m_effSigma=sigma; m_effNoDist=false;}
-  void setBkgDist(double mean,double sigma, bool nodist) { m_bkgMean=mean; m_bkgSigma=sigma; m_bkgNoDist=false;}  //
+  //
+  // Sets the distributions for efficiency and background
+  // CHECKPARAMS!!!
+  void setEffDist(double mean,double sigma, DISTYPE dist=DIST_GAUS) { m_effMean=mean; m_effSigma=sigma; m_effDist=dist;}
+  void setBkgDist(double mean,double sigma, DISTYPE dist=DIST_GAUS) { m_bkgMean=mean; m_bkgSigma=sigma; m_bkgDist=dist;}  //
+  void setEffBkgCorr(double coef);
+  bool checkEffBkgDists();
+  //
   void initTabs();
   //
   void startTimer();
@@ -46,27 +44,31 @@ public:
   void endofRunTime();
   //
   void printSetup();
-  void generateExperiment(); // creates a set of observables (eff,bkg,s)
+  void generateExperiment();   // creates a set of observables (eff,bkg,s)
   void doLoop();               // loops over all requested 'experiments'
+  void doExpTest();            // loops over all requested 'experiments', no limit calc
   //
   void updateCoverage();	// Update coverage counters
   void resetCoverage();		// Reset dito
   //
   void collectStats(bool flag) { m_collectStats = flag; } // if true, then collect statistics
+  void pushMeas();
+  void pushLimits();
   void updateStatistics();	// Update statistics on limits
   void resetStatistics();	// Reset dito
   void calcStatistics();	// calculate collected stats
   void printStatistics();	// print calculated stuff
+  //  void dumpExperiments(const char *name=0);
+  void dumpExperiments(std::string name="");
   void calcCoverage();		// Calculate coverage
-  void outputCoverageResult(const char *hdr=0);	// Output coverage to stdout
+  virtual void outputCoverageResult(const int flag=0);	// Output coverage
   //
   void setVerbose(int v=0) { m_verbose = v; }
   //
 
 private:
   void calcStats(std::vector<double> & vec, double & average, double & variance);
-  //
-  bool m_useLogNormal; //TMP
+  double calcStatsCorr(std::vector<double> & x, std::vector<double> & y);
   //
   int    m_verbose;
   //
@@ -83,18 +85,17 @@ private:
   bool   m_fixedEff;
   bool   m_fixedBkg;
   bool   m_fixedSig;
-  // Efficiency, gaussian
+  // Efficiency PDF
   double m_effMean;
   double m_effSigma;
-  bool   m_effNoDist;
-  // Background, gaussian
+  DISTYPE m_effDist;
+  // Background PDF
   double m_bkgMean;
   double m_bkgSigma;
-  bool   m_bkgNoDist;
-  // Correlation between bkg and eff
+  DISTYPE m_bkgDist;
+  // Correlation between bkg and eff (...pole)
   double m_beCorr;    // = r = correlation coeff (-1..1)
   double m_beCorrInv; // = sqrt(1-r*r);
-  bool   m_useCorr;
   //
   // Signal True mean, poisson
   //
@@ -128,6 +129,7 @@ private:
   double m_varEff;
   double m_aveBkg;
   double m_varBkg;
+  double m_corrEffBkg;
   double m_aveNobs;
   double m_varNobs;
 
