@@ -19,11 +19,20 @@
 std::vector<double> gXvec;
 std::vector<double> gYvec;
 std::vector<double> gZvec;
+std::vector<double> gLvec;
+std::vector<double> gUvec;
+std::vector<double> gULvec;
 
-bool getXYZ(std::string data, double & x, double & y, double & z) {
+bool getXYZ(std::string data, double & x, double & y, double & z, double & l, double & u) {
+  bool rval=false;
+  l = u = 0;
   std::istringstream sstr(data);
   sstr >> x >> y >> z;
-  return sstr;
+  if (sstr) {
+    rval = true;
+    sstr >> l >> u;
+  }
+  return rval;
 }
 
 bool loadData(std::string filename) {
@@ -31,15 +40,19 @@ bool loadData(std::string filename) {
   ifstream inpf(filename.c_str());
   std::string dataLine;
   double x,y,z;
+  double lo,up;
   int nch;
   //
   if (inpf.is_open()) {
     while ((nch=inpf.peek())>-1) {
       getline(inpf,dataLine);
-      if (getXYZ(dataLine,x,y,z)) {
+      if (getXYZ(dataLine,x,y,z,lo,up)) {
 	gXvec.push_back(x);
 	gYvec.push_back(y);
 	gZvec.push_back(z);
+	gLvec.push_back(lo);
+	gUvec.push_back(up);
+	gULvec.push_back(up-lo);
       }
     }
     rval = (gXvec.size()>0);
@@ -142,11 +155,52 @@ void plotData() {
   canvas->Update();
 }
 
+void plotDataLim() {
+  TCanvas *canvas = new TCanvas("H2","H2",200,10,600,280);
+  canvas->cd();
+  //
+  //  (0,1)------------(1,1)
+  //    |                |
+  //    |     Canvas     |
+  //    |                |
+  //  (0,0) -----------(1,0)
+  //
+  TPad *pad1 = new TPad("p1","Lower limit",0.03,0.51,0.50,0.92,21);
+  TPad *pad2 = new TPad("p2","Upper limit",0.51,0.51,0.97,0.92,21);
+  TPad *pad3 = new TPad("p3","Lower vs upper",0.03,0.02,0.50,0.50,21);
+  TPad *pad4 = new TPad("p4","Lower-Upper vs Nobs",0.51,0.02,0.97,0.50,21);
+  pad1->Draw();
+  pad2->Draw();
+  pad3->Draw();
+  pad4->Draw();
+
+  pad1->cd();
+  TH1F *histLo = makeH1("Low", "Lower limit",gLvec,100);
+  histLo->Draw();
+
+  pad2->cd();
+  TH1F *histUp = makeH1("Upp", "Upper limit",gUvec,100);
+  histUp->Draw();
+
+  pad3->cd();
+  TH2F *histLoUp = makeH2("UpLo", "Lower vs Upper",gLvec,gUvec,100,100);
+  histLoUp->Draw();
+
+  pad4->cd();
+  TH2F *histULN = makeH2("ULN", "Up-Lo vs Nobs",gULvec,gXvec,100,100);
+  histULN->Draw();
+
+  //
+  canvas->Modified();
+  canvas->Update();
+}
+
 int main(int argc, char *argv[]) {
   if (argc>1) {
     if (loadData(std::string(argv[1]))) {
       TApplication theApp("App", &argc, argv);
       plotData();
+      plotDataLim();
       theApp.Run(kTRUE);
     }
   }
