@@ -8,11 +8,32 @@
 Coverage gCoverage;
 Pole     gPole;
 
-void my_abort(int a) {
-  std::cout << "WARNING: Job aborting (signal = " << a << " ). Will output data from unfinnished loop.\n" << std::endl;
-  gCoverage.calcCoverage();
-  gCoverage.outputCoverageResult();
-  exit(-1);
+void time_stamp(std::string & stamp) {
+  time_t epoch;
+  time(&epoch);
+  struct tm *time;
+  char tst[32];
+  time = localtime(&epoch); // time_t == long int
+  strftime(tst,32,"%d/%m/%Y %H:%M:%S",time);
+  stamp = tst;
+}
+
+void my_sighandler(int a) {
+  std::string timestamp;
+  time_stamp(timestamp);
+  //
+  if (a==SIGUSR1) {
+    gCoverage.calcCoverage();
+    std::string header("STATUS ( ");
+    header += timestamp;
+    header += " ) : ";
+    gCoverage.outputCoverageResult(header.c_str());
+  } else {
+    std::cout << "WARNING (" << timestamp << " ) Job aborting (signal = " << a << " ). Will output data from unfinnished loop.\n" << std::endl;
+    gCoverage.calcCoverage();
+    gCoverage.outputCoverageResult();
+    exit(-1);
+  }
 }
 
 using namespace TCLAP;
@@ -172,8 +193,11 @@ void processArgs(int argc, char *argv[]) {
 int main(int argc, char *argv[]) {
   
   for (int i=0; i<SIGSYS; i++) {
-    if ( (i!=20) &&
-	 (i!=27) ) signal(i,my_abort);
+    if ( (i!=18) &&  // 
+	 (i!=20) &&  // 
+	 (i!=27) ) { // profiling - ignore that one
+      signal(i,my_sighandler);
+    }
   }
   processArgs(argc,argv);
   //
