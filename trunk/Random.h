@@ -21,10 +21,12 @@ public:
   double Gaus(double mean=0.0, double sigma=1.0);
   double LogNormal(double mean=1.0, double sigma=1.0);
   int    Poisson(double mean);
-  //  double Rndm(int i=0);
-  double Rndm();
+  double Flat(double mean, double sigma=1.0);
   unsigned int   GetSeed() {return m_seed;}
   void   SetSeed(unsigned int seed=65539);
+  //
+  virtual double Rndm();
+
 };
 
 #endif

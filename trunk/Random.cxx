@@ -76,8 +76,14 @@ double Random::Gaus(double mean, double sigma) {
 }
 
 double Random::LogNormal(double mean, double sigma) {
-  //      Return a number distributed following a lognormal with mean and sigma
+  // Return a number distributed following a lognormal with mean and sigma
   double nmean = log(mean*mean/sqrt(sigma*sigma + mean*mean));
   double nsigma = sqrt(log(sigma*sigma/mean/mean+1));
   return exp(Gaus() * nsigma + nmean);
+}
+
+double Random::Flat(double mean, double sigma) {
+  double dx=sigma*sqrt(12)*0.5;
+  double xmin = mean-dx;
+  return Rndm()*dx*2.0 + xmin;
 }
