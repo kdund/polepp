@@ -34,7 +34,6 @@ Pole::Pole() {
   m_dmus = 0.01;
   //
   m_nObserved = -1;
-  m_nBeltMax = 50;
   //
   m_intNdef = 20;    // default number of points (when step<=0)
   m_effIntScale = 5.0;
@@ -386,10 +385,14 @@ void Pole::initIntArrays() {
 }
 
 int Pole::suggestBelt() {
-  int rval=50;
+  int rval=50; // default value
   int nbelt = static_cast<int>(m_nBeltList.size());
-  if ((m_nObserved>=0) &&(m_nObserved<nbelt)) {
-    rval = m_nBeltList[m_nObserved];
+  if (m_nObserved>=0) {
+    if (m_nObserved<nbelt) {
+      rval = m_nBeltList[m_nObserved];
+    } else {
+      rval = m_nObserved*4;
+    }
   }
   return rval;
 }
@@ -621,14 +624,19 @@ void Pole::calcLimit(double s) {
   //  std::cout << "calcLimit for " << s << std::endl;
   for (int n=0; n<m_nBelt; n++) {
     m_muProb[n] =  calcProb(n, s);
-    m_lhRatio[n]  = m_muProb[n]/m_bestMuProb[n]; // POLE
+    m_lhRatio[n]  = m_muProb[n]/m_bestMuProb[n];
     norm_p += m_muProb[n]; // needs to be renormalised
   }
   //
+  k = m_nObserved;
+  if (k>=m_nBelt) {
+    k=m_nBelt; // WARNING::
+    std::cout << "WARNING:: n_observed is larger than the maximum n used for R(n,s)!!" << std::endl;
+    std::cout << "          -> increase nbelt such that it is more than n_obs = " << m_nObserved << std::endl;
+  }
   for(i=0;i<m_nBelt;i++) {
     m_muProb[i] = m_muProb[i]/norm_p;
     //    for(k=0;k<m_nBelt;k++) {
-    k = m_nObserved;
     if(i != k) { 
       if(m_lhRatio[i]  > m_lhRatio[k])  {
 	m_sumProb  +=  m_muProb[i];
@@ -672,7 +680,7 @@ bool Pole::findLimits() {
     mu_test = m_hypTest.min() + i*m_hypTest.step();
     calcLimit(mu_test);
     i++;
-    done = (i==m_hypTest.n());
+    done = (i==m_hypTest.n()); // must loop over all hypothesis
   }
   if (m_verbose>1) {
     if (m_foundUpper) {
@@ -765,7 +773,7 @@ void Pole::printLimit(bool doTitle) {
   coutFixed(6,m_bkgSigma); std::cout << "\t";
   std::cout << "[ ";
   coutFixed(2,m_lowerLimit); std::cout << ", ";
-  coutFixed(2,m_upperLimit);
+  coutFixed(2,m_upperLimit); std::cout << std::endl;
   std::cout << " ]";
 }
 
