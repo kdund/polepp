@@ -322,6 +322,9 @@ void Pole::setTestHyp(double low, double high, double step) {
 // MAYBE REMOVE THIS // HERE
 bool Pole::checkParams() {
   bool rval=true;
+  std::cout << "<<Pole::CheckParams() is disabled - Manually make sure that the integration limits are ok>>" << std::endl;
+  return rval;
+  /////////////////////////////////////////
   // check efficiency distribution
   // check background distribution
   // check true signal range
