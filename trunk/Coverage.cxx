@@ -594,8 +594,6 @@ void Coverage::doLoop() {
 	  m_pole->setEffBkgCorr(m_beCorr); // always the same...
 	  m_pole->setEffInt();         // reset the integral ranges
 	  m_pole->setBkgInt();
-	  m_pole->initIntArrays();     // will update arrays if nescesarry
-	  m_pole->initBeltArrays(true);
 	  m_pole->analyseExperiment(); // calculate the limit of the given experiment
 	  updateCoverage();            // update the coverage
 	  updateStatistics();          // statistics (only if activated)
