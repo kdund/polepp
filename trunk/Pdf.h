@@ -50,6 +50,23 @@ private:
   double rawGauss(double mu);
 };
 
+// class General {
+// public:
+//   General();
+//   General(const char *name);
+//   General(int n, double *x, double *f);
+//   ~General();
+//   //
+//   void load(const char *name);
+//   void init();
+//   //
+//   double getVal(double x);
+// private:
+//   std::double vector m_x;
+//   std::double vector m_f;
+//   std::double vector m_acc;
+// };
+
 inline double Gauss::getVal(double x, double mu0, double s) {
   double rval;
   double mu = fabs((x-mu0)/s); // symmetric around mu0
