@@ -2,18 +2,17 @@
 
 /////////////////////////////////////////////////////////////////////
 
-Range::Range(double low, double high, double step, double stepMin) {
-  setRange(low,high,step,stepMin);
+Range::Range(double low, double high, double step, int nmax) {
+  setRange(low,high,step,nmax);
 }
 
 Range::Range() {
   setRange(0,0,0,0);
 }
 
-void Range::setRange(double low, double high, double step, double stepMin) {
+void Range::setRange(double low, double high, double step, int nmax) {
   int n;
   double d = high - low;
-  if (step<stepMin) step=stepMin;
   if (d>0) {
     n = static_cast<int>((d + step)/step + 0.5);
   } else {
@@ -25,6 +24,7 @@ void Range::setRange(double low, double high, double step, double stepMin) {
   m_max  = high;
   m_n    = n;
   m_step = step;
+  if ((nmax>0)&&(n>nmax)) forceNpts(nmax);
 }
 
 void Range::forceNpts(int n) {

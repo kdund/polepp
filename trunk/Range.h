@@ -7,11 +7,11 @@
 
 class Range {
 public:
-  Range(double vmin, double vmax, double vstep, double stepMin=0.001);
+  Range(double vmin, double vmax, double vstep, int nmax=0);
   Range();
   ~Range() {}
   //
-  void setRange(double vmin, double vmax, double vstep, double stepMin=0.001);
+  void setRange(double vmin, double vmax, double vstep, int nmax=0);
   void forceNpts(int n);
   inline double getVal(int index, double def=0);
   inline double min()  {return m_min;}
