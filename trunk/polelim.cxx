@@ -19,6 +19,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> confLevel( "","cl",       "confidence level",false,0.9,"float");
     ValueArg<double> sTrue(     "","strue",   "s_true, only used if -C is active",false,1.0,"float");
     SwitchArg        coverage(  "C","coverage", "For coverage studies",false);
+    SwitchArg        doNLR("N","nlr", "Use NLR",false);
     //
     ValueArg<double> effSigma(  "", "esigma","sigma of efficiency",false,0.2,"float");
     ValueArg<double> effMeas(   "", "emeas",  "measured efficiency",false,1.0,"float");
@@ -29,6 +30,8 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> bkgMeas(   "", "bmeas",   "measured background",false,0.0,"float");
     ValueArg<int>    bkgDist(   "", "bkgdist",  "Background distribution",false,0,"int");
     //
+    ValueArg<double> beCorr(    "","corr",    "corr(bkg,eff)",false,0.0,"float");
+   //
     ValueArg<double> dMus(      "","dmus",    "step size in findBestMu",false,0.002,"float");
     ValueArg<int>    belt(   "","belt", "maximum n for findBestMu" ,false,50,"int");
     //
@@ -44,6 +47,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     ValueArg<int>    doVerbose(   "V","verbose", "verbose pole",    false,0,"int");
     //
     cmd.add(doVerbose);
+    cmd.add(doNLR);
     //
     cmd.add(hypTestMin);
     cmd.add(hypTestMax);
@@ -65,6 +69,8 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     cmd.add(bkgMeas);
     cmd.add(bkgDist);
 
+    cmd.add(beCorr);
+
     cmd.add(sTrue);
     cmd.add(coverage);
     cmd.add(confLevel);
@@ -73,12 +79,14 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     //
     cmd.parse(argc,argv);
     //
+    pole->setNLR(doNLR.getValue());
     pole->setCL(confLevel.getValue());
     pole->setNobserved(nObs.getValue());
     //
     pole->setEffMeas( effMeas.getValue(), effSigma.getValue(), static_cast<DISTYPE>(effDist.getValue()) );
     pole->setBkgMeas( bkgMeas.getValue(), bkgSigma.getValue(), static_cast<DISTYPE>(bkgDist.getValue()) );
     pole->checkEffBkgDists();
+    pole->setEffBkgCorr(beCorr.getValue());
 
     pole->setTrueSignal(sTrue.getValue());
     pole->setCoverage(coverage.getValue());

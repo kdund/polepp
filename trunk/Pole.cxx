@@ -65,6 +65,8 @@ Pole::Pole() {
   m_nBeltList.push_back(38);
   m_nBeltList.push_back(38);
   m_nBeltList.push_back(40); //10
+  //
+  m_useNLR = false;
 }
 
 Pole::~Pole() {
@@ -161,13 +163,19 @@ void Pole::setEffInt(double scale,double step) {
   m_validBestMu = false;
   //
   double low,high;
-  if (step<=0) step = m_effRangeInt.step();
-  if (scale<=0) {
-    scale = m_effIntScale;
+  if (isFullyCorrelated() && (m_effDist == DIST_GAUSCORR)) { // Fully correlated - integrate only bkg with sigma/sqrt(2)
+    low = m_effMeas;
+    high = m_effMeas;
+    step = 1.0;
   } else {
-    m_effIntScale = scale;
+    if (step<=0) step = m_effRangeInt.step();
+    if (scale<=0) {
+      scale = m_effIntScale;
+    } else {
+      m_effIntScale = scale;
+    }
+    setInt(low,high,step,scale,m_effMeas,m_effSigma,m_effDist);
   }
-  setInt(low,high,step,scale,m_effMeas,m_effSigma,m_effDist);
   //
   m_effRangeInt.setRange(low,high,step);
 }
@@ -446,11 +454,20 @@ void Pole::initIntegral() {
     bkgSigma = m_bkgSigma;
   }
   if (m_effDist==DIST_GAUSCORR) {
-    detC = sqrt(m_gauss.getDetC(m_effSigma,m_bkgSigma,m_beCorr));
+    detC = m_gauss.getDetC(m_effSigma,m_bkgSigma,m_beCorr);
     sdetC = sqrt(detC);
     vceff = m_gauss.getVeffCorr(detC,m_effSigma,m_bkgSigma,m_beCorr);
     seff  = sqrt(m_gauss.getVeff(detC,m_bkgSigma)); // effective sigma for efficiency v1eff = detC/(s2*s2)
     sbkg  = sqrt(m_gauss.getVeff(detC,m_effSigma)); // dito for background            v2eff = detC/(s1*s1)
+    if (m_verbose>2) {
+      std::cout << "DetC = " << detC << std::endl;
+      std::cout << "sDetC = " << sdetC << std::endl;
+      std::cout << "Vceff = " << vceff << std::endl;
+      std::cout << "seff = " << seff << std::endl;
+      std::cout << "sbkg = " << sbkg << std::endl;
+      std::cout << "corr = " << m_beCorr << std::endl;
+    }
+
   }
   //////////////////////////////////
   //
@@ -485,7 +502,11 @@ void Pole::initIntegral() {
 	eff_prob = m_gauss.getValLogN(effs,effMean,effSigma);
 	break;
       case DIST_GAUSCORR:
-	eff_prob = 1.0; // will be set in the bkg loop
+	if (isNotCorrelated()) {
+	  eff_prob = m_gauss.getVal(effs,m_effMeas,m_effSigma);
+	} else {
+	  eff_prob = 1.0; // will be set in the bkg loop
+	}
 	break;
       case DIST_FLAT:
 	if (m_effSigma>0) {
@@ -515,7 +536,15 @@ void Pole::initIntegral() {
 	  bkg_prob = m_gauss.getValLogN(bkgs,bkgMean,bkgSigma);
 	  break;
 	case DIST_GAUSCORR:
-	  bkg_prob = m_gauss.getVal2D(effs,m_effMeas,bkgs,m_bkgMeas,sdetC,seff,sbkg,vceff);
+	  if (isFullyCorrelated()) {
+	    bkg_prob = m_gauss.getVal(bkgs,m_bkgMeas,m_bkgSigma/sqrt(2.0));
+	  } else {
+	    if (isNotCorrelated()) {
+	      bkg_prob = m_gauss.getVal(bkgs,m_bkgMeas,m_bkgSigma);
+	    } else {
+	      bkg_prob = m_gauss.getVal2D(effs,m_effMeas,bkgs,m_bkgMeas,sdetC,seff,sbkg,vceff);
+	    }
+	  }
 	  break;
 	case DIST_FLAT:
 	if (m_bkgSigma>0) {
@@ -625,10 +654,25 @@ void Pole::calcLimit(double s) {
   m_sumProb = 0;
   //
   //  std::cout << "calcLimit for " << s << std::endl;
-  for (int n=0; n<m_nBelt; n++) {
-    m_muProb[n] =  calcProb(n, s);
-    m_lhRatio[n]  = m_muProb[n]/m_bestMuProb[n];
-    norm_p += m_muProb[n]; // needs to be renormalised
+  if (m_useNLR) { // use method by Gary Hill
+    double pbf;
+    for (int n=0; n<m_nBelt; n++) {
+      m_muProb[n] =  calcProb(n, s);
+      if (n>m_bkgMeas) {
+	pbf = static_cast<double>(n);
+      } else {
+	pbf = 0;
+      }
+      pbf = m_poisson.getVal(n,pbf);
+      m_lhRatio[n]  = m_muProb[n]/pbf;
+      norm_p += m_muProb[n]; // needs to be renormalised
+    }
+  } else {
+    for (int n=0; n<m_nBelt; n++) {
+      m_muProb[n] =  calcProb(n, s);
+      m_lhRatio[n]  = m_muProb[n]/m_bestMuProb[n];
+      norm_p += m_muProb[n]; // needs to be renormalised
+    }
   }
   //
   k = m_nObserved;
@@ -754,8 +798,10 @@ void Pole::analyseExperiment() {
   initBeltArrays();
   if (m_verbose>0) std::cout << "Constructing integral" << std::endl;
   initIntegral();  // generates predefined parts of double integral ( eq.7)
-  if (m_verbose>0) std::cout << "Finding s_best" << std::endl;
-  findAllBestMu(); // loops
+  if (!m_useNLR) {
+    if (m_verbose>0) std::cout << "Finding s_best" << std::endl;
+    findAllBestMu(); // loops
+  }
   if (m_verbose>0) std::cout << "Calculating limit" << std::endl;
   if (m_coverage) {
     findCoverageLimits();
@@ -776,8 +822,8 @@ void Pole::printLimit(bool doTitle) {
   coutFixed(6,m_bkgSigma); std::cout << "\t";
   std::cout << "[ ";
   coutFixed(2,m_lowerLimit); std::cout << ", ";
-  coutFixed(2,m_upperLimit); std::cout << std::endl;
-  std::cout << " ]";
+  coutFixed(2,m_upperLimit); std::cout << " ]";
+  std::cout << std::endl;
 }
 
 void Pole::printSetup() {
@@ -813,6 +859,8 @@ void Pole::printSetup() {
   std::cout << "----------------------------------------------\n";
   std::cout << " Belt N max         : " << m_nBelt << std::endl;
   std::cout << " Step mu_best       : " << m_dmus << std::endl;
+  std::cout << "----------------------------------------------\n";
+  std::cout << " Use NLR            : " << yesNo(m_useNLR) << std::endl;
   std::cout << "==============================================\n";
   //
 }

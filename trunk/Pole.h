@@ -93,6 +93,9 @@ public:
   void setBkgMeas(double mean,double sigma, DISTYPE dist=DIST_GAUS);
   void setEffBkgCorr(double corr) {m_beCorr = corr;}
   bool checkEffBkgDists();
+  //
+  bool isFullyCorrelated() { return (((fabs(fabs(m_beCorr)-1.0)) < 1e-16)); }
+  bool isNotCorrelated()   { return (fabs(m_beCorr) < 1e-16); }
   // POLE construction
   void setEffInt(double scale=0,double step=0); // efficiency range for integral (7) [AFTER the previous]
   void setBkgInt(double scale=0,double step=0); // dito background
@@ -174,6 +177,8 @@ public:
   double getSumProb()    { return m_sumProb; }
   double getLowerLimit() { return m_lowerLimit; }
   double getUpperLimit() { return m_upperLimit; }
+  //
+  void setNLR(bool flag) { m_useNLR=flag;}
   //  
 private:
   void setInt(double & low, double & high, double & step, double scale, double mean, double sigma, DISTYPE dt);
@@ -245,6 +250,7 @@ private:
   double m_lowerLimit; // lowerlimit obtained from ordering (4)
   double m_upperLimit; // upperlimit
   //
+  bool   m_useNLR; // Use Gary Hills likelihood ratio
 };
 
 inline double Pole::calcProb(int n, double s) {  

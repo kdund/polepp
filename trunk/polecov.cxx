@@ -7,6 +7,7 @@
 
 Coverage gCoverage;
 Pole     gPole;
+std::string gDumpFile;
 
 void time_stamp(std::string & stamp) {
   time_t epoch;
@@ -85,7 +86,9 @@ void processArgs(int argc, char *argv[]) {
     //
     SwitchArg        doStats("C","stats", "Collect statistics",false);
     SwitchArg        doFixSig("S","fixsig", "Fixed meas. n_observed",false);
-
+    SwitchArg        doNLR("N","nlr", "Use NLR",false);
+    //
+    ValueArg<std::string> dump("","dump",    "dump filename",false,"","string");
     //
     SwitchArg        doExamples("","example", "Print examples",false);
     //
@@ -94,6 +97,9 @@ void processArgs(int argc, char *argv[]) {
     //
     cmd.add(verboseCov);
     cmd.add(verbosePol);
+    cmd.add(dump);
+    //
+    cmd.add(doNLR);
     //
     //    cmd.add(effIntMin);
     //    cmd.add(effIntMax);
@@ -140,6 +146,7 @@ void processArgs(int argc, char *argv[]) {
     if (doExamples.getValue()) {
     }
     //
+    gPole.setNLR(doNLR.getValue());
     gPole.setVerbose(verbosePol.getValue());
     gPole.setNobserved(0);
     gPole.setCoverage(true);
@@ -162,6 +169,7 @@ void processArgs(int argc, char *argv[]) {
     gPole.initBeltArrays();
 
     //
+    gCoverage.setDumpBase(dump.getValue().c_str());
     gCoverage.setFixedSig(doFixSig.getValue());
     gCoverage.setEffDist( effMin.getValue(), effSigma.getValue(), static_cast<DISTYPE>(effDist.getValue()));
     gCoverage.setBkgDist( bkgMin.getValue(), bkgSigma.getValue(), static_cast<DISTYPE>(bkgDist.getValue()));
