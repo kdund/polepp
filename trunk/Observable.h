@@ -57,6 +57,27 @@ private:
   double m_lambda;
 };
 
+class GeneralPdf : public Pdf<double> {
+public:
+  GeneralPdf():Pdf<double>("General") {}
+  GeneralPdf(std::vector<double> & x, std::vector<double> & f):Pdf<double>("General") { setData(x,f); init(); }
+  //  GaussPdf(const GaussPdf & other):Pdf<double>(other) {m_mean=other.getMean(); m_sigma=other.getSigma(); m_name=other.getName();}
+  virtual ~GaussPdf() {};
+  //
+  void setData(std::vector<double> & x, std::vector<double> & f) { m_x = x; m_f = f; }
+  void init();
+  double getMean()  { return m_mean; }
+  double getSigma() { return m_sigma; }
+  //
+  inline double F(double val);
+  inline double phi(double mu);
+private:
+  std::vector<double> m_x;
+  std::vector<double> m_f;
+  double m_mean;
+  double m_sigma;
+};
+
 
 template <typename T>
 class Observable {
@@ -115,7 +136,7 @@ public:
   ~ObservableGauss() {};
   //
   //  void setPDF(GaussPdf *pdf) {m_pdf = pdf;}
-  inline double rnd() {return (m_valid ? m_rndGen->Gaus(dynamic_cast<GaussPdf *>(m_pdf)->getMean(),dynamic_cast<GaussPdf *>(m_pdf)->getSigma()):0);}
+  inline double rnd() {return (m_valid ? m_rndGen->gaus(dynamic_cast<GaussPdf *>(m_pdf)->getMean(),dynamic_cast<GaussPdf *>(m_pdf)->getSigma()):0);}
 };
 
 class ObservablePoisson : public Observable<int> {
@@ -125,7 +146,7 @@ public:
   ~ObservablePoisson() {};
   //
   //  void setPDF(PoissonPdf *pdf) {m_pdf = pdf;}
-  inline int rnd() {return (m_valid ? m_rndGen->Poisson(dynamic_cast<PoissonPdf *>(m_pdf)->getLambda()):0);}
+  inline int rnd() {return (m_valid ? m_rndGen->poisson(dynamic_cast<PoissonPdf *>(m_pdf)->getLambda()):0);}
 };
 
 inline double GaussPdf::phi(double mu) {
