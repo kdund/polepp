@@ -565,6 +565,8 @@ void Coverage::doLoop() {
   int is,ie,ib,j;
   bool first = true;
   bool timingDone = false;
+  int nWarnings=0;
+  const int maxWarnings=10;
   //
   m_pole->setCoverage(!m_collectStats); // make full limits when collecting statistics
   //
@@ -594,22 +596,36 @@ void Coverage::doLoop() {
 	  m_pole->setEffBkgCorr(m_beCorr); // always the same...
 	  m_pole->setEffInt();         // reset the integral ranges
 	  m_pole->setBkgInt();
-	  m_pole->analyseExperiment(); // calculate the limit of the given experiment
-	  updateCoverage();            // update the coverage
-	  updateStatistics();          // statistics (only if activated)
-	  if (!timingDone) {
-	    nest++;
-	    if (checkTimer(5)) {
-	      timingDone = true;
-	      stopTimer();
-	      printEstimatedTime(nest);
+	  if (!m_pole->analyseExperiment()) { // calculate the limit of the given experiment
+	    if (nWarnings<maxWarnings) {
+	      std::cout << "WARNING: limit calculation failed - nbelt is probably too small ("
+		   << m_pole->getNBelt() << ") for Nobs = " << m_measNobs << std::endl;
+	      std::cout << "         probability    = " << m_pole->getSumProb() << std::endl;
+	      std::cout << "         lower lim norm = " << m_pole->getLowerLimitNorm() << std::endl;
+	      std::cout << "         upper lim norm = " << m_pole->getUpperLimitNorm() << std::endl;
+	      std::cout << "         will be ignored." << std::endl;
+	      nWarnings++;
+	      if (nWarnings==maxWarnings) {
+		std::cout << "WARNING: previous message will not be repeated." << std::endl;
+	      }
 	    }
+	  } else {
+	    updateCoverage();            // update the coverage
+	    updateStatistics();          // statistics (only if activated)
+	    if (!timingDone) {
+	      nest++;
+	      if (checkTimer(5)) {
+		timingDone = true;
+		stopTimer();
+		printEstimatedTime(nest);
+	      }
+	    }
+	    //	  if ((!timingDone) && (j==nest-1)) { // calculate the estimated run time.
+	    //	    stopTimer();
+	    //	    printEstimatedTime(nest);
+	    //	    timingDone = true;
+	    //	  }
 	  }
-	  //	  if ((!timingDone) && (j==nest-1)) { // calculate the estimated run time.
-	  //	    stopTimer();
-	  //	    printEstimatedTime(nest);
-	  //	    timingDone = true;
-	  //	  }
 	}
 	calcCoverage();         // calculate coverage and its uncertainty
 	stopClock();
