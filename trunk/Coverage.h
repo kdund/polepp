@@ -58,7 +58,7 @@ public:
   void calcStatistics();	// calculate collected stats
   void printStatistics();	// print calculated stuff
   void calcCoverage();		// Calculate coverage
-  void outputCoverageResult();	// Output coverage to stdout
+  void outputCoverageResult(const char *hdr=0);	// Output coverage to stdout
   //
   void setVerbose(int v=0) { m_verbose = v; }
   //

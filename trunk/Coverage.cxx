@@ -183,17 +183,25 @@ void Coverage::calcCoverage() {
   }
 }
 
-void Coverage::outputCoverageResult() { //output coverage result
+void Coverage::outputCoverageResult(const char *hdr) { //output coverage result
   static bool firstCall=true;
+  std::string header;
   if (firstCall) {
     std::cout << "       Signal \tEfficiency\tBackground\tCoverage\tCov.err.\tLoops\tMax loops" << std::endl;
     std::cout << "      --------------------------------------------------------------------------------------------" << std::endl;
     firstCall = false;
   }
-  std::cout << "DATA: " << std::fixed << std::setprecision(6)
+  if (hdr) {
+    header = hdr;
+  } else {
+    header = "DATA: ";
+  }
+  std::cout << header.c_str() << std::fixed << std::setprecision(6)
 	    << m_sTrueMean << "\t"
 	    << m_effMean << "\t"
+	    << m_effSigma << "\t"
 	    << m_bkgMean << "\t"
+	    << m_bkgSigma << "\t"
 	    << m_coverage << "\t"
 	    << m_errCoverage << "\t"
 	    << m_totalCount << "\t"
