@@ -613,7 +613,9 @@ void Pole::printLimit(bool doTitle) {
 	    << m_nObserved << "\t"
 	    << std::fixed << std::setprecision(6)
 	    << m_effMeas << "\t"
-	    << m_bkgMeas << "\t[ "
+	    << m_effSigma << "\t"
+	    << m_bkgMeas << "\t"
+	    << m_bkgSigma << "\t[ "
 	    << std::fixed << std::setprecision(2)
 	    << m_lowerLimit << ", "
 	    << m_upperLimit << " ]" << std::endl;
