@@ -131,6 +131,10 @@ private:
   double m_aveNobs;
   double m_varNobs;
 
+  bool m_saveExperiments;
+  std::vector<double> m_allNobs;
+  std::vector<double> m_allEff;
+  std::vector<double> m_allBkg;
   // some timing stuff
   time_t m_startTime;  // start time
   time_t m_stopTime;   // stop time
