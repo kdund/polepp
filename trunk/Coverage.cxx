@@ -381,8 +381,13 @@ void Coverage::dumpExperiments(std::string name) {
   *os << "# bkg       = " << m_bkgTrue.min() << std::endl;
   *os << "# bkg sigma = " << m_bkgSigma << std::endl;
   *os << "#" << std::endl;
+  *os << "# N_obs   Efficiency     Background" << std::endl;
+  *os << "#-----------------------------------" << std::endl;
   for (i=0; i<sz; i++) {
-    *os << std::fixed << std::setprecision(6)
+    *os << std::fixed
+	<< std::setprecision(0)
+	<< m_nobsStat[i] << '\t'
+	<< std::setprecision(6)
 	<< m_effStat[i] << '\t'
         << m_bkgStat[i] << std::endl;
   }
