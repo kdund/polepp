@@ -121,14 +121,20 @@ inline double Poisson::getVal(int no, double s) {
   double ests;
   unsigned long sind  = static_cast<int>(s/m_dL);
   unsigned long index = no+sind*m_nN;
-  double df;
+  double df,df2,ndl;
   //
   if (index<m_nTot) {
     rval = m_data[index];
-    df = -1.0;
-    if (sind>0) df = rval*((static_cast<double>(no)/s)-1.0);
     ests = static_cast<double>(sind)*m_dL;
-    rval = df*(s-ests) + rval;
+    df = -(s-ests);
+    df2=  0.0;
+    if (sind>0) {
+      ndl = static_cast<double>(no)/ests;
+      df = rval*(ndl-1.0)*(s-ests);
+      if (rval<0.01)
+	df2 = 0.5*rval*((ndl-1.0)*(ndl-1.0) - (1.0+(ndl/ests)))*(s-ests)*(s-ests);
+    }
+    rval += df + df2;
   } else {
     rval = rawPoisson(no,s);
   }
