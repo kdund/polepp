@@ -84,8 +84,6 @@ void processArgs(int argc, char *argv[]) {
     ValueArg<int>    bkgDist("","bkgdist",  "Background distribution",false,1,"int");
     //
     SwitchArg        doStats("C","stats", "Collect statistics",false);
-    SwitchArg        doFixEff("E","fixeff", "Fixed meas. efficiency",false);
-    SwitchArg        doFixBkg("B","fixbkg", "Fixed meas. background",false);
     SwitchArg        doFixSig("S","fixsig", "Fixed meas. n_observed",false);
 
     //
@@ -131,8 +129,6 @@ void processArgs(int argc, char *argv[]) {
     cmd.add(muTestMax);
     cmd.add(muTestStep);
     cmd.add(doStats);
-    cmd.add(doFixEff);
-    cmd.add(doFixBkg);
     cmd.add(doFixSig);
     cmd.add(effDist);
     cmd.add(bkgDist);
@@ -166,6 +162,7 @@ void processArgs(int argc, char *argv[]) {
     gPole.initBeltArrays();
 
     //
+    gCoverage.setFixedSig(doFixSig.getValue());
     gCoverage.setEffDist( effMin.getValue(), effSigma.getValue(), static_cast<DISTYPE>(effDist.getValue()));
     gCoverage.setBkgDist( bkgMin.getValue(), bkgSigma.getValue(), static_cast<DISTYPE>(bkgDist.getValue()));
     gCoverage.setEffBkgCorr(beCorr.getValue());
