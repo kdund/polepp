@@ -625,8 +625,8 @@ void Pole::findBestMu(int n) {
     //    dmu_s = 0.01; // HARDCODED:: Change!
     int ntst = 1+int((mu_s_max-mu_s_min)/m_dmus);
     //// TEMPORARY CODE - REMOVE /////
-    ntst = 1000;
-    m_dmus = (mu_s_max-mu_s_min)/double(ntst);
+    //    ntst = 1000;
+    //    m_dmus = (mu_s_max-mu_s_min)/double(ntst);
     //////////////////////////////////
     if (m_verbose>1) std::cout << "FindBestMu range: " << " I " << m_bkgRangeInt.max() << " " << m_effRangeInt.max() << " "
 			       << n << " " << m_bkgMeas << " " << ntst << " [" << mu_s_min << "," << mu_s_max << "] => ";
