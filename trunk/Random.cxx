@@ -87,3 +87,44 @@ double Random::flat(double mean, double sigma) {
   double xmin = mean-dx;
   return rndm()*dx*2.0 + xmin;
 }
+
+double Random::general(int npts, double *xvec, double xmin, double xmax, double *fvec, double fmin, double fmax) {
+  double dx = xmax-xmin;
+  double du = fmax-fmin;
+  double x;
+  double xn;
+  double u;
+  double fx;
+  double rval=0;
+  bool accepted=false;
+
+  int nlow = 0;
+  int nup  = npts-1;
+  int n;
+  int indx;
+  //
+  while(!accepted) {
+    x = rndm()*dx + xmin;
+    u = rndm()*du + fmin;
+    // search for index of given x
+    nlow = 0;
+    n = nlow+(int)(((double)nup)*(x-xmin)/dx); // First approximation -> is correct if equidistant points
+    while ((nup-nlow>1)) {
+      xn = xvec[n];
+      if (xn>x) {
+	nup = n;
+      } else {
+	nlow = n;
+      }
+      n = (nup+nlow)/2;
+    }
+    indx = nlow; // the closest index from below
+    fx = fvec[indx];
+    //
+    if (u<fx) {
+      accepted=true;
+      rval=x;
+    }
+  }
+  return rval;
+}

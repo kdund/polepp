@@ -21,6 +21,7 @@ public:
   double logNormal(double mean=1.0, double sigma=1.0);
   int    poisson(double mean);
   double flat(double mean, double sigma=1.0);
+  double general(int npts, double *x, double xmin, double xmax, double *f, double fmin, double fmax);
   unsigned int getSeed() {return m_seed;}
   void   setSeed(unsigned int seed=65539);
   //
