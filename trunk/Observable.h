@@ -9,9 +9,18 @@
 template <typename T>
 class Pdf {
 public:
-  Pdf() {}
-  Pdf(const char *name) {m_name = name;}
-  Pdf(const Pdf<T> & other) {m_name = other.getName();}
+  Pdf() {m_table=0; m_tableNpts=0;}
+  Pdf(const char *name) {m_table=0; m_tableNpts=0; m_name = name;}
+//   Pdf(const Pdf<T> & other) {
+//     m_name = other.getName();
+//     double *tptr = other.getTable();
+//     m_tableNpts =  other.getTableNpts();
+//     if (tptr) {
+//       m_table = new double[other.getTableNpts()];
+//       for (int i=0; i<other.getTableNpts(); i++) { //Copy
+// 	m_table[i] = tptr[i];
+//       }
+//     }
   virtual ~Pdf() {}
   //
   virtual double F(T val)=0;
@@ -19,16 +28,25 @@ public:
   double operator()(T val) { return F(val); }
   //
   const char *getName() { return m_name.c_str();}
-private:
+  //
+  virtual void tabulate() {}
+  void clearTable() {if (m_table) delete [] m_table; m_table=0; m_tableNpts=0;}
+  const double *getTable() {return m_table;}
+  const double *getTableNpts() {return m_tableNpts;}
+  bool isTabulated() { return (m_tableNpts>0); }
+
+protected:
   std::string m_name;
+  double *m_table;
+  int     m_tableNpts;
 };
 
-class GaussPdf : public Pdf<double> {
+class PdfGauss : public Pdf<double> {
 public:
-  GaussPdf():Pdf<double>("Gaussian") {m_mean=0.0; m_sigma=1.0;}
-  GaussPdf(double mean, double sigma):Pdf<double>("Gaussian") {m_mean=mean; m_sigma=sigma;}
-  //  GaussPdf(const GaussPdf & other):Pdf<double>(other) {m_mean=other.getMean(); m_sigma=other.getSigma(); m_name=other.getName();}
-  virtual ~GaussPdf() {};
+  PdfGauss():Pdf<double>("Gaussian") {m_mean=0.0; m_sigma=1.0;}
+  PdfGauss(double mean, double sigma):Pdf<double>("Gaussian") {m_mean=mean; m_sigma=sigma;}
+  //  PdfGauss(const PdfGauss & other):Pdf<double>(other) {m_mean=other.getMean(); m_sigma=other.getSigma(); m_name=other.getName();}
+  virtual ~PdfGauss() {};
   //
   void setMean(double mean)   { m_mean  = mean;}
   void setSigma(double sigma) { m_sigma = sigma;}
@@ -37,46 +55,76 @@ public:
   //
   inline double F(double val);
   inline double phi(double mu);
+
+  virtual void tabulate();
+  void setTableParams(int npts, double mumax) { 
+    if (isTabulated()) return;
+    m_tableNpts=npts;
+    m_tabMuMax = mumax;
+  }
 private:
   double m_mean;
   double m_sigma;
+  double m_tabMuMax; // tabulate N(0,1) from 0 to m_tabMuMax
+  double m_tabDmu;
 };
 
-class PoissonPdf : public Pdf<int> {
+class PdfPoisson : public Pdf<int> {
 public:
-  PoissonPdf():Pdf<int>("Poisson") {m_lambda=0.0;}
-  PoissonPdf(double lambda):Pdf<int>("Poisson") {m_lambda=lambda;}
-  //  PoissonPdf(const PoissonPdf & other):Pdf<int>(other) {m_lambda=other.getLambda(); m_name=other.getName();}
-  virtual ~PoissonPdf() {};
+  PdfPoisson():Pdf<int>("Poisson") {m_lambda=0.0; m_tabLmbN=0; m_tabLmbInd=0; m_tabNmax=0;}
+  PdfPoisson(double lambda):Pdf<int>("Poisson") {m_lambda=lambda;}
+  //  PdfPoisson(const PdfPoisson & other):Pdf<int>(other) {m_lambda=other.getLambda(); m_name=other.getName();}
+  virtual ~PdfPoisson() {};
   //
-  void setLambda(double lambda)   { m_lambda  = lambda;}
+  void setLambda(double lambda) {
+    m_lambda  = lambda;
+    if (isTabulated()) m_tabLmbInd = static_cast<int>(m_lambda/m_tabDlmb);
+  }
   double getLambda()  { return m_lambda; }
   //
   inline double F(int val);
+
+  virtual void tabulate();
+  void setTableParams(int nlmb, double lmbmax, int nn) {
+    if (isTabulated()) return;
+    m_tableNpts = nlmb*nn;
+    m_tabLmbMax = lmbmax;
+    m_tabLmbN   = nlmb;
+    m_tabDlmb = m_tabLmbMax/double(m_tabLmbN);
+    m_tabNmax   = nn;
+    m_tabLmbInd = static_cast<int>(m_lambda/m_tabDlmb);
+  }
 private:
   double m_lambda;
+  double m_tabLmbMax;
+  int    m_tabLmbN;
+  double m_tabDlmb;
+  int    m_tabLmbInd;
+  int    m_tabNmax; // maximum N in table
+  //
+  double rawPoisson(int n, double s);
 };
 
-class GeneralPdf : public Pdf<double> {
-public:
-  GeneralPdf():Pdf<double>("General") {}
-  GeneralPdf(std::vector<double> & x, std::vector<double> & f):Pdf<double>("General") { setData(x,f); init(); }
-  //  GaussPdf(const GaussPdf & other):Pdf<double>(other) {m_mean=other.getMean(); m_sigma=other.getSigma(); m_name=other.getName();}
-  virtual ~GaussPdf() {};
-  //
-  void setData(std::vector<double> & x, std::vector<double> & f) { m_x = x; m_f = f; }
-  void init();
-  double getMean()  { return m_mean; }
-  double getSigma() { return m_sigma; }
-  //
-  inline double F(double val);
-  inline double phi(double mu);
-private:
-  std::vector<double> m_x;
-  std::vector<double> m_f;
-  double m_mean;
-  double m_sigma;
-};
+// class GeneralPdf : public Pdf<double> {
+// public:
+//   GeneralPdf():Pdf<double>("General") {}
+//   GeneralPdf(std::vector<double> & x, std::vector<double> & f):Pdf<double>("General") { setData(x,f); init(); }
+//   //  PdfGauss(const PdfGauss & other):Pdf<double>(other) {m_mean=other.getMean(); m_sigma=other.getSigma(); m_name=other.getName();}
+//   virtual ~PdfGauss() {};
+//   //
+//   void setData(std::vector<double> & x, std::vector<double> & f) { m_x = x; m_f = f; }
+//   void init();
+//   double getMean()  { return m_mean; }
+//   double getSigma() { return m_sigma; }
+//   //
+//   inline double F(double val);
+//   inline double phi(double mu);
+// private:
+//   std::vector<double> m_x;
+//   std::vector<double> m_f;
+//   double m_mean;
+//   double m_sigma;
+// };
 
 
 template <typename T>
@@ -132,39 +180,53 @@ protected:
 class ObservableGauss : public Observable<double> {
 public:
   ObservableGauss():Observable<double>() {};
-  ObservableGauss(GaussPdf *pdf, Random *rndGen, const char *name, const char *desc=0):Observable<double>(pdf,rndGen,name,desc) {};
+  ObservableGauss(PdfGauss *pdf, Random *rndGen, const char *name, const char *desc=0):Observable<double>(pdf,rndGen,name,desc) {};
   ~ObservableGauss() {};
   //
-  //  void setPDF(GaussPdf *pdf) {m_pdf = pdf;}
-  inline double rnd() {return (m_valid ? m_rndGen->gaus(dynamic_cast<GaussPdf *>(m_pdf)->getMean(),dynamic_cast<GaussPdf *>(m_pdf)->getSigma()):0);}
+  //  void setPDF(PdfGauss *pdf) {m_pdf = pdf;}
+  inline double rnd() {return (m_valid ? m_rndGen->gaus(dynamic_cast<PdfGauss *>(m_pdf)->getMean(),dynamic_cast<PdfGauss *>(m_pdf)->getSigma()):0);}
 };
 
 class ObservablePoisson : public Observable<int> {
 public:
   ObservablePoisson():Observable<int>() {};
-  ObservablePoisson(PoissonPdf *pdf, Random *rndGen, const char *name, const char *desc=0):Observable<int>(pdf,rndGen,name,desc) {};
+  ObservablePoisson(PdfPoisson *pdf, Random *rndGen, const char *name, const char *desc=0):Observable<int>(pdf,rndGen,name,desc) {};
   ~ObservablePoisson() {};
   //
-  //  void setPDF(PoissonPdf *pdf) {m_pdf = pdf;}
-  inline int rnd() {return (m_valid ? m_rndGen->poisson(dynamic_cast<PoissonPdf *>(m_pdf)->getLambda()):0);}
+  //  void setPDF(PdfPoisson *pdf) {m_pdf = pdf;}
+  inline int rnd() {return (m_valid ? m_rndGen->poisson(dynamic_cast<PdfPoisson *>(m_pdf)->getLambda()):0);}
 };
 
-inline double GaussPdf::phi(double mu) {
+inline double PdfGauss::phi(double mu) {
   return (1.0L/sqrt(2.0*M_PIl))*exp(-0.5L*mu*mu);
 }
 
-inline double GaussPdf::F(double val) {
-  return phi((val-m_mean)/m_sigma);
+inline double PdfGauss::F(double val) {
+  double rval;
+  double mu = fabs((val-m_mean)/m_sigma); // symmetric around mu0
+  if (mu>m_tabMuMax) {
+    rval = phi(mu)/m_sigma;
+  } else {
+    int sind  = static_cast<int>(mu/m_tabDmu);
+    if (sind>=m_tableNpts) {
+      rval = phi(mu)/m_sigma;
+    } else {
+      rval = m_table[sind]/m_sigma;
+    }
+  }
+  return rval;
 }
 
-inline double PoissonPdf::F(int val) {
-  double prob;
-  if(m_lambda<50.0) {
-    prob = (pow(m_lambda,val)/exp(lgamma(val+1)))*exp(-m_lambda);
+inline double PdfPoisson::F(int val) {
+  double rval;
+  int index=0;
+  if (m_tableNpts>0) index = val+m_tabLmbInd*m_tabNmax;
+  if (index<m_tableNpts) {
+    rval = m_table[index];
   } else {
-    double t = double(val)-m_lambda;
-    prob = (1.0L/(sqrt(2.0*M_PIl)*sqrt(m_lambda)))*exp(-0.5L*t*t/m_lambda);
+    rval = rawPoisson(val,m_lambda);
   }
-  return prob;
+  return rval;
 }
+
 
