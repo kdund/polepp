@@ -24,7 +24,7 @@ void Poisson::init(int nlambda, int nn, double lmax) {
   m_dL = m_lambdaMax/double(m_nLambda);
   //
   double lmb;
-  unsigned long index;
+  unsigned long index,index0;
   std::cout << "==================================" << std::endl;
   if (m_nTot==0) {
     std::cout << " Will not use tabulated poisson!" << std::endl;
@@ -35,9 +35,11 @@ void Poisson::init(int nlambda, int nn, double lmax) {
     std::cout << "   n(N)       = " << m_nN <<std::endl;
     for (unsigned long i=0; i<m_nLambda; i++) {
       lmb = m_dL*double(i);
-      for (unsigned long j=0; j<m_nN; j++) {
-	index = i*m_nN +j;
-	m_data[index] = rawPoisson(int(j),lmb);
+      index0 = i*m_nN + 0;
+      m_data[index0] = rawPoisson(0,lmb);
+      for (unsigned long j=1; j<m_nN; j++) {
+	index = index0 + j;
+	m_data[index] = m_data[index-1]*lmb/static_cast<double>(j);
       }
     }
   }
