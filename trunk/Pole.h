@@ -33,9 +33,10 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include <sys/times.h>
+#include <ctime>
 #include <utility>
 #include <map>
+#include <string>
 
 #include "Range.h"
 #include "Tabulated.h"

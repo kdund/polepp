@@ -6,7 +6,7 @@
 #include <fstream>
 #include <iomanip>
 #include <cmath>
-#include <sys/times.h>
+#include <ctime>
 
 #include "Coverage.h"
 
@@ -234,7 +234,7 @@ void Coverage::outputCoverageResult(const int flag) { //output coverage result
   } else {       // final result
     header = "DATA: ";
   }
-  std::cout << header.c_str() << std::fixed << std::setprecision(6)
+  std::cout << header.c_str() << std::ios::fixed << std::setprecision(6)
 	    << m_sTrueMean << "\t"
 	    << m_effMean << "\t"
 	    << m_effSigma << "\t"
@@ -349,12 +349,12 @@ void Coverage::calcStatistics() {
 void Coverage::printStatistics() {
   if (m_collectStats) {
     std::cout << "====== Statistics ======" << std::endl;
-    std::cout << " N observed (mu,sig) =\t" << std::fixed << std::setprecision(6) << m_aveNobs << "\t" << sqrt(m_varNobs) << std::endl;
-    std::cout << " efficiency (mu,sig) =\t" << std::fixed << std::setprecision(6)<< m_aveEff  << "\t" << sqrt(m_varEff) << std::endl;
-    std::cout << " background (mu,sig) =\t" << std::fixed << std::setprecision(6)<< m_aveBkg  << "\t" << sqrt(m_varBkg) << std::endl;
-    std::cout << " correlation coeff   =\t" << std::fixed << std::setprecision(6) << m_corrEffBkg << std::endl;
-    std::cout << " lower lim. (mu,sig) =\t" << std::fixed << std::setprecision(6) << m_aveLL   << "\t" << sqrt(m_varLL)  << std::endl;
-    std::cout << " upper lim. (mu,sig) =\t" << std::fixed << std::setprecision(6) << m_aveUL   << "\t" << sqrt(m_varUL)  << std::endl;
+    std::cout << " N observed (mu,sig) =\t" << std::ios::fixed << std::setprecision(6) << m_aveNobs << "\t" << sqrt(m_varNobs) << std::endl;
+    std::cout << " efficiency (mu,sig) =\t" << std::ios::fixed << std::setprecision(6)<< m_aveEff  << "\t" << sqrt(m_varEff) << std::endl;
+    std::cout << " background (mu,sig) =\t" << std::ios::fixed << std::setprecision(6)<< m_aveBkg  << "\t" << sqrt(m_varBkg) << std::endl;
+    std::cout << " correlation coeff   =\t" << std::ios::fixed << std::setprecision(6) << m_corrEffBkg << std::endl;
+    std::cout << " lower lim. (mu,sig) =\t" << std::ios::fixed << std::setprecision(6) << m_aveLL   << "\t" << sqrt(m_varLL)  << std::endl;
+    std::cout << " upper lim. (mu,sig) =\t" << std::ios::fixed << std::setprecision(6) << m_aveUL   << "\t" << sqrt(m_varUL)  << std::endl;
     std::cout << "========================" << std::endl;
   }
 }
@@ -384,7 +384,7 @@ void Coverage::dumpExperiments(std::string name) {
   *os << "# N_obs   Efficiency     Background" << std::endl;
   *os << "#-----------------------------------" << std::endl;
   for (i=0; i<sz; i++) {
-    *os << std::fixed
+    *os << std::ios::fixed
 	<< std::setprecision(0)
 	<< m_nobsStat[i] << '\t'
 	<< std::setprecision(6)

@@ -667,7 +667,7 @@ bool Pole::findLimits() {
   }
   if (m_verbose>1) {
     if (m_foundUpper) {
-      std::cout << std::fixed << std::setprecision(4)
+      std::cout << std::ios::fixed << std::setprecision(4)
 		<< "LIMITS(N,e,b,l,u): " << m_nObserved << "\t"
 		<< m_effMeas << "\t" << m_bkgMeas << "\t"
 		<< m_lowerLimit << "\t" << m_upperLimit << std::endl;
@@ -712,7 +712,7 @@ bool Pole::findCoverageLimits() {
   }
   if (m_verbose>1) {
     if (m_foundUpper) {
-      std::cout << std::fixed << std::setprecision(4)
+      std::cout << std::ios::fixed << std::setprecision(4)
 		<< "COVLIMITS(N,s,e,b,l,u): " << m_nObserved << "\t" << m_sTrue << "\t"
 		<< m_effMeas << "\t" << m_bkgMeas << "\t"
 		<< m_lowerLimit << "\t" << m_upperLimit << std::endl;
@@ -744,14 +744,14 @@ void Pole::printLimit(bool doTitle) {
     std::cout << " Nobs  \t  Eff   \t Bkg" << std::endl;
     std::cout << "-------------------------------------------------" << std::endl;
   }
-  std::cout << std::fixed << std::setw(4)
+  std::cout << std::ios::fixed << std::setw(4)
 	    << m_nObserved << "\t"
-	    << std::fixed << std::setprecision(6)
+	    << std::ios::fixed << std::setprecision(6)
 	    << m_effMeas << "\t"
 	    << m_effSigma << "\t"
 	    << m_bkgMeas << "\t"
 	    << m_bkgSigma << "\t[ "
-	    << std::fixed << std::setprecision(2)
+	    << std::ios::fixed << std::setprecision(2)
 	    << m_lowerLimit << ", "
 	    << m_upperLimit << " ]" << std::endl;
 }

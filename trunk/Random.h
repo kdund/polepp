@@ -5,8 +5,7 @@
 #include <fstream>
 #include <iomanip>
 #include <cmath>
-#include <sys/times.h>
-
+#include <ctime>
 //
 // Local copy of what we need from TRandom, extended
 //

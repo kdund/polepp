@@ -2,10 +2,11 @@
 #define COVERAGE_H
 //
 #include <iostream>
-#include <ostream>
+#include <iomanip>
 #include <vector>
 #include <cmath>
-#include <sys/times.h>
+#include <ctime>
+#include <string>
 
 #include "Range.h"
 #include "Tabulated.h"
