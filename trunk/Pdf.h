@@ -11,7 +11,7 @@ public:
   Poisson();
   ~Poisson();
   //
-  void init(int nlambda=10000, int nn=51, double lmbmax=100.0);
+  void init(int nlambda=100000, int nn=60, double lmbmax=200.0);
   inline double getVal(int no, double s);
 private:
   unsigned long m_nLambda;
@@ -118,10 +118,17 @@ inline double Gauss::getLNSigma(double mean,double sigma) {
 
 inline double Poisson::getVal(int no, double s) {
   double rval;
+  double ests;
   unsigned long sind  = static_cast<int>(s/m_dL);
   unsigned long index = no+sind*m_nN;
+  double df;
+  //
   if (index<m_nTot) {
     rval = m_data[index];
+    df = -1.0;
+    if (sind>0) df = rval*((static_cast<double>(no)/s)-1.0);
+    ests = static_cast<double>(sind)*m_dL;
+    rval = df*(s-ests) + rval;
   } else {
     rval = rawPoisson(no,s);
   }
