@@ -5,15 +5,20 @@ LDOBJS   =  Pdf.o Range.o Random.o Coverage.o Pole.o
 # Use -g to include debug info
 # Use -pg for profiling info
 CFLAGS     = -g -O
-SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx
+SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx poleconst.cxx
 INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h
 SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Range.cxx Pdf.cxx
 
-all:		polelim polebelt polecov exptest plotexp estbelt
+all:		polelim polebelt polecov exptest plotexp estbelt poleconst
 
 estbelt:	estbelt.o
 		g++ $(CFLAGS) -Wall $< -o $@
 estbelt.o:	estbelt.cxx
+		g++ $(CFLAGS) -Wall -c $<
+
+poleconst:	poleconst.o $(LDOBJS)
+		g++ $(CFLAGS) -Wall $< $(LDOBJS) -ltclap -o $@
+poleconst.o:	poleconst.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
 polelim:	polelim.o $(LDOBJS)
