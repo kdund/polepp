@@ -70,7 +70,7 @@ double TabTrig::Sin(double x) {
 }
 
 double TabTrig::Cos(double x) {
-  return Sin(x+M_PIl*0.5);
+  return Sin(x+M_PI*0.5);
 }
 
 
@@ -152,7 +152,7 @@ double Poisson::rawPoisson(int n, double s) {
     prob = (pow(s,n)/exp(lgamma(n+1)))*exp(-s);
   } else {
     double sigma = sqrt(s); // gaussian aprox.
-    double c = 1.0L/(sqrt(2.0*M_PIl)*sigma);
+    double c = 1.0L/(sqrt(2.0*M_PI)*sigma);
     double t = (double(n)-s)/sigma;
     prob = c*exp(-0.5L*t*t);
   }
@@ -193,7 +193,7 @@ void Gauss::init(int ndata, double mumax) {
 
 double Gauss::rawGauss(double mu) {
   double prob;
-  double norm = 1.0L/sqrt(2.0*M_PIl);
+  double norm = 1.0L/sqrt(2.0*M_PI);
   prob = norm*exp(-0.5L*mu*mu);
   return prob;
 }
