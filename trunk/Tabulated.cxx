@@ -191,7 +191,6 @@ void Gauss::init(int ndata, double mumax) {
   std::cout << "==================================\n" << std::endl;
 }
 
-
 double Gauss::rawGauss(double mu) {
   double prob;
   double norm = 1.0L/sqrt(2.0*M_PIl);
