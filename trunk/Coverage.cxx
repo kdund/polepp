@@ -24,6 +24,7 @@ inline char *yesNo(bool var) {
 ////////////////////////////////////////////////////////////////////////
 
 Coverage::Coverage() {
+  m_saveExperiments = false;
   m_pole = 0;
   m_nLoops = 1;
   m_fixedEff = false;
@@ -145,6 +146,11 @@ void Coverage::generateExperiment() {
   } else {
     m_measNobs   = m_rnd.Poisson(m_effMean*m_sTrueMean+m_bkgMean);
   }
+  if (m_saveExperiments) {
+    m_allNobs.push_back(m_measNobs);
+    m_allEff.push_back(m_measEff);
+    m_allBkg.push_back(m_measBkg);
+  }
   //
 }
 
@@ -167,19 +173,21 @@ void Coverage::updateCoverage() {
 
 void Coverage::calcCoverage() {
   m_coverage = 0;
-  m_errCoverage = 0;
+  m_errCoverage = -1.0;
   //
   if (m_totalCount>0) {
     m_coverage = static_cast<double>(m_insideCount)/static_cast<double>(m_totalCount);
-    m_errCoverage = m_coverage*sqrt((1.0-m_pole->getCL())/static_cast<double>(m_insideCount));
+    if (m_insideCount>0) {
+      m_errCoverage = m_coverage*sqrt((1.0-m_pole->getCL())/static_cast<double>(m_insideCount));
+    }
   }
 }
 
 void Coverage::outputCoverageResult() { //output coverage result
   static bool firstCall=true;
   if (firstCall) {
-    std::cout << "       Signal \tEfficiency\tBackground\tCoverage\tCov.err." << std::endl;
-    std::cout << "       -----------------------------------------------------------------" << std::endl;
+    std::cout << "       Signal \tEfficiency\tBackground\tCoverage\tCov.err.\tLoops\tMax loops" << std::endl;
+    std::cout << "      --------------------------------------------------------------------------------------------" << std::endl;
     firstCall = false;
   }
   std::cout << "DATA: " << std::fixed << std::setprecision(6)
@@ -187,7 +195,10 @@ void Coverage::outputCoverageResult() { //output coverage result
 	    << m_effMean << "\t"
 	    << m_bkgMean << "\t"
 	    << m_coverage << "\t"
-	    << m_errCoverage << std::endl;
+	    << m_errCoverage << "\t"
+	    << m_totalCount << "\t"
+	    << m_nLoops
+	    << std::endl;
 }
 
 
