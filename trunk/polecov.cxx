@@ -27,12 +27,12 @@ void my_sighandler(int a) {
     std::string header("STATUS ( ");
     header += timestamp;
     header += " ) : ";
-    gCoverage.outputCoverageResult(header.c_str());
+    gCoverage.outputCoverageResult(1);
   } else {
     std::cout << "WARNING (" << timestamp << " ) Job aborting (signal = " << a
 	      << " ). Will output data from unfinnished loop.\n" << std::endl;
     gCoverage.calcCoverage();
-    gCoverage.outputCoverageResult();
+    gCoverage.outputCoverageResult(0);
     exit(-1);
   }
 }
@@ -50,41 +50,44 @@ void processArgs(int argc, char *argv[]) {
     // Arg3 = version number given when --version is used
     CmdLine cmd("Try again, friend.", ' ', "0.99");
 
-    ValueArg<int>    nLoops(    "","nloops",  "number of loops",false,1,"int");
-    ValueArg<double> confLevel( "","cl",      "confidence level",false,0.9,"float");
-    ValueArg<int>    rSeed(     "","rseed",   "rnd seed" ,false,rndSeed,"int");
-    ValueArg<int>    rSeedOfs(  "","rseedofs","rnd seed offset" ,false,0,"int");
-    ValueArg<int>    nBelt(      "","nbelt",  "n Belt" ,false,-1,"int");
-    ValueArg<double> sMin(      "","smin",    "min s_true",false,1.0,"float");
-    ValueArg<double> sMax(      "","smax",    "max s_true",false,1.0,"float");
-    ValueArg<double> sStep(     "","sstep",    "step s_true",false,1.0,"float");
-    ValueArg<double> effSigma(  "","esigma","sigma of efficiency",false,0.2,"float");
-    ValueArg<double> effMin(    "","emin",    "min eff true",false,1.0,"float");
-    ValueArg<double> effMax(    "","emax",    "max eff true",false,1.0,"float");
-    ValueArg<double> effStep(   "","estep",   "step eff true",false,1.0,"float");
-    ValueArg<double> bkgSigma(  "","bsigma","sigma of background",false,0.2,"float");
+    ValueArg<int>    nLoops(    "","nloops",  "number of loops",    false,1,"int");
+    ValueArg<double> confLevel( "","cl",      "confidence level",   false,0.9,"float");
+    ValueArg<int>    rSeed(     "","rseed",   "rnd seed" ,          false,rndSeed,"int");
+    ValueArg<int>    rSeedOfs(  "","rseedofs","rnd seed offset" ,   false,0,"int");
+    ValueArg<int>    nBelt(     "","nbelt",   "n Belt" ,            false,-1,"int");
+    ValueArg<double> sMin(      "","smin",    "min s_true",         false,1.0,"float");
+    ValueArg<double> sMax(      "","smax",    "max s_true",         false,1.0,"float");
+    ValueArg<double> sStep(     "","sstep",   "step s_true",        false,1.0,"float");
+    ValueArg<double> effSigma(  "","esigma",  "sigma of efficiency",false,0.2,"float");
+    ValueArg<double> effMin(    "","emin",    "min eff true",       false,1.0,"float");
+    ValueArg<double> effMax(    "","emax",    "max eff true",       false,1.0,"float");
+    ValueArg<double> effStep(   "","estep",   "step eff true",      false,1.0,"float");
+    ValueArg<double> bkgSigma(  "","bsigma",  "sigma of background",false,0.2,"float");
     ValueArg<double> bkgMin(    "","bmin",    "min bkg true",false,0.0,"float");
     ValueArg<double> bkgMax(    "","bmax",    "max bkg true",false,0.0,"float");
     ValueArg<double> bkgStep(   "","bstep",   "step bkg true",false,1.0,"float");
-    ValueArg<double> beCorr(    "","corr",    "corr(bkg,eff)",false,1000.0,"float");
+    ValueArg<double> beCorr(    "","corr",    "corr(bkg,eff)",false,0.0,"float");
     ValueArg<double> dMus(      "","dmus",    "step size in findBestMu",false,0.01,"float");
     ValueArg<double> muTestMin( "","mumin",   "test min" ,false,0.0,"float");
     ValueArg<double> muTestMax( "","mumax",   "test max" ,false,35.0,"float");
     ValueArg<double> muTestStep("","mustep",  "test step" ,false,0.02,"float");
-    ValueArg<double> effIntMin( "","eintmin",    "eff min in integral",  false,0.0,"float");
-    ValueArg<double> effIntMax( "","eintmax",    "eff max in integral",  false,2.0,"float");
+    //    ValueArg<double> effIntMin( "","eintmin",    "eff min in integral",  false,0.0,"float");
+    //    ValueArg<double> effIntMax( "","eintmax",    "eff max in integral",  false,2.0,"float");
+    ValueArg<double> effIntScale( "","eintscale",    "n sigmas in integral (eff)",  false,5.0,"float");
     ValueArg<double> effIntStep("","eintstep",   "eff step in integral", false,-1.0,"float");
-    ValueArg<double> bkgIntMin( "","bintmin",    "bkg min in integral",  false,0.0,"float");
-    ValueArg<double> bkgIntMax( "","bintmax",    "bkg max in integral",  false,2.0,"float");
+    //    ValueArg<double> bkgIntMin( "","bintmin",    "bkg min in integral",  false,0.0,"float");
+    //    ValueArg<double> bkgIntMax( "","bintmax",    "bkg max in integral",  false,2.0,"float");
+    ValueArg<double> bkgIntScale( "","bintscale",    "n sigmas in integral (bkg)",  false,5.0,"float");
     ValueArg<double> bkgIntStep("","bintstep",   "bkg step in integral", false,-1.0,"float");
+
+    ValueArg<int>    effDist("","effdist",  "Efficiency distribution",false,1,"int");
+    ValueArg<int>    bkgDist("","bkgdist",  "Background distribution",false,1,"int");
     //
     SwitchArg        doStats("C","stats", "Collect statistics",false);
-    SwitchArg        doLogNorm("L","lognorm", "Use lognormal instead of gauss",false);
     SwitchArg        doFixEff("E","fixeff", "Fixed meas. efficiency",false);
     SwitchArg        doFixBkg("B","fixbkg", "Fixed meas. background",false);
     SwitchArg        doFixSig("S","fixsig", "Fixed meas. n_observed",false);
-    SwitchArg        doNoDistEff("e","ndeff",  "No efficiency distribution",false);
-    SwitchArg        doNoDistBkg("b","ndbkg",  "No background distribution",false);
+
     //
     SwitchArg        doExamples("","example", "Print examples",false);
     //
@@ -94,14 +97,15 @@ void processArgs(int argc, char *argv[]) {
     cmd.add(verboseCov);
     cmd.add(verbosePol);
     //
-    cmd.add(effIntMin);
-    cmd.add(effIntMax);
+    //    cmd.add(effIntMin);
+    //    cmd.add(effIntMax);
+    cmd.add(effIntScale);
     cmd.add(effIntStep);
-    cmd.add(bkgIntMin);
-    cmd.add(bkgIntMax);
+    //    cmd.add(bkgIntMin);
+    //    cmd.add(bkgIntMax);
+    cmd.add(bkgIntScale);
     cmd.add(bkgIntStep);
     //
-    cmd.add(doLogNorm);
     cmd.add(effSigma);
     cmd.add(effMin);
     cmd.add(effMax);
@@ -130,8 +134,8 @@ void processArgs(int argc, char *argv[]) {
     cmd.add(doFixEff);
     cmd.add(doFixBkg);
     cmd.add(doFixSig);
-    cmd.add(doNoDistEff);
-    cmd.add(doNoDistBkg);
+    cmd.add(effDist);
+    cmd.add(bkgDist);
     cmd.add(confLevel);
     //    cmd.add(doExamples);
     //
@@ -140,16 +144,17 @@ void processArgs(int argc, char *argv[]) {
     if (doExamples.getValue()) {
     }
     //
-    gPole.useLogNormal(doLogNorm.getValue());
     gPole.setVerbose(verbosePol.getValue());
     gPole.setNobserved(0);
     gPole.setCoverage(true);
     gPole.setCL(confLevel.getValue());
     gPole.setDmus(dMus.getValue());
-    gPole.setEffDist( effMin.getValue(), effSigma.getValue(), doNoDistEff.getValue());
-    gPole.setBkgDist( bkgMin.getValue(), bkgSigma.getValue(), doNoDistBkg.getValue());
-    gPole.setEffInt(effIntMin.getValue(),effIntMax.getValue(),effIntStep.getValue());
-    gPole.setBkgInt(bkgIntMin.getValue(),bkgIntMax.getValue(),bkgIntStep.getValue());
+    gPole.setEffMeas( effMin.getValue(), effSigma.getValue(), static_cast<DISTYPE>(effDist.getValue()));
+    gPole.setBkgMeas( bkgMin.getValue(), bkgSigma.getValue(), static_cast<DISTYPE>(bkgDist.getValue()));
+    gPole.checkEffBkgDists(); // will make sure the settings above are OK - it will update pole if changes are made
+    gPole.setEffBkgCorr(beCorr.getValue());
+    gPole.setEffInt(effIntScale.getValue(),effIntStep.getValue());
+    gPole.setBkgInt(bkgIntScale.getValue(),bkgIntStep.getValue());
     //
     gPole.setBelt(nBelt.getValue());
     gPole.setBeltMax(nBelt.getValue()*2);
@@ -161,7 +166,11 @@ void processArgs(int argc, char *argv[]) {
     gPole.initBeltArrays();
 
     //
-    gCoverage.useLogNormal(doLogNorm.getValue());
+    gCoverage.setEffDist( effMin.getValue(), effSigma.getValue(), static_cast<DISTYPE>(effDist.getValue()));
+    gCoverage.setBkgDist( bkgMin.getValue(), bkgSigma.getValue(), static_cast<DISTYPE>(bkgDist.getValue()));
+    gCoverage.setEffBkgCorr(beCorr.getValue());
+    gCoverage.checkEffBkgDists(); // will make sure the settings above are OK - it will update pole if changes are made
+    //
     gCoverage.setVerbose(verboseCov.getValue());
     gCoverage.setPole(&gPole);
     //
@@ -173,14 +182,6 @@ void processArgs(int argc, char *argv[]) {
     gCoverage.setEffTrue(effMin.getValue(), effMax.getValue(), effStep.getValue());
     gCoverage.setBkgTrue(bkgMin.getValue(), bkgMax.getValue(), bkgStep.getValue());
     //
-    gCoverage.setFixedEff(doFixEff.getValue());
-    gCoverage.setFixedBkg(doFixBkg.getValue());
-    gCoverage.setFixedSig(doFixSig.getValue());
-    double c = beCorr.getValue(); // Correlation must be set after
-    bool uc = true;
-    if (c>999.0) uc=false;
-    gCoverage.setCorr(c);
-    gCoverage.setUseCorr(uc);
     //
     //    gCoverage.initTabs();
     //
@@ -204,6 +205,7 @@ int main(int argc, char *argv[]) {
   //                               ====================================================================
   // General signals
   signal(SIGSEGV,my_sighandler); // Segmentation fault
+  signal(SIGUSR1,my_sighandler);
   signal(SIGIO,  my_sighandler); // Directory access error
   //
   processArgs(argc,argv);

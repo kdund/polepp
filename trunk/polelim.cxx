@@ -22,11 +22,12 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     //
     ValueArg<double> effSigma(  "", "esigma","sigma of efficiency",false,0.2,"float");
     ValueArg<double> effMeas(   "", "emeas",  "measured efficiency",false,1.0,"float");
-    SwitchArg        effNoDist( "E","ndeff", "No efficiency distribution",false);
+    ValueArg<int>    effDist(   "","effdist",  "Efficiency distribution",false,1,"int");
+
     //
-    ValueArg<double> bkgSigma(  "", "bsigma","sigma of background",false,0.2,"float");
-    ValueArg<double> bkgMeas(   "", "bmeas",   "measured background",false,0.2,"float");
-    SwitchArg        bkgNoDist( "B","ndbkg",   "No background distribution",false);
+    ValueArg<double> bkgSigma(  "", "bsigma","sigma of background",false,0.0,"float");
+    ValueArg<double> bkgMeas(   "", "bmeas",   "measured background",false,0.0,"float");
+    ValueArg<int>    bkgDist(   "", "bkgdist",  "Background distribution",false,0,"int");
     //
     ValueArg<double> dMus(      "","dmus",    "step size in findBestMu",false,0.002,"float");
     ValueArg<int>    belt(   "","belt", "maximum n for findBestMu" ,false,50,"int");
@@ -35,12 +36,10 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> hypTestMax( "","hmax",   "hypothesis test max" ,false,35.0,"float");
     ValueArg<double> hypTestStep("","hstep",  "hypothesis test step" ,false,0.01,"float");
     //
-    ValueArg<double> effIntMin( "","emin",    "eff min in integral",  false,0.0,"float");
-    ValueArg<double> effIntMax( "","emax",    "eff max in integral",  false,0.0,"float");
-    ValueArg<double> effIntStep("","estep",   "eff step in integral", false,-1.0,"float");
-    ValueArg<double> bkgIntMin( "","bmin",    "bkg min in integral",  false,0.0,"float");
-    ValueArg<double> bkgIntMax( "","bmax",    "bkg max in integral",  false,0.0,"float");
-    ValueArg<double> bkgIntStep("","bstep",   "bkg step in integral", false,-1.0,"float");
+    ValueArg<double> effIntScale( "","escale","eff n sigma in integral", false,5.0,"float");
+    ValueArg<double> effIntStep("","estep",   "eff step in integral",    false,-1.0,"float");
+    ValueArg<double> bkgIntScale( "","bscale","bkg n sigma in integral", false,5.0,"float");
+    ValueArg<double> bkgIntStep("","bstep",   "bkg step in integral",    false,-1.0,"float");
 
     ValueArg<int>    doVerbose(   "V","verbose", "verbose pole",    false,0,"int");
     //
@@ -50,11 +49,9 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     cmd.add(hypTestMax);
     cmd.add(hypTestStep);
 
-    cmd.add(effIntMin);
-    cmd.add(effIntMax);
+    cmd.add(effIntScale);
     cmd.add(effIntStep);
-    cmd.add(bkgIntMin);
-    cmd.add(bkgIntMax);
+    cmd.add(bkgIntScale);
     cmd.add(bkgIntStep);
 
     cmd.add(belt);
@@ -62,11 +59,11 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
 
     cmd.add(effSigma);
     cmd.add(effMeas);
-    cmd.add(effNoDist);
+    cmd.add(effDist);
 
     cmd.add(bkgSigma);
     cmd.add(bkgMeas);
-    cmd.add(bkgNoDist);
+    cmd.add(bkgDist);
 
     cmd.add(sTrue);
     cmd.add(coverage);
@@ -79,22 +76,23 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     pole->setCL(confLevel.getValue());
     pole->setNobserved(nObs.getValue());
     //
-    pole->setEffDist( effMeas.getValue(), effSigma.getValue(), effNoDist.getValue() );
-    pole->setBkgDist( bkgMeas.getValue(), bkgSigma.getValue(), bkgNoDist.getValue() );
+    pole->setEffMeas( effMeas.getValue(), effSigma.getValue(), static_cast<DISTYPE>(effDist.getValue()) );
+    pole->setBkgMeas( bkgMeas.getValue(), bkgSigma.getValue(), static_cast<DISTYPE>(bkgDist.getValue()) );
+    pole->checkEffBkgDists();
 
     pole->setTrueSignal(sTrue.getValue());
     pole->setCoverage(coverage.getValue());
 
     pole->setDmus(dMus.getValue());
-    pole->setEffInt(effIntMin.getValue(),effIntMax.getValue(),effIntStep.getValue());
-    pole->setBkgInt(bkgIntMin.getValue(),bkgIntMax.getValue(),bkgIntStep.getValue());
+    pole->setEffInt(effIntScale.getValue(),effIntStep.getValue());
+    pole->setBkgInt(bkgIntScale.getValue(),bkgIntStep.getValue());
     //
     pole->setBelt(belt.getValue()); // call after nObserved is set.
     pole->setBeltMax(belt.getValue()*2); // maximum allocated
     pole->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
     //
-    //    pole->initPoisson(50000,60,200);
-    //    pole->initGauss(10000,10.0);
+    pole->initPoisson(50000,60,200);
+    pole->initGauss(10000,10.0);
     pole->initIntArrays();
     pole->initBeltArrays();
     //
@@ -115,10 +113,13 @@ int main(int argc, char *argv[]) {
   if (pole.checkParams()) {
     pole.printSetup();
     pole.analyseExperiment();
-    pole.printLimit();
-    pole.setNobserved(4);
-    pole.analyseExperiment();
-    pole.printLimit();
+    pole.printLimit(true);
+//     pole.setNobserved(4);
+//     pole.analyseExperiment();
+//     pole.printLimit();
+//     pole.setNobserved(6);
+//     pole.analyseExperiment();
+//     pole.printLimit();
   }
   //
 }
