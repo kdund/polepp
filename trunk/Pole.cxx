@@ -28,6 +28,9 @@ inline char *yesNo(bool var) {
   Main constructor.
  */
 Pole::Pole() {
+  m_nUppLim = 10;
+  m_normMaxDiff = 0.001;
+
   m_effDist = DIST_GAUS;
   m_bkgDist = DIST_GAUS;
   //
@@ -144,7 +147,6 @@ void Pole::setInt(double & low, double & high, double & step, double scale, doub
     case DIST_GAUS:
       low  = mean - scale*sigma;
       high = mean + scale*sigma;
-      if (low<0) low = 0;
       break;
     case DIST_FLAT:
       dx=sigma*1.73205081; // == sqrt(12)*0.5; ignore scale - always use full range
@@ -159,6 +161,10 @@ void Pole::setInt(double & low, double & high, double & step, double scale, doub
       break;
     default: // ERROR STATE
       break;
+    }
+    if (low<0) { // lower limit below 0 - shift the range
+      high-=low;
+      low=0;
     }
     if (step<=0.0) step = (high-low)/m_intNdef;     // default N pts
   }
@@ -297,7 +303,7 @@ void Pole::initIntArrays() {
 int Pole::suggestBelt() {
   int rval=50;
   if (m_nObserved>=0) {
-    rval = BeltEstimator::getBeltMin(m_nObserved, m_bkgMeas);
+    rval = BeltEstimator::getBeltMin(m_nObserved, m_bkgMeas) + 5;
     if (rval<20) rval=20; // becomes less reliable for small n
   }
   if (m_verbose>1) std::cout << "Pole::suggestBelt() : Belt range = " << m_nBelt << std::endl;
@@ -325,12 +331,17 @@ void Pole::initBeltArrays() {
 void Pole::initIntegral() {
   if (m_validInt) return;
   //
+  static bool firstEffWarn=true;
+  static bool firstBkgWarn=true;
   int i,j;
   double effs;
   double bkgs;
   double eff_prob, bkg_prob, norm_prob;
+  double sum_eff_prob=0;
+  double sum_bkg_prob=0;
   int count=0;
   norm_prob = 1.0;
+  bool full2d = false;
   /////////////////////////////////
   double sdetC=0, detC=0, seff=0, sbkg=0, vceff=0;
   double effMean,effSigma;
@@ -350,35 +361,46 @@ void Pole::initIntegral() {
     bkgSigma = m_bkgSigma;
   }
   if (m_effDist==DIST_GAUSCORR) {
-    detC = m_gauss.getDetC(m_effSigma,m_bkgSigma,m_beCorr);
-    sdetC = sqrt(detC);
-    vceff = m_gauss.getVeffCorr(detC,m_effSigma,m_bkgSigma,m_beCorr);
-    seff  = sqrt(m_gauss.getVeff(detC,m_bkgSigma)); // effective sigma for efficiency v1eff = detC/(s2*s2)
-    sbkg  = sqrt(m_gauss.getVeff(detC,m_effSigma)); // dito for background            v2eff = detC/(s1*s1)
-    if (m_verbose>2) {
-      std::cout << "DetC = " << detC << std::endl;
-      std::cout << "sDetC = " << sdetC << std::endl;
-      std::cout << "Vceff = " << vceff << std::endl;
-      std::cout << "seff = " << seff << std::endl;
-      std::cout << "sbkg = " << sbkg << std::endl;
-      std::cout << "corr = " << m_beCorr << std::endl;
-    }
-
-  }
-  //////////////////////////////////
-  //
-  double dedb=1.0;
-  if ((m_effRangeInt.n() != 1) && (m_bkgRangeInt.n() != 1)) { // both eff and bkg vary
-    dedb = m_bkgRangeInt.step()*m_effRangeInt.step();
-  } else {
-    if ((m_effRangeInt.n() != 1) && (m_bkgRangeInt.n() == 1)) { // bkg const
-      dedb = m_effRangeInt.step();
+    if (isFullyCorrelated() || isNotCorrelated()) {
+      full2d=false;
     } else {
-      if ((m_effRangeInt.n() == 1) && (m_bkgRangeInt.n() != 1)) {  // eff const
-	dedb = m_bkgRangeInt.step();
+      full2d=true;
+      detC = m_gauss.getDetC(m_effSigma,m_bkgSigma,m_beCorr);
+      sdetC = sqrt(detC);
+      vceff = m_gauss.getVeffCorr(detC,m_effSigma,m_bkgSigma,m_beCorr);
+      seff  = sqrt(m_gauss.getVeff(detC,m_bkgSigma)); // effective sigma for efficiency v1eff = detC/(s2*s2)
+      sbkg  = sqrt(m_gauss.getVeff(detC,m_effSigma)); // dito for background            v2eff = detC/(s1*s1)
+      if (m_verbose>2) {
+	std::cout << "DetC = " << detC << std::endl;
+	std::cout << "sDetC = " << sdetC << std::endl;
+	std::cout << "Vceff = " << vceff << std::endl;
+	std::cout << "seff = " << seff << std::endl;
+	std::cout << "sbkg = " << sbkg << std::endl;
+	std::cout << "corr = " << m_beCorr << std::endl;
       }
     }
   }
+  //////////////////////////////////
+  //
+  bool dosumbkg = false;
+  double dedb;
+  double de=1.0;
+  double db=1.0;
+  if (m_effRangeInt.n() != 1) de=m_effRangeInt.step();
+  if (m_bkgRangeInt.n() != 1) db=m_bkgRangeInt.step();
+  dedb = de*db;
+
+//   if ((m_effRangeInt.n() != 1) && (m_bkgRangeInt.n() != 1)) { // both eff and bkg vary
+//     dedb = m_bkgRangeInt.step()*m_effRangeInt.step();
+//   } else {
+//     if ((m_effRangeInt.n() != 1) && (m_bkgRangeInt.n() == 1)) { // bkg const
+//       dedb = m_effRangeInt.step();
+//     } else {
+//       if ((m_effRangeInt.n() == 1) && (m_bkgRangeInt.n() != 1)) {  // eff const
+// 	dedb = m_bkgRangeInt.step();
+//       }
+//     }
+//   }
   if (m_verbose>1) {
     std::cout << "InitMatrix: eff dist (mu,s)= " << m_effMeas << "\t"
 	      << m_effSigma << std::endl;
@@ -421,45 +443,57 @@ void Pole::initIntegral() {
 	break;
       }
     }
+    sum_eff_prob += eff_prob;
+    //
     for (j=0;j<m_bkgRangeInt.n();j++) { // Loop over all background points
       bkgs =  j*m_bkgRangeInt.step() + m_bkgRangeInt.min();
       if ( m_bkgRangeInt.n() == 1 ) {
 	bkg_prob = 1.0;
+	dosumbkg = (i==0);
       } else {
 	switch(m_bkgDist) {
 	case DIST_GAUS:
 	  bkg_prob = m_gauss.getVal(bkgs,m_bkgMeas,m_bkgSigma);
+	  dosumbkg = (i==0);
 	  //	  std::cout << "GAUSSBKG: " << bkgs << " " << m_bkgMeas << " " << m_bkgSigma << " -> " << bkg_prob << std::endl;
 	  break;
 	case DIST_LOGN:
 	  bkg_prob = m_gauss.getValLogN(bkgs,bkgMean,bkgSigma);
+	  dosumbkg = (i==0);
 	  break;
 	case DIST_GAUSCORR:
 	  if (isFullyCorrelated()) {
 	    bkg_prob = m_gauss.getVal(bkgs,m_bkgMeas,m_bkgSigma/sqrt(2.0));
+	    dosumbkg = (i==0);
 	  } else {
 	    if (isNotCorrelated()) {
 	      bkg_prob = m_gauss.getVal(bkgs,m_bkgMeas,m_bkgSigma);
+	      dosumbkg = (i==0);
 	    } else {
 	      bkg_prob = m_gauss.getVal2D(effs,m_effMeas,bkgs,m_bkgMeas,sdetC,seff,sbkg,vceff);
+	      dosumbkg = true;
 	    }
 	  }
 	  break;
 	case DIST_FLAT:
-	if (m_bkgSigma>0) {
-	  bkg_prob = 1.0/(m_bkgSigma*3.46410161513775);
-	} else {
-	  bkg_prob = 1.0;
-	}
+	  if (m_bkgSigma>0) {
+	    bkg_prob = 1.0/(m_bkgSigma*3.46410161513775);
+	  } else {
+	    bkg_prob = 1.0;
+	  }
+	  dosumbkg = (i==0);
 	  break;
 	case DIST_NONE:
 	  bkg_prob = 1.0;
+	  dosumbkg = (i==0);
 	  break;
 	default:
 	  bkg_prob = 1.0;
+	  dosumbkg = (i==0);
 	  break;
 	}
       }
+      if (dosumbkg) sum_bkg_prob += bkg_prob; // only for first loop
       norm_prob = eff_prob*bkg_prob*dedb;
       //
       // Fill the arrays (integral)
@@ -474,7 +508,7 @@ void Pole::initIntegral() {
 	m_weightInt[count] = norm_prob;
       }
       //
-      if (m_verbose>1) std::cout << "Matrix: (" << i << ", " <<  j << ") -> (" << m_effInt[count] << ", " << m_bkgInt[count] << ") " << m_weightInt[count] << "\n";
+      //      if (m_verbose>1) std::cout << "Matrix: (" << i << ", " <<  j << ") -> (" << m_effInt[count] << ", " << m_bkgInt[count] << ") " << m_weightInt[count] << "\n";
       //
       count++;
       if (count>m_nInt) {
@@ -483,6 +517,35 @@ void Pole::initIntegral() {
 		  << ", n_b = " << m_bkgRangeInt.n() << std::endl;
       }
     }
+  }
+  double norm_bkg = sum_bkg_prob*db;
+  double norm_eff = sum_eff_prob*de;
+  if (full2d) {
+    norm_bkg *= de;  // if the distribution is a 2d gauss, the sum is over all area elements
+    norm_eff  = 1.0; // per construction
+  }
+  double norm = norm_bkg*norm_eff;
+  //
+  for (i=0; i<count; i++) {
+    m_weightInt[i] = m_weightInt[i]/norm;
+  }
+  if (firstEffWarn && (!full2d) && (!normOK(norm_eff))) {
+    std::cout << std::endl;
+    std::cout << "WARNING: normalisation of EFF is off: " << norm_eff << std::endl;
+    std::cout << "         This might be OK if the intention is to use a bounded pdf." << std::endl;
+    std::cout << "         The pdf is reweighted such that it is normalised." << std::endl;
+    std::cout << "--- MESSAGE IS NOT REPEATED! ---" << std::endl;
+    std::cout << std::endl;
+    firstEffWarn = false;
+  }
+  if (firstBkgWarn && (!normOK(norm_bkg))) {
+    std::cout << std::endl;
+    std::cout << "WARNING: normalisation of BKG is off: " << norm_bkg << std::endl;
+    std::cout << "         This might be OK if the intention is to use a bounded pdf." << std::endl;
+    std::cout << "         The pdf is reweighted such that it is normalised." << std::endl;
+    std::cout << "--- MESSAGE IS NOT REPEATED! ---" << std::endl;
+    std::cout << std::endl;
+    firstBkgWarn = false;
   }
   if (m_verbose>1) {
     std::cout << "First 10 from double integral (bkg,eff,w):" << std::endl;
@@ -572,15 +635,16 @@ double Pole::calcLimit(double s) {
       }
       pbf = m_poisson.getVal(n,pbf);
       m_lhRatio[n]  = m_muProb[n]/pbf;
-      norm_p += m_muProb[n]; // needs to be renormalised
+      norm_p += m_muProb[n]; // check norm
     }
   } else {
     for (int n=0; n<m_nBelt; n++) {
       m_muProb[n] =  calcProb(n, s);
       m_lhRatio[n]  = m_muProb[n]/m_bestMuProb[n];
-      norm_p += m_muProb[n]; // needs to be renormalised
+      norm_p += m_muProb[n];
     }
   }
+  if (norm_p>m_maxNorm) m_maxNorm=norm_p;
   //
   k = m_nObserved;
   if (k>=m_nBelt) {
@@ -600,7 +664,7 @@ double Pole::calcLimit(double s) {
   bool done=false;
   while (!done) {
     //  for(i=0;i<m_nBelt;i++) {
-    m_muProb[i] = m_muProb[i]/norm_p;
+    //    m_muProb[i] = m_muProb[i]/norm_p; DO NOT NORMALISE
     //    for(k=0;k<m_nBelt;k++) {
     if(i != k) { 
       if(m_lhRatio[i] > m_lhRatio[k])  {
@@ -613,32 +677,84 @@ double Pole::calcLimit(double s) {
     i++;
     done = ((i==m_nBelt) || m_sumProb>m_cl);
   }
+  //
+  // Check if limit is reached.
+  // For a given n_observed, we should have
+  //   Sum(p) > cl for s < s_low
+  //   Sum(p) < cl for s_low < s < s_upp
+  //   Sum(p) > cl for s_upp < s
+  //
   if (m_sumProb<m_cl) {
     if (m_foundLower) {
       m_upperLimit = s;
-      m_foundUpper = true;
+      m_upperLimitNorm = norm_p;
+      //      m_foundUpper = true;
     } else {
       m_lowerLimit = s;
+      m_lowerLimitNorm = norm_p;
       m_foundLower = true;
       m_foundUpper = false;
     }
+  } else {
+    if (m_foundLower) {
+      m_foundUpper = true;
+    }
   }
-//  else {
-//     if (m_foundUpper) {
-//       if (!m_foundUpper) {
-// 	//	std::cout << "Last upper found" << std::endl;
-// 	m_foundUpper = true;
-//       } else {
-// 	//	std::cout << "WARNING:: found a new set of upper limits!!!" << std::endl;
-//       }
-//     }
-//   }
-  return m_sumProb;
+  return norm_p;
+}
+
+bool Pole::limitsOK() {
+  bool rval=false;
+  if (m_foundLower && m_foundUpper) {
+    rval = (normOK(m_lowerLimitNorm) && normOK(m_upperLimitNorm));
+  }
+  return rval;
 }
 
 //*********************************************************************//
 //*********************************************************************//
 //*********************************************************************//
+
+void Pole::calcConstruct(double s) {
+  int i;
+  //
+  double norm_p = 0;
+  double p;
+  std::vector<double> muProb;
+  std::vector<double> lhRatio;
+  //
+  //  std::cout << "calcLimit for " << s << std::endl;
+  if (m_useNLR) { // use method by Gary Hill
+    double pbf;
+    for (int n=0; n<m_nBelt; n++) {
+      p =  calcProb(n, s);
+      if (n>m_bkgMeas) {
+	pbf = static_cast<double>(n);
+      } else {
+	pbf = 0;
+      }
+      pbf = m_poisson.getVal(n,pbf);
+      lhRatio.push_back(p/pbf);
+      muProb.push_back(p);
+      norm_p += p; // needs to be renormalised
+
+    }
+  } else {
+    for (int n=0; n<m_nBelt; n++) {
+      p =  calcProb(n, s);
+      lhRatio.push_back(p/m_bestMuProb[n]);
+      muProb.push_back(p);
+      norm_p += p; // needs to be renormalised
+    }
+  }
+  for (i=0; i<m_nBelt; i++) {
+    muProb[i] = muProb[i]/norm_p;
+  }
+  //
+  for (i=0; i<m_nBelt; i++) {
+    std::cout << "CONSTRUCT: " << s << "\t" << i << "\t" << lhRatio[i] << "\t" << muProb[i] << std::endl;
+  }
+}
 
 // NOTE: Simple sorting - should be put somewhere else...
 
@@ -701,7 +817,7 @@ double Pole::calcBelt(double s, int & n1, int & n2) {
       norm_p += p; // needs to be renormalised
     }
   }
-  sort_index(lhRatio,index,true);
+  sort_index(lhRatio,index,true); // reverse sort
   //
   // Calculate the probability for all n and the given s.
   // The Feldman-Cousins method dictates that for each n a
@@ -737,13 +853,26 @@ double Pole::calcBelt(double s, int & n1, int & n2) {
   }
   n1 = nmin;
   n2 = nmax;
-  std::cout << "CONFBELT: " << s << "\t" << n1 << "\t" << n2 << "\t" << sumProb << "\t" << lhRatio[n1] << "\t" << lhRatio[n2] << std::endl;
+  std::cout << "CONFBELT: " << s << "\t" << n1 << "\t" << n2 << "\t" << sumProb << "\t" << lhRatio[n1] << "\t" << lhRatio[n2] << "\t" << norm_p << std::endl;
   return sumProb;
 }
 
 //*********************************************************************//
 //*********************************************************************//
 //*********************************************************************//
+
+void Pole::findConstruct() {
+  double mu_test;
+  int i = 0;
+  bool done = (i==m_hypTest.n());
+  //
+  while (!done) {
+    mu_test = m_hypTest.min() + i*m_hypTest.step();
+    calcConstruct(mu_test);
+    i++;
+    done = (i==m_hypTest.n()); // must loop over all hypothesis
+  }
+}
 
 void Pole::findBelt() {
   double mu_test;
@@ -754,34 +883,45 @@ void Pole::findBelt() {
   while (!done) {
     mu_test = m_hypTest.min() + i*m_hypTest.step();
     calcBelt(mu_test,n1,n2);
-
     i++;
     done = (i==m_hypTest.n()); // must loop over all hypothesis
   }
 }
 
 bool Pole::findLimits() {
-  double mu_test;
-  int i = 0;
-  bool done = (i==m_hypTest.n());
-  //
+  m_maxNorm = -1.0;
   m_foundLower = false;
   m_foundUpper = false;
   m_lowerLimit = 0;
   m_upperLimit = 0;
   //
+  if (m_nObserved>=m_nBelt) return false;
+  double mu_test;
+  int i = 0;
+  bool done = (i==m_hypTest.n());
+  bool nuppOK = false;
+  int nupp=0;
+  //
+  //
   double p;
   //  int n1,n2;
+
   while (!done) {
     mu_test = m_hypTest.min() + i*m_hypTest.step();
     p=calcLimit(mu_test);
     //    calcBelt(mu_test,n1,n2);
-    if (m_verbose>2) std::cout << "CalcLimit: " << mu_test << " p = " << p << std::endl;
+    if (m_verbose>2) std::cout << "findLimits(): " << mu_test << " norm = " << p << " sump = " << m_sumProb << std::endl;
     i++;
-    done = (i==m_hypTest.n()); // must loop over all hypothesis
+    if (m_foundUpper) { // sample a few afterwards just to make sure we get the last one
+      nupp++;
+      nuppOK = ((nupp>=m_nUppLim) || (m_nUppLim<1));
+    }
+    done = ((i==m_hypTest.n()) || // Done if last hypothesis reached
+	    (nuppOK)           || //
+	    (!normOK(p)));        // normalisation not OK
   }
   if (m_verbose>1) {
-    if (m_foundUpper) {
+    if (limitsOK()) {
       std::cout << "LIMITS(N,e,b,l,u): ";
       coutFixed(4,m_nObserved);  std::cout << "\t";
       coutFixed(4,m_effMeas);    std::cout << "\t";
@@ -792,7 +932,7 @@ bool Pole::findLimits() {
       std::cout << "Limits NOT OK!" << std::endl;
     }
   }
-  return (m_foundUpper);
+  return limitsOK();
 }
 
 bool Pole::findCoverageLimits() {
@@ -800,37 +940,52 @@ bool Pole::findCoverageLimits() {
   // Same as findLimits() but it will stop the scan as soon it is clear
   // that the true s (m_sTrueMean) is inside or outside the range.
   //
-  double mu_test;
-  int i = 0;
-  bool done = (i==m_hypTest.n());
-  bool decided = false;
-  //
+  m_maxNorm = -1.0;
   m_foundLower = false;
   m_foundUpper = false;
   m_lowerLimit = 0;
   m_upperLimit = 0;
   //
+  if (m_nObserved>=m_nBelt) return false;
+  //
+  double mu_test;
+  int i = 0;
+  bool done = (i==m_hypTest.n());
+  bool decided = false;
+  bool nuppOK = false;
+  int  nupp=0;
+  //
   double p;
   while (!done) {
     mu_test = m_hypTest.min() + i*m_hypTest.step();
     p=calcLimit(mu_test);
-    if (m_verbose>2) std::cout << "CalcLimit: " << mu_test << " p = " << p << std::endl;
+    if (m_verbose>2) std::cout << "findCoverageLimits():"
+			       << " s_test = " << mu_test
+			       << " norm = " << p
+			       << " sump = " << m_sumProb << std::endl;
     i++;
     if ((!m_foundLower) && (mu_test>m_sTrue)) { // for sure outside
       decided = true;
       m_lowerLimit = mu_test;     // create a fake set of limits
       m_upperLimit = mu_test+0.1;
+      m_lowerLimitNorm = p; // not really needed
+      m_upperLimitNorm = p; // not exactly true - only the lower limit norm is relevant
       m_foundLower = true;
       m_foundUpper = true;
-    } else if ((m_foundUpper) && (m_upperLimit>m_sTrue)) { // for sure inside
-      decided = true;
+    } else if (m_foundUpper) {
+      if (m_upperLimit>m_sTrue) { // for sure inside
+	decided = limitsOK(); // if norm is not OK then this is not sure
+      } else { // m_sTrue is above - wait a bit before deciding
+	nupp++;
+	nuppOK = ((nupp>=m_nUppLim) || (m_nUppLim<1));
+	if (nuppOK) decided = limitsOK();
+      }
     }
-    //   done = ((limitOk) || (i==m_hypTest.n()));
-    done = ((decided) || (i==m_hypTest.n())); // loop until limit is found or end of
-    //    done = (i==m_hypTest.n());
+    done = ((decided) ||
+	    (i==m_hypTest.n()));
   }
   if (m_verbose>1) {
-    if (m_foundUpper) {
+    if (limitsOK()) {
       std::cout << "COVLIMITS(N,s,e,b,l,u): ";
       coutFixed(4,m_nObserved);  std::cout << "\t";
       coutFixed(4,m_sTrue);      std::cout << "\t";
@@ -845,7 +1000,8 @@ bool Pole::findCoverageLimits() {
   return decided;
 }
 
-void Pole::analyseExperiment() {
+bool Pole::analyseExperiment() {
+  bool rval=false;
   if (m_verbose>0) std::cout << "Initialise arrays" << std::endl;
   initIntArrays();
   initBeltArrays();
@@ -857,10 +1013,11 @@ void Pole::analyseExperiment() {
   }
   if (m_verbose>0) std::cout << "Calculating limit" << std::endl;
   if (m_coverage) {
-    findCoverageLimits();
+    rval=findCoverageLimits();
   } else {
-    findLimits();
+    rval=findLimits();
   }
+  return rval;
 }
 
 void Pole::printLimit(bool doTitle) {
