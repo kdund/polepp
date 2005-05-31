@@ -617,6 +617,30 @@ void Pole::findAllBestMu() {
   m_validBestMu = true;
 }
 
+double Pole::calcLhRatio() {
+  double norm_p = 0;
+  if (m_useNLR) { // use method by Gary Hill
+    double pbf;
+    for (int n=0; n<m_nBelt; n++) {
+      m_muProb[n] =  calcProb(n, s);
+      if (n>m_bkgMeas) {
+	pbf = static_cast<double>(n);
+      } else {
+	pbf = 0;
+      }
+      pbf = m_poisson.getVal(n,pbf);
+      m_lhRatio[n]  = m_muProb[n]/pbf;
+      norm_p += m_muProb[n]; // needs to be renormalised
+    }
+  } else {
+    for (int n=0; n<m_nBelt; n++) {
+      m_muProb[n] =  calcProb(n, s);
+      m_lhRatio[n]  = m_muProb[n]/m_bestMuProb[n];
+      norm_p += m_muProb[n]; // needs to be renormalised
+    }
+  }
+}
+
 double Pole::calcLimit(double s) {
   int k,i;
   //
