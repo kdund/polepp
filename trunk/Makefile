@@ -17,37 +17,37 @@ estbelt.o:	estbelt.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
 poleconst:	poleconst.o $(LDOBJS)
-		g++ $(CFLAGS) -Wall $< $(LDOBJS) -ltclap -o $@
+		g++ $(CFLAGS) -Wall $< $(LDOBJS)  -o $@
 poleconst.o:	poleconst.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
 polelim:	polelim.o $(LDOBJS)
-		g++ $(CFLAGS) -Wall $< $(LDOBJS) -ltclap -o $@
+		g++ $(CFLAGS) -Wall $< $(LDOBJS)  -o $@
 polelim.o:	polelim.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
 polebelt:	polebelt.o $(LDOBJS)
-		g++ $(CFLAGS) -Wall $< $(LDOBJS) -ltclap -o $@
+		g++ $(CFLAGS) -Wall $< $(LDOBJS)  -o $@
 polebelt.o:	polebelt.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
 polecov:	polecov.o $(LDOBJS)
-		g++ $(CFLAGS) -Wall $< $(LDOBJS) -ltclap -o $@
+		g++ $(CFLAGS) -Wall $< $(LDOBJS)  -o $@
 polecov.o:	polecov.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
 exptest:	exptest.o $(LDOBJS)
-		g++ $(CFLAGS) -Wall $< $(LDOBJS) -ltclap -o $@
+		g++ $(CFLAGS) -Wall $< $(LDOBJS)  -o $@
 exptest.o:	exptest.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
 plotexp:	plotexp.o
-		g++ $(CFLAGS) -Wall $< $(ROOTLIBS) -ltclap -o $@
+		g++ $(CFLAGS) -Wall $< $(ROOTLIBS)  -o $@
 plotexp.o:	plotexp.cxx
 		g++ $(CFLAGS) $(ROOTCFLAGS) -Wall -c $<
 
 obstest:	obstest.o $(LDOBJS) Observable.o
-		g++ $(CFLAGS) -Wall $< $(LDOBJS) Observable.o -ltclap -o $@
+		g++ $(CFLAGS) -Wall $< $(LDOBJS) Observable.o  -o $@
 obstest.o:	obstest.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
