@@ -14,6 +14,7 @@ Poisson::~Poisson() {
 }
 
 void Poisson::init(int nlambda, int nn, double lmax) {
+  std::cout << nlambda << ", " << nn << ", " << lmax << std::endl;
   m_nLambda = nlambda;
   m_nN = nn;
   m_nTot = nn*nlambda;

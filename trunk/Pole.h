@@ -255,7 +255,7 @@ public:
   void calcConstruct(double s);
   double calcBelt(double s, int & n1, int & n2); // calculate (4) and find confidence belt
   double calcLimit(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
-  double calcLhRatio(); // fills the likelihood ratio array
+  double calcLhRatio(double s); // fills the likelihood ratio array
   bool limitsOK(); // check if calculated limit is OK using the sum of probs.
   inline bool normOK(double p);
   void setNormMaxDiff(double dpmax=0.001) { m_normMaxDiff=dpmax; }

@@ -166,6 +166,9 @@ void processArgs(int argc, char *argv[]) {
     gPole.setTestHyp(muTestMin.getValue(), muTestMax.getValue(), muTestStep.getValue());
     gPole.printSetup();
     if (useTabulated.getValue()) {
+      gPole.initPoisson(100000,100,50);
+      //      gPole.initPoisson(500000,100,50);
+      //      gPole.initGauss(1000000,10.0);
       gPole.initPoisson(50000,100,50);
       //      gPole.initPoisson(50000,100,200);
       gPole.initGauss(50000,10.0);
@@ -198,7 +201,7 @@ void processArgs(int argc, char *argv[]) {
     
   }
   catch (ArgException e) {
-    cout << "ERROR: " << e.error() << " " << e.argId() << endl;
+    std::cout << "ERROR: " << e.error() << " " << e.argId() << std::endl;
   }
 }
 

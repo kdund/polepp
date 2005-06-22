@@ -617,7 +617,7 @@ void Pole::findAllBestMu() {
   m_validBestMu = true;
 }
 
-double Pole::calcLhRatio() {
+double Pole::calcLhRatio(double s) {
   double norm_p = 0;
   if (m_useNLR) { // use method by Gary Hill
     double pbf;
@@ -639,6 +639,8 @@ double Pole::calcLhRatio() {
       norm_p += m_muProb[n]; // needs to be renormalised
     }
   }
+  std::cout << "BUG:: NOT YET OK (calcLhRatio())" << std::endl;
+  return 0.0;
 }
 
 double Pole::calcLimit(double s) {
@@ -691,10 +693,10 @@ double Pole::calcLimit(double s) {
     //    m_muProb[i] = m_muProb[i]/norm_p; DO NOT NORMALISE
     //    for(k=0;k<m_nBelt;k++) {
     if(i != k) { 
+      //      std::cout << "LHratio: s= " << s << "   i:k " << i << ":" << k << "    RL(i:k) = " << m_lhRatio[i] << ":" << m_lhRatio[k]
+      //		<< "   prob = " << m_sumProb << std::endl;
       if(m_lhRatio[i] > m_lhRatio[k])  {
 	m_sumProb  +=  m_muProb[i];
-	//	std::cout << "s= " << s << "   i:k " << i << ":" << k << "    RL(i:k) = " << m_lhRatio[i] << ":" << m_lhRatio[k]
-	//		  << "   prob = " << m_sumProb << std::endl;
       }
       //    }
     }
@@ -877,7 +879,9 @@ double Pole::calcBelt(double s, int & n1, int & n2) {
   }
   n1 = nmin;
   n2 = nmax;
-  std::cout << "CONFBELT: " << s << "\t" << n1 << "\t" << n2 << "\t" << sumProb << "\t" << lhRatio[n1] << "\t" << lhRatio[n2] << "\t" << norm_p << std::endl;
+  std::cout << "CONFBELT: " << s << "\t" << n1 << "\t" << n2 << "\t" << sumProb << "\t"
+	    << lhRatio[n1] << "\t" << lhRatio[n2] << "\t" << norm_p << "\t"
+	    << index[0] << "\t" << lhRatio[index[0]] << std::endl;
   return sumProb;
 }
 
@@ -1034,6 +1038,9 @@ bool Pole::analyseExperiment() {
   if (!m_useNLR) {
     if (m_verbose>0) std::cout << "Finding s_best" << std::endl;
     findAllBestMu(); // loops
+  }
+  if (m_verbose>3) {
+    findBelt();
   }
   if (m_verbose>0) std::cout << "Calculating limit" << std::endl;
   if (m_coverage) {

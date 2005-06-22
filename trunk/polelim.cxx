@@ -112,7 +112,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
 
   }
   catch (ArgException e) {
-    cout << "ERROR: " << e.error() << " " << e.argId() << endl;
+    std::cout << "ERROR: " << e.error() << " " << e.argId() << std::endl;
   }
 }
 
