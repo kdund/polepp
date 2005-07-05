@@ -255,6 +255,7 @@ public:
   void calcConstruct(double s);
   double calcBelt(double s, int & n1, int & n2); // calculate (4) and find confidence belt
   double calcLimit(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
+  void   calcLh(double s); // fills the likelihood array
   double calcLhRatio(double s); // fills the likelihood ratio array
   bool limitsOK(); // check if calculated limit is OK using the sum of probs.
   inline bool normOK(double p);
@@ -295,20 +296,20 @@ public:
   Range  *getHypTest()     { return &m_hypTest; }
   //
   bool    isValidInt()   { return m_validInt; }
-  int     getNInt()      { return m_nInt; }
-  int     getNIntMax()   { return m_nIntMax; }
-  double *getWeightInt() { return m_weightInt; }
-  double *getEffInt()    { return m_effInt; }
-  double *getBkgInt()    { return m_bkgInt; }
+  unsigned int getNInt()      { return m_nInt; }
+  unsigned int getNIntMax()   { return m_nIntMax; }
+  const std::vector<double> & getWeightInt() const { return m_weightInt; }
+  const std::vector<double> & getEffInt() const    { return m_effInt; }
+  const std::vector<double> & getBkgInt() const    { return m_bkgInt; }
   //
-  double  getDmus() { return m_dmus; }
-  int     getNBelt() { return m_nBelt; }
-  int     getNBeltMax() { return m_nBeltMax; }
-  bool    isValidBestMu()   { return m_validBestMu; }
-  double *getBestMuProb() { return m_bestMuProb; }
-  double *getBestMu() { return m_bestMu; }
-  double *getMuProb() { return m_muProb; }
-  double *getLhRatio() { return m_lhRatio; }
+  const double  getDmus() const { return m_dmus; }
+  const int     getNBelt() const { return m_nBelt; }
+  const int     getNBeltMax() const { return m_nBeltMax; }
+  const bool    isValidBestMu() const  { return m_validBestMu; }
+  const std::vector<double> & getBestMuProb() const { return m_bestMuProb; }
+  const std::vector<double> & getBestMu() const { return m_bestMu; }
+  const std::vector<double> & getMuProb() const { return m_muProb; }
+  const std::vector<double> & getLhRatio() const { return m_lhRatio; }
   //
   double getSumProb()    { return m_sumProb; }
   double getLowerLimit() { return m_lowerLimit; }
@@ -355,19 +356,15 @@ private:
   double m_bkgIntScale;
   // Test range for the likelihood ratio calculation (4)
   Range  m_hypTest;
-  double m_hypTestMin;
-  double m_hypTestMax;
-  double m_hypTestStep;
-  int    m_hypTestN; // obtained from range and stepsize
   //
   // Kernel of double integral (7)
   //
   bool    m_validInt;  // true if integral is valid
-  int     m_nInt;      // == m_effIntN*m_bkgIntN
-  int     m_nIntMax;   // allocated
-  double *m_weightInt; // array containing weights (Gauss(e)*Gauss(b)*de*db), size = n_points
-  double *m_effInt;    // array containg e used in integral (e)
-  double *m_bkgInt;    // array containg b used in integral (b)
+  unsigned int m_nInt;      // == m_effIntN*m_bkgIntN
+  unsigned int m_nIntMax;   // allocated
+  std::vector<double> m_weightInt; // array containing weights (Gauss(e)*Gauss(b)*de*db), size = n_points
+  std::vector<double> m_effInt;    // array containg e used in integral (e)
+  std::vector<double> m_bkgInt;    // array containg b used in integral (b)
   //
   // Arrays of best fit and limits
   //
@@ -378,10 +375,10 @@ private:
   bool    m_suggestBelt;// if true, always call suggestBelt(); set to true if setBelt(v) is called with v<1
   //  std::vector<int> m_nBeltList; // list of suggested nBelt - filled in constructor
   bool    m_validBestMu;//
-  double *m_bestMuProb; // prob. of best mu=e*s+b, index == (N observed)
-  double *m_bestMu;     // best mu=e*s+b
-  double *m_muProb;     // prob for mu
-  double *m_lhRatio;    // likelihood ratio
+  std::vector<double> m_bestMuProb; // prob. of best mu=e*s+b, index == (N observed)
+  std::vector<double> m_bestMu;     // best mu=e*s+b
+  std::vector<double> m_muProb;     // prob for mu
+  std::vector<double> m_lhRatio;    // likelihood ratio
   double m_sumProb;    // sum of probs for conf.belt construction
   bool   m_foundLower; // true if lower limit is found
   bool   m_foundUpper; // true if an upper limit is found
@@ -403,7 +400,7 @@ inline bool Pole::normOK(double p) {
 inline double Pole::calcProb(int n, double s) {  
   double p = 0.0; 
   //
-  for(int i=0;i<m_nInt;i++) {
+  for(unsigned int i=0;i<m_nInt;i++) {
     p += m_weightInt[i]*m_poisson.getVal(n,m_effInt[i]*s + m_bkgInt[i]);
   }
   return p;

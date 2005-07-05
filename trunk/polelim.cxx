@@ -34,7 +34,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> beCorr(    "","corr",    "corr(bkg,eff)",false,0.0,"float");
    //
     ValueArg<double> dMus(      "","dmus",    "step size in findBestMu",false,0.002,"float");
-    ValueArg<int>    belt(   "","belt", "maximum n for findBestMu" ,false,50,"int");
+    ValueArg<int>    belt(   "","belt", "maximum n for findBestMu" ,false,0,"int");
     //
     ValueArg<double> hypTestMin( "","hmin",   "hypothesis test min" ,false,0.0,"float");
     ValueArg<double> hypTestMax( "","hmax",   "hypothesis test max" ,false,35.0,"float");

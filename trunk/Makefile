@@ -51,6 +51,9 @@ obstest:	obstest.o $(LDOBJS) Observable.o
 obstest.o:	obstest.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
+Combine.o:      Combine.cxx Combine.h
+		g++ $(CFLAGS) -Wall -c $<
+
 Pole.o:		Pole.cxx Pole.h Pdf.h Range.h
 		g++ $(CFLAGS) -Wall -c $<
 Range.o:	Range.cxx Range.h

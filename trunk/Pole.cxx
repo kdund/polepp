@@ -47,19 +47,12 @@ Pole::Pole() {
   m_hypTest.setRange(0.0,35.0,0.01);
   //
   m_validInt  = false;
-  m_nInt      = 0;
-  m_weightInt = 0;
-  m_effInt    = 0;
-  m_bkgInt    = 0;
+  m_nInt      = 0; // should be equal to the size of Int vectors below
   //
   m_validBestMu = false;
   m_nBelt       = 0;
   m_nBeltMax    = 0;
   m_suggestBelt = true;
-  m_muProb      = 0;
-  m_bestMuProb  = 0;
-  m_bestMu      = 0;
-  m_lhRatio     = 0;
   //
   // init list of suggested nBelt
   //
@@ -79,15 +72,6 @@ Pole::Pole() {
 }
 
 Pole::~Pole() {
-  // delete arrays
-  if (m_weightInt)  delete [] m_weightInt;
-  if (m_effInt)     delete [] m_effInt;
-  if (m_bkgInt)     delete [] m_bkgInt;
-  //
-  if (m_bestMuProb) delete [] m_bestMuProb;
-  if (m_muProb)     delete [] m_muProb;
-  if (m_bestMu)     delete [] m_bestMu;
-  if (m_lhRatio)    delete [] m_lhRatio;
 }
 
 void Pole::setEffMeas(double mean,double sigma, DISTYPE dist) {
@@ -273,16 +257,11 @@ void Pole::initGauss(int ndata, double mumax) {
 //
 void Pole::initIntArrays() {
   m_nInt = m_effRangeInt.n()*m_bkgRangeInt.n();
-  if ((m_weightInt==0) || (m_nInt>m_nIntMax)) {
+  if (m_weightInt.size()<static_cast<unsigned int>(m_nInt)) {
     m_nIntMax = m_nInt*2; // make a safe margin
-    if (m_weightInt) { // arrays needs resizing
-      delete [] m_weightInt;
-      delete [] m_effInt;
-      delete [] m_bkgInt;
-    }
-    m_weightInt = new double[m_nIntMax];
-    m_effInt    = new double[m_nIntMax];
-    m_bkgInt    = new double[m_nIntMax];
+    m_weightInt.resize(m_nIntMax);
+    m_effInt.resize(m_nIntMax);
+    m_bkgInt.resize(m_nIntMax);
   }
 }
 
@@ -313,18 +292,12 @@ int Pole::suggestBelt() {
 void Pole::initBeltArrays() {
   if (m_suggestBelt) m_nBelt = suggestBelt();
   //
-  if ((m_muProb==0) || (m_nBelt>m_nBeltMax)) {
+  if (m_muProb.size()<static_cast<unsigned int>(m_nBelt)) {
     m_nBeltMax = m_nBelt*2;
-    if (m_muProb) { // arrays needs resizing
-      delete [] m_muProb;
-      delete [] m_bestMuProb;
-      delete [] m_bestMu;
-      delete [] m_lhRatio;
-    }
-    m_muProb     = new double[m_nBeltMax];
-    m_bestMuProb = new double[m_nBeltMax];
-    m_bestMu     = new double[m_nBeltMax];
-    m_lhRatio    = new double[m_nBeltMax];
+    m_muProb.resize(m_nBeltMax);
+    m_bestMuProb.resize(m_nBeltMax);
+    m_bestMu.resize(m_nBeltMax);
+    m_lhRatio.resize(m_nBeltMax);
   }
 }
 
@@ -333,13 +306,12 @@ void Pole::initIntegral() {
   //
   static bool firstEffWarn=true;
   static bool firstBkgWarn=true;
-  int i,j;
   double effs;
   double bkgs;
   double eff_prob, bkg_prob, norm_prob;
   double sum_eff_prob=0;
   double sum_bkg_prob=0;
-  int count=0;
+  unsigned int count=0;
   norm_prob = 1.0;
   bool full2d = false;
   /////////////////////////////////
@@ -408,7 +380,7 @@ void Pole::initIntegral() {
 	      << m_bkgSigma << std::endl;
     std::cout << "InitMatrix: dedb           = " << dedb << std::endl;
   }
-  for (i=0;i<m_effRangeInt.n();i++) { // Loop over all efficiency points
+  for (int i=0;i<m_effRangeInt.n();i++) { // Loop over all efficiency points
     effs =  i*m_effRangeInt.step() + m_effRangeInt.min();
     if ( m_effRangeInt.n() == 1 ) {
       eff_prob = 1.0;
@@ -445,7 +417,7 @@ void Pole::initIntegral() {
     }
     sum_eff_prob += eff_prob;
     //
-    for (j=0;j<m_bkgRangeInt.n();j++) { // Loop over all background points
+    for (int j=0;j<m_bkgRangeInt.n();j++) { // Loop over all background points
       bkgs =  j*m_bkgRangeInt.step() + m_bkgRangeInt.min();
       if ( m_bkgRangeInt.n() == 1 ) {
 	bkg_prob = 1.0;
@@ -526,7 +498,7 @@ void Pole::initIntegral() {
   }
   double norm = norm_bkg*norm_eff;
   //
-  for (i=0; i<count; i++) {
+  for (unsigned int i=0; i<count; i++) {
     m_weightInt[i] = m_weightInt[i]/norm;
   }
   if (firstEffWarn && (!full2d) && (!normOK(norm_eff))) {
@@ -553,7 +525,7 @@ void Pole::initIntegral() {
 	      << "\t"    << m_effRangeInt.min() << "\t" << m_effRangeInt.max() << std::endl;
     std::cout << "Bkg: " << m_bkgRangeInt.n()   << "\t" << m_bkgRangeInt.step()
 	      << "\t"    << m_bkgRangeInt.min() << "\t" << m_bkgRangeInt.max() << std::endl;
-    for (i=0; i<10; i++) {
+    for (int i=0; i<10; i++) {
       std::cout << m_bkgInt[i] << "\t" << m_effInt[i] << "\t"
 		<< m_weightInt[i] << std::endl;
     }
@@ -615,6 +587,14 @@ void Pole::findAllBestMu() {
     }
   }
   m_validBestMu = true;
+}
+
+void Pole::calcLh(double s) {
+  //  double norm_p=0.0;
+  for (int n=0; n<m_nBelt; n++) {
+    m_muProb[n] = calcProb(n, s);
+    //    norm_p += m_muProb[n]; // needs to be renormalised - NO!! 
+  }
 }
 
 double Pole::calcLhRatio(double s) {
@@ -688,9 +668,10 @@ double Pole::calcLimit(double s) {
   // R0 is the likelihood ratio for n_observed.
   i=0;
   bool done=false;
+  //  std::cout << "Norm_p = " << norm_p << std::endl;
   while (!done) {
     //  for(i=0;i<m_nBelt;i++) {
-    //    m_muProb[i] = m_muProb[i]/norm_p; DO NOT NORMALISE
+    //    m_muProb[i] = m_muProb[i]/norm_p; DO NOT NORMALISE - NOT NEEDED AS THEY ARE ALL 1
     //    for(k=0;k<m_nBelt;k++) {
     if(i != k) { 
       //      std::cout << "LHratio: s= " << s << "   i:k " << i << ":" << k << "    RL(i:k) = " << m_lhRatio[i] << ":" << m_lhRatio[k]

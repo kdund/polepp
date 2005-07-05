@@ -166,7 +166,7 @@ void processArgs(int argc, char *argv[]) {
     gPole.setTestHyp(muTestMin.getValue(), muTestMax.getValue(), muTestStep.getValue());
     gPole.printSetup();
     if (useTabulated.getValue()) {
-      gPole.initPoisson(100000,100,50);
+      //      gPole.initPoisson(100000,100,50);
       //      gPole.initPoisson(500000,100,50);
       //      gPole.initGauss(1000000,10.0);
       gPole.initPoisson(50000,100,50);
