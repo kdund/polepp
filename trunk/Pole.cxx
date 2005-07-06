@@ -27,22 +27,36 @@ inline char *yesNo(bool var) {
 /*!
   Main constructor.
  */
+// HERE: Should have a truly empty with NO initiation of variables -> SPEED!
 Pole::Pole() {
+  m_coverage = false;
   m_nUppLim = 10;
   m_normMaxDiff = 0.001;
-
+  //
+  // Default observation
+  //
+  m_nObserved = 1;
+  m_sTrue = 1;
+  m_effMeas = 1.0;
+  m_effSigma = 0.1;
   m_effDist = DIST_GAUS;
-  m_bkgDist = DIST_GAUS;
+
+  m_bkgMeas = 0;
+  m_bkgSigma = 0;
+  m_bkgDist = DIST_NONE;
+
+  m_beCorr = 0;
   //
   m_stepMin = 0.001;
   //
   m_dmus = 0.01;
   //
-  m_nObserved = -1;
-  //
   m_intNdef = 20;    // default number of points (when step<=0)
   m_effIntScale = 5.0;
   m_bkgIntScale = 5.0;
+  //
+  setEffInt(m_effIntScale,-1.0);
+  setBkgInt(m_bkgIntScale,-1.0);
   //
   m_hypTest.setRange(0.0,35.0,0.01);
   //
@@ -50,9 +64,9 @@ Pole::Pole() {
   m_nInt      = 0; // should be equal to the size of Int vectors below
   //
   m_validBestMu = false;
-  m_nBelt       = 0;
-  m_nBeltMax    = 0;
-  m_suggestBelt = true;
+  m_nBelt       = 50;
+  m_nBeltMax    = 50;
+  m_suggestBelt = (m_nBelt<1);
   //
   // init list of suggested nBelt
   //
@@ -548,8 +562,8 @@ void Pole::findBestMu(int n) {
     m_bestMu[n] = 0; // best mu is 0
     m_bestMuProb[n] = calcProb(n,0);
   } else {
-    mu_s_max = double(n)-m_bkgMeas;
-    //    mu_s_max = (double(n) - m_bkgRangeInt.min())/m_effRangeInt.min();
+    //    mu_s_max = double(n)-m_bkgMeas; // OLD version
+    mu_s_max = (double(n) - m_bkgRangeInt.min())/m_effMeas;
     //    mu_s_min = (double(n) - m_bkgRangeInt.max())/m_effRangeInt.max();
     mu_s_min = (double(n) - m_bkgRangeInt.max())/m_effRangeInt.max();
     if(mu_s_min<0) {mu_s_min = 0.0;}
@@ -1009,13 +1023,17 @@ bool Pole::findCoverageLimits() {
   return decided;
 }
 
-bool Pole::analyseExperiment() {
-  bool rval=false;
+void Pole::initAnalysis() {
   if (m_verbose>0) std::cout << "Initialise arrays" << std::endl;
   initIntArrays();
   initBeltArrays();
   if (m_verbose>0) std::cout << "Constructing integral" << std::endl;
   initIntegral();  // generates predefined parts of double integral ( eq.7)
+}
+
+bool Pole::analyseExperiment() {
+  bool rval=false;
+  initAnalysis();
   if (!m_useNLR) {
     if (m_verbose>0) std::cout << "Finding s_best" << std::endl;
     findAllBestMu(); // loops
