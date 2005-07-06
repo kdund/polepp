@@ -47,7 +47,7 @@ void Poisson::init(int nlambda, int nn, double lmax) {
   std::cout << "==================================\n" << std::endl;
 }
 
-double Poisson::rawPoisson(int n, double s) {
+const double Poisson::rawPoisson(int n, double s) const {
   double prob;
   if(s<50.0) {
     prob = (pow(s,n)/exp(lgamma(n+1)))*exp(-s);
@@ -92,7 +92,7 @@ void Gauss::init(int ndata, double mumax) {
   std::cout << "==================================\n" << std::endl;
 }
 
-double Gauss::rawGauss(double mu) {
+const double Gauss::rawGauss(double mu) const {
   double prob;
   double norm = 1.0L/sqrt(2.0*M_PI);
   prob = norm*exp(-0.5L*mu*mu);

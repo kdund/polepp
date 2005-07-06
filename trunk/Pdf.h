@@ -13,9 +13,9 @@ public:
   //
   void init(int nlambda=100000, int nn=60, double lmbmax=200.0);
   //
-  inline double getVal(int no, double s);
-  const double *getData() { return m_data; }
-  const int getNdata()    { return m_nTot; }
+  inline const double getVal(int no, double s) const;
+  const double *getData() const { return m_data; }
+  const int getNdata() const    { return m_nTot; }
 private:
   unsigned long m_nLambda;
   unsigned long m_nN;
@@ -24,7 +24,7 @@ private:
   double m_dL;
   double *m_data;
   //
-  double rawPoisson(int n, double s);
+  const double rawPoisson(int n, double s) const;
 };
 
 class Gauss {
@@ -33,24 +33,24 @@ public:
   ~Gauss();
   //
   void init(int ndata=10000, double nmumax=100.0);
-  inline double getVal(double x, double mu, double s);
+  inline const double getVal(double x, double mu, double s) const;
   // 2D gauss
-  inline double getVal2D(double x1, double mu1, double s1, double x2, double mu2, double s2, double corr);
-  inline double getVal2D(double x1, double mu1, double x2, double mu2, double sdetC, double seff1, double seff2, double veffc);
-  inline double getDetC(double s1,double s2,double c) { return (s1*s1*s2*s2*(1.0-c*c)); }
-  inline double getVeff(double detC, double s) { return (detC/(s*s)); }
-  inline double getVeffCorr(double detC, double s1, double s2, double corr) { return (detC/(corr*s1*s2)); }
+  inline const double getVal2D(double x1, double mu1, double s1, double x2, double mu2, double s2, double corr) const;
+  inline const double getVal2D(double x1, double mu1, double x2, double mu2, double sdetC, double seff1, double seff2, double veffc) const;
+  inline const double getDetC(double s1,double s2,double c) const { return (s1*s1*s2*s2*(1.0-c*c)); }
+  inline const double getVeff(double detC, double s) const { return (detC/(s*s)); }
+  inline const double getVeffCorr(double detC, double s1, double s2, double corr) const { return (detC/(corr*s1*s2));}
   // Log-Normal
-  inline double getValLogN(double x, double nmean, double nsigma);
-  inline double getLNMean(double mean,double sigma);
-  inline double getLNSigma(double mean,double sigma);
+  inline const double getValLogN(double x, double nmean, double nsigma) const;
+  inline const double getLNMean(double mean,double sigma) const;
+  inline const double getLNSigma(double mean,double sigma) const;
 private:
   unsigned long m_nData;
   double m_muMax;
   double m_dMu;
   double *m_data;
   //
-  double rawGauss(double mu);
+  const double rawGauss(double mu) const;
 };
 
 // class General {
@@ -70,7 +70,7 @@ private:
 //   std::double vector m_acc;
 // };
 
-inline double Gauss::getVal(double x, double mu0, double s) {
+inline const double Gauss::getVal(double x, double mu0, double s) const {
   double rval;
   double mu = fabs((x-mu0)/s); // symmetric around mu0
   if (mu>m_muMax) {
@@ -86,7 +86,7 @@ inline double Gauss::getVal(double x, double mu0, double s) {
   return rval;
 }
 
-inline double Gauss::getVal2D(double x1, double mu1, double s1, double x2, double mu2, double s2, double corr) {
+inline const double Gauss::getVal2D(double x1, double mu1, double s1, double x2, double mu2, double s2, double corr) const {
   double sdetC = sqrt(getDetC(s1,s2,corr));
   double seff1 = sdetC/s2;
   double seff2 = sdetC/s1;
@@ -100,7 +100,7 @@ inline double Gauss::getVal2D(double x1, double mu1, double s1, double x2, doubl
   return rval;
 }
 
-inline double Gauss::getVal2D(double x1, double mu1, double x2, double mu2, double sdetC, double seff1, double seff2, double veffc) {
+inline const double Gauss::getVal2D(double x1, double mu1, double x2, double mu2, double sdetC, double seff1, double seff2, double veffc) const {
   double rval;
   rval  = getVal(x1,mu1,seff1)*seff1;
   rval *= getVal(x2,mu2,seff2)*seff2;
@@ -109,17 +109,17 @@ inline double Gauss::getVal2D(double x1, double mu1, double x2, double mu2, doub
   return rval;
 }
 
-inline double Gauss::getValLogN(double x, double nmean, double nsigma) {
+inline const double Gauss::getValLogN(double x, double nmean, double nsigma) const {
   return (x>0.0 ? getVal(log(x),nmean,nsigma)/x:0.0);
 }
-inline double Gauss::getLNMean(double mean,double sigma) {
+inline const double Gauss::getLNMean(double mean,double sigma) const {
   return log(mean*mean/sqrt(sigma*sigma + mean*mean));
 }
-inline double Gauss::getLNSigma(double mean,double sigma) {
+inline const double Gauss::getLNSigma(double mean,double sigma) const {
   return sqrt(log(sigma*sigma/mean/mean+1));
 }
 
-inline double Poisson::getVal(int no, double s) {
+inline const double Poisson::getVal(int no, double s) const {
   double rval;
   double ests;
   unsigned long sind  = static_cast<int>(s/m_dL);
