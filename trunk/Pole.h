@@ -249,7 +249,7 @@ public:
   void initIntegral();    // calculates double integral kernal (eff*bkg*db*de) according to setup (7)
 
   // POLE
-  inline double calcProb(int n, double s); // calculates probability (7)
+  inline const double calcProb(int n, double s) const; // calculates probability (7)
   void findBestMu(int n); // finds the best fit (mu=s+b) for a given n. Fills m_bestMu[n] and m_bestMuProb[n].
   void findAllBestMu();   // dito for all n (loop n=0; n<m_nMuUsed)
   void calcConstruct(double s);
@@ -268,36 +268,37 @@ public:
   // 
   void printSetup();
   // POLE
-  bool analyseExperiment();  // makes the double integral and finds the limits/coverage
+  void initAnalysis(); // inits the vectors and calculates the double integral weights
+  bool analyseExperiment();  // finds the limits/coverage
   //
   // Access functions
   //
-  double getStepMin()    { return m_stepMin; }
-  double getCL()         { return m_cl; }
-  double getSTrue()      { return m_sTrue; }
-  bool   getCoverage()   { return m_coverage; }
-  int    getNObserved()  { return m_nObserved; }
+  const double getStepMin() const    { return m_stepMin; }
+  const double getCL() const         { return m_cl; }
+  const double getSTrue() const      { return m_sTrue; }
+  const bool   getCoverage() const   { return m_coverage; }
+  const int    getNObserved() const  { return m_nObserved; }
   // Efficiency
-  double getEffMeas()    { return m_effMeas; }
-  double getEffSigma()   { return m_effSigma; }
-  DISTYPE getEffDist()   { return m_effDist; }
+  const double getEffMeas() const    { return m_effMeas; }
+  const double getEffSigma() const   { return m_effSigma; }
+  const DISTYPE getEffDist() const   { return m_effDist; }
   // Background
-  double  getBkgMeas()   { return m_bkgMeas; }
-  double  getBkgSigma()  { return m_bkgSigma; }
-  DISTYPE getBkgDist()   { return m_bkgDist; }
-  double  getEffBkgCorr() { return m_beCorr; }
+  const double  getBkgMeas() const   { return m_bkgMeas; }
+  const double  getBkgSigma() const  { return m_bkgSigma; }
+  const DISTYPE getBkgDist() const   { return m_bkgDist; }
+  const double  getEffBkgCorr() const { return m_beCorr; }
   // range and steps in double integral (7), in principle infinite
-  double  getEffIntScale() { return m_effIntScale; }
-  Range  *getEffRangeInt() { return &m_effRangeInt; }
+  const double  getEffIntScale() const { return m_effIntScale; }
+  const Range  *getEffRangeInt() const { return &m_effRangeInt; }
   // range and steps in double integral (7)
-  double  getBkgIntScale() { return m_bkgIntScale; }
-  Range  *getBkgRangeInt() { return &m_bkgRangeInt; }
+  const double  getBkgIntScale() const { return m_bkgIntScale; }
+  const Range  *getBkgRangeInt() const { return &m_bkgRangeInt; }
   // Test range for the likelihood ratio calculation (4)
-  Range  *getHypTest()     { return &m_hypTest; }
+  const Range  *getHypTest() const     { return &m_hypTest; }
   //
-  bool    isValidInt()   { return m_validInt; }
-  unsigned int getNInt()      { return m_nInt; }
-  unsigned int getNIntMax()   { return m_nIntMax; }
+  const bool    isValidInt() const   { return m_validInt; }
+  const unsigned int getNInt() const     { return m_nInt; }
+  const unsigned int getNIntMax() const  { return m_nIntMax; }
   const std::vector<double> & getWeightInt() const { return m_weightInt; }
   const std::vector<double> & getEffInt() const    { return m_effInt; }
   const std::vector<double> & getBkgInt() const    { return m_bkgInt; }
@@ -311,12 +312,12 @@ public:
   const std::vector<double> & getMuProb() const { return m_muProb; }
   const std::vector<double> & getLhRatio() const { return m_lhRatio; }
   //
-  double getSumProb()    { return m_sumProb; }
-  double getLowerLimit() { return m_lowerLimit; }
-  double getUpperLimit() { return m_upperLimit; }
-  double getLowerLimitNorm() { return m_lowerLimitNorm; }
-  double getUpperLimitNorm() { return m_upperLimitNorm; }
-  int    getNuppLim()    { return m_nUppLim; }
+  const double getSumProb() const    { return m_sumProb; }
+  const double getLowerLimit() const { return m_lowerLimit; }
+  const double getUpperLimit() const { return m_upperLimit; }
+  const double getLowerLimitNorm() const { return m_lowerLimitNorm; }
+  const double getUpperLimitNorm() const { return m_upperLimitNorm; }
+  const int    getNuppLim() const    { return m_nUppLim; }
 
 private:
   void setInt(double & low, double & high, double & step, double scale, double mean, double sigma, DISTYPE dt);
@@ -397,7 +398,7 @@ inline bool Pole::normOK(double p) {
   return (fabs(p-1.0)<m_normMaxDiff);
 }
 
-inline double Pole::calcProb(int n, double s) {  
+inline const double Pole::calcProb(int n, double s) const {  
   double p = 0.0; 
   //
   for(unsigned int i=0;i<m_nInt;i++) {
