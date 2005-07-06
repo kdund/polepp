@@ -13,11 +13,11 @@ public:
   //
   void setRange(double vmin, double vmax, double vstep, int nmax=0);
   void forceNpts(int n);
-  inline double getVal(int index, double def=0);
-  inline double min()  {return m_min;}
-  inline double max()  {return m_max;}
-  inline int    n()    {return m_n;}
-  inline double step() {return m_step;}
+  inline const double getVal(int index, double def=0) const;
+  inline const double min() const  {return m_min;}
+  inline const double max() const  {return m_max;}
+  inline const int    n() const    {return m_n;}
+  inline const double step() const {return m_step;}
 private:
   double m_min;
   double m_max;
@@ -25,7 +25,7 @@ private:
   int    m_n;
 };
 
-inline double Range::getVal(int index, double def) {
+inline const double Range::getVal(int index, double def) const {
   double rval=def;
   if ((index<m_n) && (index>=0))
     rval = m_min + static_cast<double>(index)*m_step;
