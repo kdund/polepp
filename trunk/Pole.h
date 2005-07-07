@@ -258,7 +258,7 @@ public:
   void   calcLh(double s); // fills the likelihood array
   double calcLhRatio(double s); // fills the likelihood ratio array
   bool limitsOK(); // check if calculated limit is OK using the sum of probs.
-  inline bool normOK(double p);
+  inline const bool normOK(double p) const;
   void setNormMaxDiff(double dpmax=0.001) { m_normMaxDiff=dpmax; }
   void findConstruct();
   void findBelt();
@@ -394,7 +394,7 @@ private:
   bool   m_useNLR; // Use Gary Hills likelihood ratio
 };
 
-inline bool Pole::normOK(double p) {
+inline const bool Pole::normOK(double p) const {
   return (fabs(p-1.0)<m_normMaxDiff);
 }
 
