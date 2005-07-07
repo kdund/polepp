@@ -11,6 +11,11 @@ SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Range.cxx Pdf.cxx
 
 all:		polelim polebelt polecov exptest plotexp estbelt poleconst
 
+polecomb:       polecomb.o $(LDOBJS) Combine.o
+		g++ $(CFLAGS) -Wall $< $(LDOBJS) Combine.o  -o $@
+polecomb.o:     polecomb.cxx
+		g++ $(CFLAGS) -Wall -c $<
+
 estbelt:	estbelt.o
 		g++ $(CFLAGS) -Wall $< -o $@
 estbelt.o:	estbelt.cxx
