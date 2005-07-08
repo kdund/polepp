@@ -2,6 +2,9 @@
 
 namespace PDF {
 
+Poisson gPoisson;
+Gauss   gGauss;
+
 Poisson::Poisson() {
   m_data = 0; // for the destructor
   m_nN = 0;   // makes sure if we call getVal without having done init(), it will still function

@@ -144,6 +144,9 @@ inline const double Poisson::getVal(int no, double s) const {
   return rval;
 }
 
+extern Poisson gPoisson;
+extern Gauss   gGauss;
+
 };
 
 #endif
