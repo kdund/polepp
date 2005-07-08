@@ -1,13 +1,13 @@
 ROOTCFLAGS = $(shell root-config --cflags)
 ROOTLIBS   = $(shell root-config --libs)
-LDOBJS   =  Pdf.o Range.o Random.o Coverage.o Pole.o
+LDOBJS   =  Pdf.o Range.o Random.o Coverage.o Pole.o Combination.o
 ###CFLAGS     = -O
 # Use -g to include debug info
 # Use -pg for profiling info
 CFLAGS     = -g -O
 SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx poleconst.cxx
-INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h
-SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Range.cxx Pdf.cxx
+INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h
+SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Range.cxx Pdf.cxx Combination.cxx
 
 all:		polelim polebelt polecov exptest plotexp estbelt poleconst
 
@@ -68,6 +68,8 @@ Coverage.o:	Coverage.cxx Coverage.h Range.h Random.h Pole.h Pdf.h
 Random.o:	Random.cxx Random.h
 		g++ $(CFLAGS) -Wall -c $<
 Pdf.o:		Pdf.cxx Pdf.h
+		g++ $(CFLAGS) -Wall -c $<
+Combination.o:	Combination.cxx Combination.h
 		g++ $(CFLAGS) -Wall -c $<
 Observable.o:	Observable.cxx Observable.h Random.h
 		g++ $(CFLAGS) -Wall -c $<
