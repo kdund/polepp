@@ -3,6 +3,8 @@
 //
 //
 //
+#include "Combination.h"
+
 class Pole;
 
 class Combine {
