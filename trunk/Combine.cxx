@@ -3,7 +3,6 @@
 #include <iterator>
 #include "Pole.h"
 #include "Combine.h"
-#include "Permutation.h"
 
 Combine::Combine() {
   m_foundLower=false;
@@ -52,25 +51,16 @@ void Combine::tabulateLikelihood() {
   m_nVectors.clear();
   // all possible n
   for (int i=0; i<nrange; i++) nvecRange[i]=i;
-  // permutate
-  AnalysisUtils::Permutation<const std::vector<int> > nvecPerm(&nvecRange,nmeas);
+
+//   // permutate
+//   std::cout << "   permutate " << std::endl;
+//   AnalysisUtils::Permutation<const std::vector<int> > nvecPerm(&nvecRange,nmeas);
 
   std::vector< int > jj;
-
-  // save permutations
-
-  while (nvecPerm.get(jj)) {
-    m_nVectors.push_back(jj);
-  }
-  //
-  // now make vectors where all elements are equal
-  //
-  jj.resize(nmeas);
-  for (int i=0; i<nrange; i++) {
-    for (int m=0; m<nmeas; m++) {
-      jj[m] = i;
-    }
-    m_nVectors.push_back(jj);
+  jj.resize(nmeas,0);
+  m_nVectors.push_back(jj);  
+  while (Combination::next_vector(jj,nrange-1)) {
+    m_nVectors.push_back(jj);  
   }
   //
   // sort them
@@ -94,7 +84,7 @@ void Combine::tabulateLikelihood() {
     s = BeltEstimator::getSigUp(pole->getNObserved(), pole->getBkgMeas());
     if (s>smax) smax=s;
   }
-  smax *= 1.1; // increase the range by 10% - just to be sure (?)
+  smax *= 2.0; // increase the range by 10% - just to be sure (?)
   double sstep = m_poleRef->getHypTest()->step();
   if (sstep<=0) sstep = 0.01;
   //  sstep=0.1;
@@ -457,14 +447,17 @@ void Combine::findLimits() {
   double stst;
   double pnorm;
   //
+  double pnormMax=0;
   while (!done) {
     stst = m_sVector[i];
     pnorm = calcLimit(stst);
+    if (pnorm>pnormMax) pnormMax = pnorm;
     done = ((i==ismax) ||
 	    (m_foundUpper) ||
 	    (!m_poleRef->normOK(pnorm)));
     i++;
   }
+  std::cout << "Max norm = " << pnormMax << std::endl;
   bool limitsOK = false;
   if (m_foundLower && m_foundUpper) {
     limitsOK = (m_poleRef->normOK(m_lowNorm) && m_poleRef->normOK(m_uppNorm)); // a bit ugly...
@@ -474,6 +467,12 @@ void Combine::findLimits() {
   } else {
     std::cout << "Limits not OK!" << std::endl;
     std::cout << "Limits: [ " << m_lowerLimit << " , " << m_upperLimit << " ]" << std::endl;
+    std::cout << "ismax = " << ismax << std::endl;
+    std::cout << "lowNorm = " << m_lowNorm << std::endl;
+    std::cout << "uppNorm = " << m_uppNorm << std::endl;
+    std::cout << "lowFound = " << m_foundLower << std::endl;
+    std::cout << "uppFound = " << m_foundUpper << std::endl;
+
   }
 }
 
