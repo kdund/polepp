@@ -29,6 +29,7 @@ inline char *yesNo(bool var) {
  */
 // HERE: Should have a truly empty with NO initiation of variables -> SPEED!
 Pole::Pole() {
+  m_verbose=0;
   m_coverage = false;
   m_nUppLim = 10;
   m_normMaxDiff = 0.001;
@@ -152,8 +153,8 @@ void Pole::setInt(double & low, double & high, double & step, double scale, doub
       high = mean+dx;
       break;
     case DIST_LOGN:
-      nmean  = m_gauss.getLNMean(mean,sigma);
-      nsigma = m_gauss.getLNSigma(mean,sigma);
+      nmean  = m_gauss->getLNMean(mean,sigma);
+      nsigma = m_gauss->getLNSigma(mean,sigma);
       low  = exp(nmean - scale*nsigma);
       high = exp(nmean + scale*nsigma);
       break;
@@ -259,11 +260,11 @@ bool Pole::checkParams() {
 //
 
 void Pole::initPoisson(int nlambda, int nn, double lmbmax) {
-  m_poisson.init(nlambda, nn, lmbmax);
+  //  if (m_poisson) m_poisson->init(nlambda, nn, lmbmax);
 }
 
 void Pole::initGauss(int ndata, double mumax) {
-  m_gauss.init(ndata, mumax);
+  //  if (m_gauss) m_gauss->init(ndata, mumax);
 }
 
 //
@@ -333,15 +334,15 @@ void Pole::initIntegral() {
   double effMean,effSigma;
   double bkgMean,bkgSigma;
   if (m_effDist==DIST_LOGN) {
-    effMean  = m_gauss.getLNMean(m_effMeas,m_effSigma);
-    effSigma = m_gauss.getLNSigma(m_effMeas,m_effSigma);
+    effMean  = m_gauss->getLNMean(m_effMeas,m_effSigma);
+    effSigma = m_gauss->getLNSigma(m_effMeas,m_effSigma);
   } else {
     effMean  = m_effMeas;
     effSigma = m_effSigma;
   }
   if (m_bkgDist==DIST_LOGN) {
-    bkgMean  = m_gauss.getLNMean(m_bkgMeas,m_bkgSigma);
-    bkgSigma = m_gauss.getLNSigma(m_bkgMeas,m_bkgSigma);
+    bkgMean  = m_gauss->getLNMean(m_bkgMeas,m_bkgSigma);
+    bkgSigma = m_gauss->getLNSigma(m_bkgMeas,m_bkgSigma);
   } else {
     bkgMean  = m_bkgMeas;
     bkgSigma = m_bkgSigma;
@@ -351,11 +352,11 @@ void Pole::initIntegral() {
       full2d=false;
     } else {
       full2d=true;
-      detC = m_gauss.getDetC(m_effSigma,m_bkgSigma,m_beCorr);
+      detC = m_gauss->getDetC(m_effSigma,m_bkgSigma,m_beCorr);
       sdetC = sqrt(detC);
-      vceff = m_gauss.getVeffCorr(detC,m_effSigma,m_bkgSigma,m_beCorr);
-      seff  = sqrt(m_gauss.getVeff(detC,m_bkgSigma)); // effective sigma for efficiency v1eff = detC/(s2*s2)
-      sbkg  = sqrt(m_gauss.getVeff(detC,m_effSigma)); // dito for background            v2eff = detC/(s1*s1)
+      vceff = m_gauss->getVeffCorr(detC,m_effSigma,m_bkgSigma,m_beCorr);
+      seff  = sqrt(m_gauss->getVeff(detC,m_bkgSigma)); // effective sigma for efficiency v1eff = detC/(s2*s2)
+      sbkg  = sqrt(m_gauss->getVeff(detC,m_effSigma)); // dito for background            v2eff = detC/(s1*s1)
       if (m_verbose>2) {
 	std::cout << "DetC = " << detC << std::endl;
 	std::cout << "sDetC = " << sdetC << std::endl;
@@ -401,15 +402,15 @@ void Pole::initIntegral() {
     } else {
       switch(m_effDist) {
       case DIST_GAUS:
-	eff_prob = m_gauss.getVal(effs,m_effMeas,m_effSigma);
+	eff_prob = m_gauss->getVal(effs,m_effMeas,m_effSigma);
 	//	std::cout << "GAUSSEFF: " << effs << " " << m_effMeas << " " << m_effSigma << " -> " << eff_prob << std::endl;
 	break;
       case DIST_LOGN:
-	eff_prob = m_gauss.getValLogN(effs,effMean,effSigma);
+	eff_prob = m_gauss->getValLogN(effs,effMean,effSigma);
 	break;
       case DIST_GAUSCORR:
 	if (isNotCorrelated()) {
-	  eff_prob = m_gauss.getVal(effs,m_effMeas,m_effSigma);
+	  eff_prob = m_gauss->getVal(effs,m_effMeas,m_effSigma);
 	} else {
 	  eff_prob = 1.0; // will be set in the bkg loop
 	}
@@ -439,24 +440,24 @@ void Pole::initIntegral() {
       } else {
 	switch(m_bkgDist) {
 	case DIST_GAUS:
-	  bkg_prob = m_gauss.getVal(bkgs,m_bkgMeas,m_bkgSigma);
+	  bkg_prob = m_gauss->getVal(bkgs,m_bkgMeas,m_bkgSigma);
 	  dosumbkg = (i==0);
 	  //	  std::cout << "GAUSSBKG: " << bkgs << " " << m_bkgMeas << " " << m_bkgSigma << " -> " << bkg_prob << std::endl;
 	  break;
 	case DIST_LOGN:
-	  bkg_prob = m_gauss.getValLogN(bkgs,bkgMean,bkgSigma);
+	  bkg_prob = m_gauss->getValLogN(bkgs,bkgMean,bkgSigma);
 	  dosumbkg = (i==0);
 	  break;
 	case DIST_GAUSCORR:
 	  if (isFullyCorrelated()) {
-	    bkg_prob = m_gauss.getVal(bkgs,m_bkgMeas,m_bkgSigma/sqrt(2.0));
+	    bkg_prob = m_gauss->getVal(bkgs,m_bkgMeas,m_bkgSigma/sqrt(2.0));
 	    dosumbkg = (i==0);
 	  } else {
 	    if (isNotCorrelated()) {
-	      bkg_prob = m_gauss.getVal(bkgs,m_bkgMeas,m_bkgSigma);
+	      bkg_prob = m_gauss->getVal(bkgs,m_bkgMeas,m_bkgSigma);
 	      dosumbkg = (i==0);
 	    } else {
-	      bkg_prob = m_gauss.getVal2D(effs,m_effMeas,bkgs,m_bkgMeas,sdetC,seff,sbkg,vceff);
+	      bkg_prob = m_gauss->getVal2D(effs,m_effMeas,bkgs,m_bkgMeas,sdetC,seff,sbkg,vceff);
 	      dosumbkg = true;
 	    }
 	  }
@@ -622,7 +623,7 @@ double Pole::calcLhRatio(double s) {
       } else {
 	pbf = 0;
       }
-      pbf = m_poisson.getVal(n,pbf);
+      pbf = m_poisson->getVal(n,pbf);
       m_lhRatio[n]  = m_muProb[n]/pbf;
       norm_p += m_muProb[n]; // needs to be renormalised
     }
@@ -653,7 +654,7 @@ double Pole::calcLimit(double s) {
       } else {
 	pbf = 0;
       }
-      pbf = m_poisson.getVal(n,pbf);
+      pbf = m_poisson->getVal(n,pbf);
       m_lhRatio[n]  = m_muProb[n]/pbf;
       norm_p += m_muProb[n]; // check norm
     }
@@ -754,7 +755,7 @@ void Pole::calcConstruct(double s) {
       } else {
 	pbf = 0;
       }
-      pbf = m_poisson.getVal(n,pbf);
+      pbf = m_poisson->getVal(n,pbf);
       lhRatio.push_back(p/pbf);
       muProb.push_back(p);
       norm_p += p; // needs to be renormalised
@@ -824,7 +825,7 @@ double Pole::calcBelt(double s, int & n1, int & n2) {
       } else {
 	pbf = 0;
       }
-      pbf = m_poisson.getVal(n,pbf);
+      pbf = m_poisson->getVal(n,pbf);
       lhRatio.push_back(p/pbf);
       muProb.push_back(p);
       norm_p += p; // needs to be renormalised

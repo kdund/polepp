@@ -240,6 +240,8 @@ public:
   void setVerbose(int v=0) { m_verbose=v; }
 
   // Tabulated PDF's
+  void setPoisson(const PDF::Poisson *pdf) {m_poisson=pdf;}
+  void setGauss(const PDF::Gauss *pdf) {m_gauss=pdf;}
   void initPoisson(int nlambda=10000, int nn=51, double lmbmax=100); // will init poisson table
   void initGauss(int ndata  =10000, double mumax=1000.0); // will init gauss table
   ///////////////////////////////
@@ -322,8 +324,8 @@ public:
 private:
   void setInt(double & low, double & high, double & step, double scale, double mean, double sigma, DISTYPE dt);
 
-  PDF::Poisson m_poisson;
-  PDF::Gauss   m_gauss;
+  const PDF::Poisson *m_poisson;
+  const PDF::Gauss   *m_gauss;
   //
   int    m_verbose;
   //
@@ -402,7 +404,7 @@ inline const double Pole::calcProb(int n, double s) const {
   double p = 0.0; 
   //
   for(unsigned int i=0;i<m_nInt;i++) {
-    p += m_weightInt[i]*m_poisson.getVal(n,m_effInt[i]*s + m_bkgInt[i]);
+    p += m_weightInt[i]*m_poisson->getVal(n,m_effInt[i]*s + m_bkgInt[i]);
   }
   return p;
 }
