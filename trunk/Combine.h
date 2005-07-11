@@ -13,6 +13,7 @@ class Combine {
   virtual ~Combine();
   //
   void add(const Pole *point);
+  void add(const std::vector<Pole *> poleList);
   //
   void init(); // called AFTER all points are added
   void doIt();

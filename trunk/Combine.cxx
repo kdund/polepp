@@ -22,7 +22,20 @@ bool Combine::isOK(const Pole *point) {
   // * CL should be the same, of course
   //
   bool rval=false;
+  //
+  // First make sure it is an ok object
+  //
   if (point==0) return rval;
+
+  //
+  // Object is OK - make no further tests if it's the first object added
+  //
+  if (m_poleList.size()==0) return true;
+
+  //
+  // Compare this with the ref. (m_poleRef)
+  //
+
   rval=true;
   return rval;
 }
@@ -32,6 +45,12 @@ void Combine::add(const Pole *point) {
     if (m_poleList.size()==0) m_poleRef=point;
     m_poleList.push_back(point);
     m_nVecObs.push_back(point->getNObserved());
+  }
+}
+
+void Combine::add(const std::vector<Pole *> poleList) {
+  for (unsigned int i=0; i<poleList.size(); i++) {
+    add(poleList[i]);
   }
 }
 
@@ -51,11 +70,7 @@ void Combine::tabulateLikelihood() {
   m_nVectors.clear();
   // all possible n
   for (int i=0; i<nrange; i++) nvecRange[i]=i;
-
-//   // permutate
-//   std::cout << "   permutate " << std::endl;
-//   AnalysisUtils::Permutation<const std::vector<int> > nvecPerm(&nvecRange,nmeas);
-
+  //
   std::vector< int > jj;
   jj.resize(nmeas,0);
   m_nVectors.push_back(jj);  
@@ -117,8 +132,8 @@ void Combine::tabulateLikelihood() {
       s = m_sVector[m];
       for (unsigned int p=0; p<m_poleList.size(); p++) { // loop over all points
 	pole = m_poleList[p];
-	lh = pole->calcProb(m_nVectors[n][p],s);     // L(n(i),s(j))
-	m_likeliHood[n][m] *=lh;                     // L(n1,s(j))*L(n2,s(j))*..../
+	lh = pole->calcProb(m_nVectors[n][p],s);     // L(n(p),s(m))
+	m_likeliHood[n][m] *=lh;                     // L(n1,s(m))*L(n2,s(m))*..../
 	//	std::cout << "n,s,lh = " << p << ": " << m_nVectors[n][p] << ", " << s << ", " << lh << std::endl;
       }
     }
@@ -148,8 +163,8 @@ unsigned int Combine::getNvecIndex(std::vector<int> & nvec) const {
       npp *= (nmax+1);
     }
     if (nvec[nvecInd]>int(nmax)) {
-      std::cerr << "WARNING: Too large element in input vector (" << nvec[nvecInd] << " > " << nmax << ")\n";
-      std::cerr << "         " << nvecInd << ",  nsize = " << nsize << ",  nmax = " << nmax << std::endl;
+      std::cout << "WARNING: Too large element in input vector (" << nvec[nvecInd] << " > " << nmax << ")\n";
+      std::cout << "         " << nvecInd << ",  nsize = " << nsize << ",  nmax = " << nmax << std::endl;
       return 0;
     }
     ofs += npp*nvec[nvecInd];
@@ -226,66 +241,6 @@ void Combine::setBestMuScan(int nind) {
   //  std::cout << "Set s_best scan range to: [ " << smin << ":" << smax << " ] with ds = " << m_poleRef->getDmus() << std::endl;
 }
 
-// void Combine::findBestMu(int ind) {
-//   //
-//   // Finds s(best) for the set of N(obs) given by m_nVectors.
-//   // The index ind is used for chosing the element to fill
-//   // in the m_bestMu/Prob vectors
-//   //
-//   if (m_poleList.size()==0) {
-//     std::cerr << "WARNING: No measurements added" << std::endl;
-//     return;
-//   }
-//   if (m_poleList.size()!=m_nVectors.size()) {
-//     std::cerr << "WARNING: Size of input vector does not match the #of measurements!" << std::endl;
-//     std::cerr << "nvec = " << m_nVectors.size() << std::endl;
-//     std::cerr << "pole = " << m_poleList.size() << std::endl;
-//     return;
-//   }
-//   //
-//   setBestMuScan(); // set bestMu scan range
-//   //
-//   const int nmeas = m_poleList.size();
-//   //
-//   const Pole *pole;
-//   std::vector<double> lhoodTot;
-//   double sScan, p;
-//   //
-//   lhoodTot.resize(m_bestMuScan.n(),1.0); // init all elements to 1.0
-//   //
-//   // loop over all points. Note nBelt should be equal in all cases
-//   //
-//   // Make: Ltot = L(n1,s)*L(n2,s)*... for each s
-//   //
-//   for (int i=0; i<nmeas; i++) { // loop over all points
-//     pole = m_poleList[i];
-//     for (int j=0; j<m_bestMuScan.n(); j++) { // loop over scan range
-//       sScan = m_bestMuScan.getVal(j);        // s(j)
-//       p = pole->calcProb(m_nVectors[i],sScan);     // L(n(i),s(j))
-//       lhoodTot[j] *= p;                      // L(n1,s(j))*L(n2,s(j))*...
-//       //      std::cout << " L(" << m_nVectors[i] << ", " << sScan << ") = " << p << "  => tot(s) = " << lhoodTot[j] << std::endl;
-//     }
-//   }
-//   //
-//   // Find the s that maximizes the likelihood
-//   //
-//   double lhMax=-1000.0;
-//   double sbest = 0;
-//   for (int j=0; j<m_bestMuScan.n(); j++) {
-//     if (lhoodTot[j]>lhMax) {
-//       lhMax = lhoodTot[j];
-//       sbest = m_bestMuScan.getVal(j);
-//     }
-//   }
-// //   std::cout << "SBEST: " << sbest << " ";
-// //   for (int i=0; i<nmeas; i++) {
-// //     std::cout << m_nVectors[i] << " ";
-// //   }
-// //   std::cout << std::endl;
-//   m_bestMu[ind]     = sbest;
-//   m_bestMuProb[ind] = lhMax;
-// }
-
 void Combine::findBestMu(int ind) {
   //
   // Finds s(best) for the set of N(obs) given by m_nVectors.
@@ -327,54 +282,6 @@ void Combine::findBestMu(int ind) {
   m_bestMu[ind]     = sbest;
   m_bestMuProb[ind] = lhMax;
 }
-
-// void Combine::findBestMu() {
-//   // loop over ALL vectors of n....
-//   std::cout << "Finding all s_best..." << std::endl;
-//   int i;
-//   // **** REMOVE - now in tabulateLikelihood()
-//   int nmeas = m_poleList.size();
-//   std::vector<int> nvecRange;
-//   //  nvecRange.resize(m_poleRef->getNBelt());
-//   //
-//   int nrange=m_poleRef->getNBelt();
-//   nvecRange.resize(nrange);
-//   m_nVectors.clear();
-//   //
-//   for (i=0; i<nrange; i++) nvecRange[i]=i;
-  
-//   AnalysisUtils::Permutation<const std::vector<int> > nvecPerm(&nvecRange,nmeas);
-
-//   std::vector< int > jj;
-
-//   while (nvecPerm.get(jj)) {
-//     m_nVectors.push_back(jj);
-//   }
-//   //
-//   // now make vectors where all elements are equal
-//   //
-//   jj.resize(nmeas);
-//   for (i=0; i<nrange; i++) {
-//     for (int m=0; m<nmeas; m++) {
-//       jj[m] = i;
-//     }
-//     m_nVectors.push_back(jj);
-//   }
-//   //
-//   std::sort(m_nVectors.begin(),m_nVectors.end());
-//   // **** END OF REMOVE
-//   //
-//   // Loop over all vectors
-//   //
-//   for (i=0; i<int(m_nVectors.size()); i++) {
-// //     std::cout << ind << "  -  ";
-// //     for (int m=0; m<nmeas; m++) {
-// //       std::cout << (m_nVectors[i][m]) << " ";
-// //     }
-// //     std::cout << std::endl;
-//     findBestMu(i);
-//   }
-// }
 
 void Combine::findBestMu() {
   // loop over ALL vectors of n....
@@ -448,6 +355,7 @@ void Combine::findLimits() {
   double pnorm;
   //
   double pnormMax=0;
+  unsigned int indUpp=m_sVector.size()-1;
   while (!done) {
     stst = m_sVector[i];
     pnorm = calcLimit(stst);
@@ -455,9 +363,14 @@ void Combine::findLimits() {
     done = ((i==ismax) ||
 	    (m_foundUpper) ||
 	    (!m_poleRef->normOK(pnorm)));
+    if (done) indUpp=i; 
     i++;
   }
-  std::cout << "Max norm = " << pnormMax << std::endl;
+  if (indUpp+1==m_sVector.size()) { // Got the last tested s as upper limit -> WARNING
+    std::cout << "WARNING: Upper limit is equal to upper test scan limit!";
+    std::cout << "         Increase the scan range to be sure." << std::endl;
+  }
+  //  std::cout << "Max norm = " << pnormMax << std::endl;
   bool limitsOK = false;
   if (m_foundLower && m_foundUpper) {
     limitsOK = (m_poleRef->normOK(m_lowNorm) && m_poleRef->normOK(m_uppNorm)); // a bit ugly...
