@@ -1,15 +1,15 @@
 ROOTCFLAGS = $(shell root-config --cflags)
 ROOTLIBS   = $(shell root-config --libs)
-LDOBJS   =  Pdf.o Range.o Random.o Coverage.o Pole.o Combination.o
+LDOBJS   =  Pdf.o Range.o Random.o Coverage.o Pole.o Combination.o PseudoExperiment.o
 ###CFLAGS     = -O
 # Use -g to include debug info
 # Use -pg for profiling info
 CFLAGS     = -g -O
 SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx poleconst.cxx
-INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h
-SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Range.cxx Pdf.cxx Combination.cxx
+INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h Measurement.h PseudoExperiment.h
+SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Range.cxx Pdf.cxx Combination.cxx PseudoExperiment.cxx
 
-all:		polelim polebelt polecov exptest plotexp estbelt poleconst
+all:		polelim polebelt polecov exptest plotexp estbelt poleconst polecomb
 
 polecomb:       polecomb.o $(LDOBJS) Combine.o
 		g++ $(CFLAGS) -Wall $< $(LDOBJS) Combine.o  -o $@
@@ -64,6 +64,8 @@ Pole.o:		Pole.cxx Pole.h Pdf.h Range.h
 Range.o:	Range.cxx Range.h
 		g++ $(CFLAGS) -Wall -c $<
 Coverage.o:	Coverage.cxx Coverage.h Range.h Random.h Pole.h Pdf.h
+		g++ $(CFLAGS) -Wall -c $<
+PseudoExperiment.o:	PseudoExperiment.cxx PseudoExperiment.h
 		g++ $(CFLAGS) -Wall -c $<
 Random.o:	Random.cxx Random.h
 		g++ $(CFLAGS) -Wall -c $<
