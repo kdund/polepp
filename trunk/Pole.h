@@ -46,42 +46,8 @@
 #include "Range.h"
 #include "Pdf.h"
 #include "BeltEstimator.h"
+#include "Measurement.h"
 
-//! Distribution type of nuisance parameters
-enum DISTYPE {
-  DIST_NONE=0,   /*!< No distrubution */
-  DIST_GAUS,     /*!< Gaussian */
-  DIST_FLAT,     /*!< Flat */
-  DIST_LOGN,     /*!< Log-Normal */
-  DIST_GAUSCORR  /*!< Correlated gauss (eff,bkg) */
-};
-/*!
-  Returns a string corresponding to the given DISTYPE.
- */
-inline const std::string distTypeStr(DISTYPE dt) {
-  std::string rval;
-  switch (dt) {
-  case DIST_NONE:
-    rval = "None";
-    break;
-  case DIST_GAUS:
-    rval = "Gauss";
-    break;
-  case DIST_FLAT:
-    rval = "Flat";
-    break;
-  case DIST_LOGN:
-    rval = "LogN";
-    break;
-  case DIST_GAUSCORR:
-    rval = "GaussCorr";
-    break;
-  default:
-    rval = "Unknown";
-    break;
-  }
-  return rval;
-}
 
 /*! @class Pole
  *
@@ -199,13 +165,16 @@ public:
   ~Pole();
   // Main parameters
   void setCL(double cl)    { m_cl = cl; }
-  void setNobserved(int nobs) {m_nObserved = nobs;}
 
+  //! Set measurement
+  void setMeasurement( const Measurement & measurement ) { m_measurement = measurement; }
+  //
+  void setNobserved(int nobs) {m_measurement.setNobserved(nobs); }
   //! distribution info on eff and bkg
-  void setEffMeas(double mean,double sigma, DISTYPE dist=DIST_GAUS);
-  void setBkgMeas(double mean,double sigma, DISTYPE dist=DIST_GAUS);
-  void setEffBkgCorr(double corr) {m_beCorr = corr;}
-
+  void setEffMeas(double mean,double sigma, DISTYPE dist=DIST_GAUS) { m_measurement.setEff(mean,sigma,dist); m_validInt = false; m_validBestMu = false;}
+  void setBkgMeas(double mean,double sigma, DISTYPE dist=DIST_GAUS) { m_measurement.setBkg(mean,sigma,dist); m_validInt = false; m_validBestMu = false;}
+  void setEffBkgCorr(double corr)                                   { m_measurement.setBEcorr(corr); }
+  ////////////////////////////////
   //
   bool checkEffBkgDists();
   bool isFullyCorrelated() { return (((fabs(fabs(m_beCorr)-1.0)) < 1e-16)); }
@@ -279,16 +248,18 @@ public:
   const double getCL() const         { return m_cl; }
   const double getSTrue() const      { return m_sTrue; }
   const bool   getCoverage() const   { return m_coverage; }
-  const int    getNObserved() const  { return m_nObserved; }
+  //
+  const Measurement & getMeasurement() const { return m_measurement; }
+  const int    getNObserved() const  { return m_measurement.getNobserved(); }
   // Efficiency
-  const double getEffMeas() const    { return m_effMeas; }
-  const double getEffSigma() const   { return m_effSigma; }
-  const DISTYPE getEffDist() const   { return m_effDist; }
+  const double  getEffMeas()  const  { return m_measurement.getEffMeas(); }
+  const double  getEffSigma() const  { return m_measurement.getEffSigma(); }
+  const DISTYPE getEffDist()  const  { return m_measurement.getEffDist(); }
   // Background
-  const double  getBkgMeas() const   { return m_bkgMeas; }
-  const double  getBkgSigma() const  { return m_bkgSigma; }
-  const DISTYPE getBkgDist() const   { return m_bkgDist; }
-  const double  getEffBkgCorr() const { return m_beCorr; }
+  const double  getBkgMeas()  const  { return m_measurement.getBkgMeas(); }
+  const double  getBkgSigma() const  { return m_measurement.getBkgSigma(); }
+  const DISTYPE getBkgDist()  const  { return m_measurement.getBkgDist(); }
+  const double  getEffBkgCorr() const { return m_measurement.getBEcorr(); }
   // range and steps in double integral (7), in principle infinite
   const double  getEffIntScale() const { return m_effIntScale; }
   const Range  *getEffRangeInt() const { return &m_effRangeInt; }
@@ -335,6 +306,9 @@ private:
   // True signal - used in coverage studies
   double m_sTrue;
   bool   m_coverage;
+  // Measurement
+  Measurement m_measurement;
+  // TO BE REPLACED BY THE ABOVE Measurement CALSS
   // Number of observed events
   int    m_nObserved;
   // Efficiency, gaussian
@@ -349,6 +323,7 @@ private:
   DISTYPE m_bkgDist;
   // correlation between eff and bkg [-1.0..1.0]
   double  m_beCorr;
+  ////////////////////////////////////////////////////
   //
   int    m_intNdef;
   // range and steps in double integral (7), in principle infinite
