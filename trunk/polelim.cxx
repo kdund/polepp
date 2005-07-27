@@ -81,6 +81,8 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     //
     cmd.parse(argc,argv);
     //
+    pole->setPoisson(&PDF::gPoisson);
+    pole->setGauss(&PDF::gGauss);
     pole->setNLR(doNLR.getValue());
     pole->setCL(confLevel.getValue());
     pole->setNobserved(nObs.getValue());
