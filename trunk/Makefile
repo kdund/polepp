@@ -1,6 +1,7 @@
 ROOTCFLAGS = $(shell root-config --cflags)
 ROOTLIBS   = $(shell root-config --libs)
-LDOBJS   =  Pdf.o Range.o Random.o Coverage.o Pole.o Combination.o PseudoExperiment.o
+LDOBJS     =  Pdf.o Range.o Random.o Coverage.o Pole.o Combination.o Combine.o PseudoExperiment.o
+LDFLAGS    = -g -fPIC -shared
 ###CFLAGS     = -O
 # Use -g to include debug info
 # Use -pg for profiling info
@@ -8,11 +9,16 @@ CFLAGS     = -g -O
 SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx poleconst.cxx
 INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h Measurement.h PseudoExperiment.h
 SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Range.cxx Pdf.cxx Combination.cxx PseudoExperiment.cxx
+LDFILE	     = libPole++.so
+LIBS         = -L./ -lPole++
 
-all:		polelim polebelt polecov exptest plotexp estbelt poleconst polecomb
+all:		$(LDFILE) polelim polebelt polecov exptest plotexp estbelt poleconst polecomb
 
-polecomb:       polecomb.o $(LDOBJS) Combine.o
-		g++ $(CFLAGS) -Wall $< $(LDOBJS) Combine.o  -o $@
+$(LDFILE):	$(LDOBJS)
+		g++ $(LDFLAGS) $(LDOBJS) -o $(LDFILE)
+
+polecomb:       polecomb.o
+		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
 polecomb.o:     polecomb.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
@@ -21,28 +27,28 @@ estbelt:	estbelt.o
 estbelt.o:	estbelt.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
-poleconst:	poleconst.o $(LDOBJS)
-		g++ $(CFLAGS) -Wall $< $(LDOBJS)  -o $@
+poleconst:	poleconst.o
+		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
 poleconst.o:	poleconst.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
-polelim:	polelim.o $(LDOBJS)
-		g++ $(CFLAGS) -Wall $< $(LDOBJS)  -o $@
+polelim:	polelim.o
+		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
 polelim.o:	polelim.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
-polebelt:	polebelt.o $(LDOBJS)
-		g++ $(CFLAGS) -Wall $< $(LDOBJS)  -o $@
+polebelt:	polebelt.o
+		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
 polebelt.o:	polebelt.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
-polecov:	polecov.o $(LDOBJS)
-		g++ $(CFLAGS) -Wall $< $(LDOBJS)  -o $@
+polecov:	polecov.o
+		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
 polecov.o:	polecov.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
-exptest:	exptest.o $(LDOBJS)
-		g++ $(CFLAGS) -Wall $< $(LDOBJS)  -o $@
+exptest:	exptest.o
+		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
 exptest.o:	exptest.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
@@ -51,8 +57,8 @@ plotexp:	plotexp.o
 plotexp.o:	plotexp.cxx
 		g++ $(CFLAGS) $(ROOTCFLAGS) -Wall -c $<
 
-obstest:	obstest.o $(LDOBJS) Observable.o
-		g++ $(CFLAGS) -Wall $< $(LDOBJS) Observable.o  -o $@
+obstest:	obstest.o Observable.o
+		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
 obstest.o:	obstest.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
