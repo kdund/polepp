@@ -222,7 +222,7 @@ void Coverage::outputCoverageResult(const int flag) { //output coverage result
   static bool firstCall=true;
   std::string header;
   if (firstCall) {
-    std::cout << "       Signal \tEfficiency\t\t\tBackground\t\tCorrelation\tCoverage\t\tLoops\tMax loops" << std::endl;
+    std::cout << "       Signal \tEfficiency\t\t\tBackground\t\t\tCorrelation\tCoverage\t\t\tLoops\tMax loops" << std::endl;
     std::cout << "      --------------------------------------------------------------------------------------------" << std::endl;
     firstCall = false;
   }
