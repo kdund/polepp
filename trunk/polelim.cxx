@@ -134,6 +134,8 @@ int main(int argc, char *argv[]) {
       std::cout << "       probability    = " << pole.getSumProb() << std::endl;
       std::cout << "       lower lim norm = " << pole.getLowerLimitNorm() << std::endl;
       std::cout << "       upper lim norm = " << pole.getUpperLimitNorm() << std::endl;
+      std::cout << "       lower lim      = " << pole.getLowerLimit() << std::endl;
+      std::cout << "       upper lim      = " << pole.getUpperLimit() << std::endl;
     }
   }
 }
