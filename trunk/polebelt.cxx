@@ -81,6 +81,11 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     //
     cmd.parse(argc,argv);
     //
+    PDF::gPoisson.init(50000,100,50);
+    PDF::gGauss.init(50000,10.0);
+    //
+    pole->setPoisson(&PDF::gPoisson);
+    pole->setGauss(&PDF::gGauss);
     pole->setNLR(doNLR.getValue());
     pole->setCL(confLevel.getValue());
     pole->setNobserved(nObs.getValue());
@@ -101,10 +106,6 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     pole->setBeltMax(belt.getValue()*2); // maximum allocated
     pole->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
     //
-    if (useTabulated.getValue()) {
-      pole->initPoisson(50000,100,50);
-      pole->initGauss(50000,10.0);
-    }
     pole->initIntArrays();
     pole->initBeltArrays();
     //

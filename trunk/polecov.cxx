@@ -148,6 +148,11 @@ void processArgs(int argc, char *argv[]) {
     if (doExamples.getValue()) {
     }
     //
+    PDF::gPoisson.init(50000,100,50);
+    PDF::gGauss.init(50000,10.0);
+    //
+    gPole.setPoisson(&PDF::gPoisson);
+    gPole.setGauss(&PDF::gGauss);
     gPole.setNLR(doNLR.getValue());
     gPole.setVerbose(verbosePol.getValue());
     gPole.setNobserved(0);
@@ -169,9 +174,9 @@ void processArgs(int argc, char *argv[]) {
       //      gPole.initPoisson(100000,100,50);
       //      gPole.initPoisson(500000,100,50);
       //      gPole.initGauss(1000000,10.0);
-      gPole.initPoisson(50000,100,50);
+      //      gPole.initPoisson(100000,100,50);
       //      gPole.initPoisson(50000,100,200);
-      gPole.initGauss(50000,10.0);
+      //      gPole.initGauss(100000,10.0);
     }
     gPole.initIntArrays();
     gPole.initBeltArrays();
