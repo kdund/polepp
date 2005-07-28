@@ -96,10 +96,10 @@ void Combine::tabulateLikelihood() {
   for (int i=0; i<nmeas; i++) {
     pole = m_poleList[i];
     // s(max) estimate using n(max)
-    s = BeltEstimator::getSigUp(pole->getNObserved(), pole->getBkgMeas());
+    s = BeltEstimator::getSigUp(pole->getNObserved(),pole->getEffMeas(),pole->getEffSigma(),pole->getBkgMeas(),pole->getBkgSigma());
     if (s>smax) smax=s;
   }
-  smax *= 2.0; // increase the range by 10% - just to be sure (?)
+  smax *= 1.0; // increase the range by 10% - just to be sure (?)
   double sstep = m_poleRef->getHypTest()->step();
   if (sstep<=0) sstep = 0.01;
   //  sstep=0.1;
@@ -125,6 +125,7 @@ void Combine::tabulateLikelihood() {
 
   std::cout << "- Calculate L(n,s)...." << std::endl;
   m_likeliHood.resize(m_nVectors.size());
+  std::cout << "- Number of L(n,s) to be calculated = " << m_nVectors.size()*m_sVector.size()*m_poleList.size() << std::endl;
   for (unsigned int n=0; n<m_nVectors.size(); n++) {
     //    std::cout << " n=" << n << std::endl;
     m_likeliHood[n].resize(m_sVector.size(),1.0);

@@ -277,10 +277,12 @@ void Pole::initIntArrays() {
 int Pole::suggestBelt() {
   int rval=50;
   if (m_measurement.getNobserved()>=0) {
-    rval = BeltEstimator::getBeltMin(m_measurement.getNobserved(), m_measurement.getBkgMeas()) + 5;
+    rval = BeltEstimator::getBeltMin(m_measurement.getNobserved(),
+				     m_measurement.getEffMeas(), m_measurement.getEffSigma(),
+				     m_measurement.getBkgMeas(), m_measurement.getBkgSigma()) + 5;
     if (rval<20) rval=20; // becomes less reliable for small n
   }
-  if (m_verbose>1) std::cout << "Pole::suggestBelt() : Belt range = " << m_nBelt << std::endl;
+  std::cout << "Using max N(belt) = " << m_nBelt << std::endl;
   return rval;
 }
 
