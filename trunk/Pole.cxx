@@ -60,7 +60,6 @@ Pole::Pole() {
   //
   m_validBestMu = false;
   m_nBelt       = 50;
-  m_nBeltMax    = 50;
   m_suggestBelt = (m_nBelt<1);
   //
   // init list of suggested nBelt
@@ -226,6 +225,11 @@ void Pole::setTestHyp(double step) {
   // Find hypothesis test range based on the input measurement
   // MUST be called after the measurement is set.
   //
+  if (step<=0) {
+    step = m_hypTest.step();
+    if (step<=0) step = 0.01;
+  }
+  
   double low = BeltEstimator::getSigLow(getNObserved(), getEffMeas(), getEffSigma(), getBkgMeas(), getBkgSigma());
   double up  = BeltEstimator::getSigUp( getNObserved(), getEffMeas(), getEffSigma(), getBkgMeas(), getBkgSigma());
   m_hypTest.setRange(low,up,step);
@@ -338,12 +342,12 @@ int Pole::suggestBelt() {
 void Pole::initBeltArrays() {
   if (m_suggestBelt) m_nBelt = suggestBelt();
   //
-  if (m_muProb.size()<static_cast<unsigned int>(m_nBelt)) {
-    m_nBeltMax = m_nBelt*2;
-    m_muProb.resize(m_nBeltMax);
-    m_bestMuProb.resize(m_nBeltMax);
-    m_bestMu.resize(m_nBeltMax);
-    m_lhRatio.resize(m_nBeltMax);
+  unsigned int nbs = static_cast<unsigned int>(m_nBelt);
+  if (m_muProb.size()!=nbs) {
+    m_muProb.resize(m_nBelt);
+    m_bestMuProb.resize(m_nBelt);
+    m_bestMu.resize(m_nBelt);
+    m_lhRatio.resize(m_nBelt);
   }
 }
 
@@ -652,7 +656,7 @@ double Pole::calcLhRatio(double s) {
       if (n>m_measurement.getBkgMeas()) {
 	pbf = static_cast<double>(n);
       } else {
-	pbf = 0;
+	pbf = m_measurement.getBkgMeas();
       }
       pbf = m_poisson->getVal(n,pbf);
       m_lhRatio[n]  = m_muProb[n]/pbf;
@@ -677,16 +681,21 @@ double Pole::calcLimit(double s) {
   //
   //  std::cout << "calcLimit for " << s << std::endl;
   if (m_useNLR) { // use method by Gary Hill
-    double pbf;
+    double g,pbf;
     for (int n=0; n<m_nBelt; n++) {
       m_muProb[n] =  calcProb(n, s);
       if (n>m_measurement.getBkgMeas()) {
-	pbf = static_cast<double>(n);
+	g = static_cast<double>(n);
       } else {
-	pbf = 0;
+	g = m_measurement.getBkgMeas();
       }
-      pbf = m_poisson->getVal(n,pbf);
+      pbf = m_poisson->getVal(n,g);
+      if (g==0) {
+	//	std::cout << "n = " << n << " : pbf = " << pbf << " : m_muProb[n] = " << m_muProb[n] << std::endl;
+	pbf=1.0;
+      }
       m_lhRatio[n]  = m_muProb[n]/pbf;
+      
       norm_p += m_muProb[n]; // check norm
     }
   } else {
@@ -1145,7 +1154,9 @@ void Pole::printFailureMsg() {
   std::cout << "ERROR: limit calculation failed. Possible causes:" << std::endl;
   std::cout << "1. nbelt is too small (used nbelt = " << getNBelt() << ")" << std::endl;
   std::cout << "2. precision in integrations (eff,bkg) not sufficient" << std::endl;
-  std::cout << "3. hypethesis test range too small" << std::endl;
+  std::cout << "3. hypethesis test range too small ( max = " << m_hypTest.max() << " )" << std::endl;
+  std::cout << "Input:" << std::endl;
+  std::cout << "   N(obs)     = " << getNObserved() << std::endl;
   std::cout << "Results:" << std::endl;
   std::cout << "   probability (should be = CL)  = " << getSumProb() << std::endl;
   std::cout << "   lower lim norm (should be 1)  = " << getLowerLimitNorm() << std::endl;
