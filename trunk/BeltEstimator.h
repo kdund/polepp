@@ -33,13 +33,13 @@ public:
   // Lower: seems ok for most cases - might overestimate when se/e and s+sigma(s) are large.
   static double getSigLow(int n, double e, double se, double b, double sb) {
     double r=m_al1*getT(n,e,se,b,sb) + m_bl1;
-    return (r<0.0 ? 0.0:r);
+    return (r<0.0 ? 0.0:r*e);
   }
   // Upper: a tighter boundary is used for when se/e is low (<0.2)
   // No separate classification is needed for cases with large sb/b.
   static double getSigUp(int n, double e, double se, double b, double sb) {
-    if (se/e > 0.2) return m_au2*getT(n,e,se,b,sb) + m_bu2;
-    return m_au1*getT(n,e,se,b,sb) + m_bu1;
+    if (se/e > 0.2) return (m_au2*getT(n,e,se,b,sb) + m_bu2)/e;
+    return (m_au1*getT(n,e,se,b,sb) + m_bu1)/e;
   }
   //
   // Belt estimations
