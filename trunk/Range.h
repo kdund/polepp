@@ -8,9 +8,11 @@
 class Range {
 public:
   Range(double vmin, double vmax, double vstep, int nmax=0);
+  Range(double vmin, double vmax, int n);
   Range();
   ~Range() {}
   //
+  void setRange(double vmin, double vmax, int n);
   void setRange(double vmin, double vmax, double vstep, int nmax=0);
   void forceNpts(int n);
   inline const double getVal(int index, double def=0) const;
