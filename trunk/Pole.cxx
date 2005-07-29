@@ -47,14 +47,13 @@ Pole::Pole() {
   //
   m_dmus = 0.01;
   //
-  m_intNdef = 20;    // default number of points (when step<=0)
   m_effIntScale = 5.0;
   m_bkgIntScale = 5.0;
   //
-  setEffInt(m_effIntScale,-1.0);
-  setBkgInt(m_bkgIntScale,-1.0);
+  setEffInt(m_effIntScale,21);
+  setBkgInt(m_bkgIntScale,21);
   //
-  m_hypTest.setRange(0.0,35.0,0.01);
+  setTestHyp(0.01);
   //
   m_validInt  = false;
   m_nInt      = 0; // should be equal to the size of Int vectors below
@@ -110,7 +109,7 @@ bool Pole::checkEffBkgDists() {
 //
 // Calculates the range for integration.
 //
-void Pole::setInt(double & low, double & high, double & step, double scale, double mean, double sigma, DISTYPE dist) {
+void Pole::setInt(double & low, double & high, double scale, double mean, double sigma, DISTYPE dist) {
   //
   double dx;
   double nsigma;
@@ -119,7 +118,6 @@ void Pole::setInt(double & low, double & high, double & step, double scale, doub
   if (dist==DIST_NONE) {
     low  = mean;
     high = mean;
-    step = 1.0;
   } else {
     switch (dist) {
     case DIST_GAUSCORR:
@@ -145,11 +143,13 @@ void Pole::setInt(double & low, double & high, double & step, double scale, doub
       high-=low;
       low=0;
     }
-    if (step<=0.0) step = (high-low)/m_intNdef;     // default N pts
   }
 }
 
-void Pole::setEffInt(double scale,double step) {
+void Pole::setEffInt(double scale,int n) {
+  if (n<1) n = m_effRangeInt.n();
+  if (n<2) n=2;
+  if (scale<0) scale = m_effIntScale;
   m_validInt = false;
   m_validBestMu = false;
   //
@@ -157,44 +157,93 @@ void Pole::setEffInt(double scale,double step) {
   if (isFullyCorrelated() && (m_measurement.getEffDist() == DIST_GAUSCORR)) { // Fully correlated - integrate only bkg with sigma/sqrt(2)
     low = m_measurement.getEffMeas();
     high = m_measurement.getEffMeas();
-    step = 1.0;
+    n = 1;
   } else {
-    if (step<=0) step = m_effRangeInt.step();
-    if (scale<=0) {
-      scale = m_effIntScale;
-    } else {
-      m_effIntScale = scale;
-    }
-    setInt(low,high,step,scale,m_measurement.getEffMeas(),m_measurement.getEffSigma(),m_measurement.getEffDist());
+    setInt(low,high,scale,m_measurement.getEffMeas(),m_measurement.getEffSigma(),m_measurement.getEffDist());  
   }
   //
-  m_effRangeInt.setRange(low,high,step);
+  m_effRangeInt.setRange(low,high,n);
 }
 
-void Pole::setBkgInt(double scale,double step) {
+// void Pole::setEffInt(double scale,double step) {
+//   m_validInt = false;
+//   m_validBestMu = false;
+//   //
+//   double low,high;
+//   if (isFullyCorrelated() && (m_measurement.getEffDist() == DIST_GAUSCORR)) { // Fully correlated - integrate only bkg with sigma/sqrt(2)
+//     low = m_measurement.getEffMeas();
+//     high = m_measurement.getEffMeas();
+//     step = 1.0;
+//   } else {
+//     if (step<=0) step = m_effRangeInt.step(); // use previous step size
+//     if (scale<=0) { // use previous scale
+//       scale = m_effIntScale;
+//     } else { // set new scale
+//       m_effIntScale = scale;
+//     }
+//     setInt(low,high,step,scale,m_measurement.getEffMeas(),m_measurement.getEffSigma(),m_measurement.getEffDist());
+//   }
+//   //
+//   m_effRangeInt.setRange(low,high,step);
+// }
+
+void Pole::setBkgInt(double scale,int n) {
+  if (n<1) n = m_bkgRangeInt.n();
+  if (n<2) n=2;
+  if (scale<0) scale = m_bkgIntScale;
   m_validInt = false;
   m_validBestMu = false;
   //
   double low,high;
-  if (step<=0)  step  = m_bkgRangeInt.step();
-  if (scale<=0) {
-    scale = m_bkgIntScale;
+  if (isFullyCorrelated() && (m_measurement.getBkgDist() == DIST_GAUSCORR)) { // Fully correlated - integrate only bkg with sigma/sqrt(2)
+    low = m_measurement.getBkgMeas();
+    high = m_measurement.getBkgMeas();
+    n = 1;
   } else {
-    m_bkgIntScale = scale;
+    setInt(low,high,scale,m_measurement.getBkgMeas(),m_measurement.getBkgSigma(),m_measurement.getBkgDist());  
   }
-  setInt(low,high,step,scale,m_measurement.getBkgMeas(),m_measurement.getBkgSigma(),m_measurement.getBkgDist());
   //
-  m_bkgRangeInt.setRange(low,high,step);
+  m_bkgRangeInt.setRange(low,high,n);
+}
+// void Pole::setBkgInt(double scale,double step) {
+//   m_validInt = false;
+//   m_validBestMu = false;
+//   //
+//   double low,high;
+//   if (step<=0)  step  = m_bkgRangeInt.step();
+//   if (scale<=0) {
+//     scale = m_bkgIntScale;
+//   } else {
+//     m_bkgIntScale = scale;
+//   }
+//   setInt(low,high,step,scale,m_measurement.getBkgMeas(),m_measurement.getBkgSigma(),m_measurement.getBkgDist());
+//   //
+//   m_bkgRangeInt.setRange(low,high,step);
+// }
+
+void Pole::setTestHyp(double step) {
+  //
+  // Find hypothesis test range based on the input measurement
+  // MUST be called after the measurement is set.
+  //
+  double low = BeltEstimator::getSigLow(getNObserved(), getEffMeas(), getEffSigma(), getBkgMeas(), getBkgSigma());
+  double up  = BeltEstimator::getSigUp( getNObserved(), getEffMeas(), getEffSigma(), getBkgMeas(), getBkgSigma());
+  m_hypTest.setRange(low,up,step);
 }
 
 void Pole::setTestHyp(double low, double high, double step) {
-  if (high>low) {
-    if (step<=0) step=(high-low)/1000.0;
+  //
+  // Set explicitely the test range.
+  // * step<=0  => step = (high-low)/1000
+  // * high<low => call setTestHyp(step) [i.e, estimate the test range needed]
+  //
+  if (high<low) {
+    setTestHyp(step);
   } else {
-    low = high;
-    step = 1.0;
+    if (step<=0) step = (high-low)/1000.0; // default 1000 pts
+    m_hypTest.setRange(low,high,step);
   }
-  m_hypTest.setRange(low,high,step);
+  
 }
 //
 // MAYBE REMOVE THIS // HERE
@@ -282,7 +331,7 @@ int Pole::suggestBelt() {
 				     m_measurement.getBkgMeas(), m_measurement.getBkgSigma()) + 5;
     if (rval<20) rval=20; // becomes less reliable for small n
   }
-  std::cout << "Using max N(belt) = " << m_nBelt << std::endl;
+  if (m_verbose>1) std::cout << "Using max N(belt) = " << m_nBelt << std::endl;
   return rval;
 }
 
@@ -1078,7 +1127,7 @@ void Pole::printSetup() {
   std::cout << "----------------------------------------------\n";
   std::cout << " Test hyp. min      : " << m_hypTest.min() << std::endl;
   std::cout << " Test hyp. max      : " << m_hypTest.max() << std::endl;
-  std::cout << " Test hyp. N pts    : " << m_hypTest.n() << std::endl;
+  std::cout << " Test hyp. step     : " << m_hypTest.step() << std::endl;
   std::cout << "----------------------------------------------\n";
   if (m_suggestBelt) {
     std::cout << " Belt N max         : variable" << std::endl;
@@ -1090,4 +1139,17 @@ void Pole::printSetup() {
   std::cout << " Use NLR            : " << yesNo(m_useNLR) << std::endl;
   std::cout << "==============================================\n";
   //
+}
+
+void Pole::printFailureMsg() {
+  std::cout << "ERROR: limit calculation failed. Possible causes:" << std::endl;
+  std::cout << "1. nbelt is too small (used nbelt = " << getNBelt() << ")" << std::endl;
+  std::cout << "2. precision in integrations (eff,bkg) not sufficient" << std::endl;
+  std::cout << "3. hypethesis test range too small" << std::endl;
+  std::cout << "Results:" << std::endl;
+  std::cout << "   probability (should be = CL)  = " << getSumProb() << std::endl;
+  std::cout << "   lower lim norm (should be 1)  = " << getLowerLimitNorm() << std::endl;
+  std::cout << "   upper lim norm (ditto)        = " << getUpperLimitNorm() << std::endl;
+  std::cout << "   lower lim                     = " << getLowerLimit() << std::endl;
+  std::cout << "   upper lim                     = " << getUpperLimit() << std::endl;
 }

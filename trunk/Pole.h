@@ -179,10 +179,12 @@ public:
   bool checkEffBkgDists();
   bool isFullyCorrelated() { return (((fabs(fabs(m_beCorr)-1.0)) < 1e-16)); }
   bool isNotCorrelated()   { return (fabs(m_beCorr) < 1e-16); }
-
-  // POLE construction
-  void setEffInt(double scale=0,double step=0); // efficiency range for integral (7) [AFTER the previous]
-  void setBkgInt(double scale=0,double step=0); // dito background
+ 
+  // POLE construction 
+  void setEffInt(double scale=-1.0, int n=0);
+  //  void setEffInt(double scale,double step); // efficiency range for integral (7) [AFTER the previous]
+  void setBkgInt(double scale=-1.0, int n=0);
+  //  void setBkgInt(double scale,double step); // dito background
 
   // Checks the integration range for eff and bkg
   bool checkParams();
@@ -194,6 +196,7 @@ public:
   void setDmus(double dmus) { m_dmus = (dmus > 0.0 ? dmus:m_stepMin); }
 
   // POLE test hypothesis range
+  void setTestHyp(double step); // set test range based on the input measurement
   void setTestHyp(double low, double high, double step); // test mu=s+b for likelihood ratio
   void setNuppLim(int n=-1) { m_nUppLim = n; }
 
@@ -238,6 +241,9 @@ public:
   void printLimit(bool doTitle=false);
   // 
   void printSetup();
+  //
+  void printFailureMsg();
+  //
   // POLE
   void initAnalysis(); // inits the vectors and calculates the double integral weights
   bool analyseExperiment();  // finds the limits/coverage
@@ -293,7 +299,7 @@ public:
   const int    getNuppLim() const    { return m_nUppLim; }
 
 private:
-  void setInt(double & low, double & high, double & step, double scale, double mean, double sigma, DISTYPE dt);
+  void setInt(double & low, double & high, double scale, double mean, double sigma, DISTYPE dt);
 
   const PDF::Poisson *m_poisson;
   const PDF::Gauss   *m_gauss;
@@ -325,7 +331,6 @@ private:
   double  m_beCorr;
   ////////////////////////////////////////////////////
   //
-  int    m_intNdef;
   // range and steps in double integral (7), in principle infinite
   Range  m_effRangeInt;
   double m_effIntScale;
