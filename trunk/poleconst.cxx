@@ -41,9 +41,10 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> hypTestStep("","hstep",  "hypothesis test step" ,false,0.01,"float");
     //
     ValueArg<double> effIntScale( "","escale","eff n sigma in integral", false,5.0,"float");
-    ValueArg<double> effIntStep("","estep",   "eff step in integral",    false,-1.0,"float");
+    ValueArg<int>    effIntN("","en",   "eff N in integral",    false,21,"int");
+
     ValueArg<double> bkgIntScale( "","bscale","bkg n sigma in integral", false,5.0,"float");
-    ValueArg<double> bkgIntStep("","bstep",   "bkg step in integral",    false,-1.0,"float");
+    ValueArg<int>    bkgIntN("","bn",   "bkg N in integral",    false,21,"int");
 
     ValueArg<int>    doVerbose(   "V","verbose", "verbose pole",    false,0,"int");
     //
@@ -56,9 +57,9 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     cmd.add(hypTestStep);
 
     cmd.add(effIntScale);
-    cmd.add(effIntStep);
+    cmd.add(effIntN);
     cmd.add(bkgIntScale);
-    cmd.add(bkgIntStep);
+    cmd.add(bkgIntN);
 
     cmd.add(belt);
     cmd.add(dMus);
@@ -94,8 +95,8 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     pole->setCoverage(coverage.getValue());
 
     pole->setDmus(dMus.getValue());
-    pole->setEffInt(effIntScale.getValue(),effIntStep.getValue());
-    pole->setBkgInt(bkgIntScale.getValue(),bkgIntStep.getValue());
+    pole->setEffInt(effIntScale.getValue(),effIntN.getValue());
+    pole->setBkgInt(bkgIntScale.getValue(),bkgIntN.getValue());
     //
     pole->setBelt(belt.getValue()); // call after nObserved is set.
     pole->setBeltMax(belt.getValue()*2); // maximum allocated

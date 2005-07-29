@@ -75,11 +75,11 @@ void processArgs(int argc, char *argv[]) {
     //    ValueArg<double> effIntMin( "","eintmin",    "eff min in integral",  false,0.0,"float");
     //    ValueArg<double> effIntMax( "","eintmax",    "eff max in integral",  false,2.0,"float");
     ValueArg<double> effIntScale( "","eintscale",    "n sigmas in integral (eff)",  false,5.0,"float");
-    ValueArg<double> effIntStep("","eintstep",   "eff step in integral", false,-1.0,"float");
+    ValueArg<int>    effIntN("","en",   "eff N in integral", false,21,"int");
     //    ValueArg<double> bkgIntMin( "","bintmin",    "bkg min in integral",  false,0.0,"float");
     //    ValueArg<double> bkgIntMax( "","bintmax",    "bkg max in integral",  false,2.0,"float");
     ValueArg<double> bkgIntScale( "","bintscale",    "n sigmas in integral (bkg)",  false,5.0,"float");
-    ValueArg<double> bkgIntStep("","bintstep",   "bkg step in integral", false,-1.0,"float");
+    ValueArg<int>    bkgIntN("","bn",   "bkg N in integral", false,21,"int");
 
     ValueArg<int>    effDist("","effdist",  "Efficiency distribution",false,1,"int");
     ValueArg<int>    bkgDist("","bkgdist",  "Background distribution",false,0,"int");
@@ -106,11 +106,11 @@ void processArgs(int argc, char *argv[]) {
     //    cmd.add(effIntMin);
     //    cmd.add(effIntMax);
     cmd.add(effIntScale);
-    cmd.add(effIntStep);
+    cmd.add(effIntN);
     //    cmd.add(bkgIntMin);
     //    cmd.add(bkgIntMax);
     cmd.add(bkgIntScale);
-    cmd.add(bkgIntStep);
+    cmd.add(bkgIntN);
     //
     cmd.add(effSigma);
     cmd.add(effMin);
@@ -163,8 +163,8 @@ void processArgs(int argc, char *argv[]) {
     gPole.setBkgMeas( bkgMin.getValue(), bkgSigma.getValue(), static_cast<DISTYPE>(bkgDist.getValue()));
     gPole.checkEffBkgDists(); // will make sure the settings above are OK - it will update pole if changes are made
     gPole.setEffBkgCorr(beCorr.getValue());
-    gPole.setEffInt(effIntScale.getValue(),effIntStep.getValue());
-    gPole.setBkgInt(bkgIntScale.getValue(),bkgIntStep.getValue());
+    gPole.setEffInt(effIntScale.getValue(),effIntN.getValue());
+    gPole.setBkgInt(bkgIntScale.getValue(),bkgIntN.getValue());
     //
     gPole.setBelt(nBelt.getValue());
     gPole.setBeltMax(nBelt.getValue()*2);

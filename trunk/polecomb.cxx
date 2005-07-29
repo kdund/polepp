@@ -72,10 +72,10 @@ int main(int argc, char *argv[]) {
     pole->setPoisson(&PDF::gPoisson);
     pole->setGauss(&PDF::gGauss);
     pole->setCL(0.9);
-    pole->setDmus(0.002);
-    pole->setBelt(50);
-    pole->setEffInt(5.0,0.1); // integrate +-5 sigma around eff and bkg
-    pole->setBkgInt(5.0,0.1); // integrate +-5 sigma around eff and bkg
+    pole->setDmus(0.01);
+    pole->setBelt(0);
+    pole->setEffInt(5.0,21); // integrate +-5 sigma around eff and bkg
+    pole->setBkgInt(5.0,21); // integrate +-5 sigma around eff and bkg
     pole->printSetup();
     pole->initAnalysis();
     combine.add(pole);
