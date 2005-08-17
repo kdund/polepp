@@ -1,6 +1,6 @@
 ROOTCFLAGS = $(shell root-config --cflags)
 ROOTLIBS   = $(shell root-config --libs)
-LDOBJS     =  Pdf.o Range.o Random.o Coverage.o Pole.o Combination.o Combine.o PseudoExperiment.o
+LDOBJS     =  Pdf.o Range.o Random.o Coverage.o Pole.o Combination.o Combine.o PseudoExperiment.o Measurement.o
 LDFLAGS    = -g -fPIC -shared
 ###CFLAGS     = -O
 # Use -g to include debug info
@@ -8,7 +8,7 @@ LDFLAGS    = -g -fPIC -shared
 CFLAGS     = -g -O
 SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx poleconst.cxx
 INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h Measurement.h PseudoExperiment.h
-SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Range.cxx Pdf.cxx Combination.cxx PseudoExperiment.cxx
+SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Range.cxx Pdf.cxx Combination.cxx PseudoExperiment.cxx Measurement.cxx
 LDFILE	     = libPole++.so
 LIBS         = -L./ -lPole++
 
@@ -23,7 +23,7 @@ polecomb.o:     polecomb.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
 estbelt:	estbelt.o
-		g++ $(CFLAGS) -Wall $< -o $@
+		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
 estbelt.o:	estbelt.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
@@ -80,6 +80,8 @@ Pdf.o:		Pdf.cxx Pdf.h
 Combination.o:	Combination.cxx Combination.h
 		g++ $(CFLAGS) -Wall -c $<
 Observable.o:	Observable.cxx Observable.h Random.h
+		g++ $(CFLAGS) -Wall -c $<
+Measurement.o:	Measurement.cxx Measurement.h
 		g++ $(CFLAGS) -Wall -c $<
 
 package:	$(SRCLIB) $(SRCTOOLS) Makefile
