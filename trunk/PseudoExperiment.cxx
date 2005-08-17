@@ -76,7 +76,7 @@ void PseudoExperiment::generateMeasurement(Measurement & rval) {
   }
   if (nobs<0) nobs=0;
   //
-  rval.setNobserved(nobs);
+  rval.setNObserved(nobs);
   rval.setEffMeas(effMeas);
   rval.setBkgMeas(bkgMeas);
 }
