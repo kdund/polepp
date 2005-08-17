@@ -35,6 +35,10 @@ public:
   void setEffBkgCorr(double coef);
   bool checkEffBkgDists();
   //
+  // Hypothesis range
+  //
+  void setTestHyp(double h1, double h2, double hs) { m_hypRMin = h1; m_hypRMax=h2; m_hypRStep = hs;}
+  //
   void initTabs();
   //
   void startTimer();
@@ -62,9 +66,9 @@ public:
   const char *getDumpName() {return m_dumpFileName.c_str();}
   //
   void collectStats(bool flag) { m_collectStats = flag; } // if true, then collect statistics
-  void pushMeas();
+  void pushMeas(bool ok=true);
   void pushLimits();
-  void updateStatistics();	// Update statistics on limits
+  void updateStatistics(bool ok=true);	// Update statistics on limits
   void resetStatistics();	// Reset dito
   void calcStatistics();	// calculate collected stats
   void printStatistics();	// print calculated stuff
@@ -115,6 +119,12 @@ private:
   //
   double m_sTrueMean;
   //
+  // Hypothesis test range
+  //
+  double m_hypRMin;
+  double m_hypRMax;
+  double m_hypRStep;
+  //
   // Variables for current experiment
   //
   double m_measEff;     // "measured" efficiency (Gauss(m_effMean, m_effSigma))
@@ -137,6 +147,16 @@ private:
   std::vector<double> m_effStat;
   std::vector<double> m_bkgStat;
   std::vector<double> m_nobsStat;
+  std::vector<double> m_effFrac;
+  std::vector<double> m_bkgFrac;
+  std::vector<double> m_sumProb;
+  std::vector<double> m_hypMax;
+  std::vector<double> m_sigVar; // pseudo-independent variable = s+sigma(s)
+  std::vector<double> m_nBeltMin; // min used N(belt)
+  std::vector<double> m_nBeltMax; // max used N(belt)
+  std::vector<double> m_nBelt;    // set N(belt)
+  std::vector<double> m_status;
+  //
   double m_aveUL;
   double m_varUL;
   double m_aveLL;
@@ -148,6 +168,16 @@ private:
   double m_corrEffBkg;
   double m_aveNobs;
   double m_varNobs;
+  double m_aveNbelt;
+  double m_varNbelt;
+  double m_aveNbeltMax;
+  double m_varNbeltMax;
+  double m_aveHypMax;
+  double m_varHypMax;
+  double m_aveSigVar;
+  double m_varSigVar;
+  double m_aveStatus;
+  double m_varStatus;
 
   // some timing stuff
   time_t m_startTime;  // start time

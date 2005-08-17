@@ -294,16 +294,33 @@ void Coverage::pushLimits() {
   m_LL.push_back(m_pole->getLowerLimit());
 }
 
-void Coverage::pushMeas() {
+void Coverage::pushMeas(bool ok) {
   m_effStat.push_back(m_measEff);
   m_bkgStat.push_back(m_measBkg);
   m_nobsStat.push_back(m_measNobs);
+  if ((m_pole->getEffSigma()>0) && (m_pole->getEffDist() != DIST_NONE)) {
+    m_effFrac.push_back(m_measEff/m_pole->getEffSigma());
+  } else {
+    m_effFrac.push_back(-1.0);
+  }
+  if ((m_pole->getBkgSigma()>0) && (m_pole->getBkgDist() != DIST_NONE)) {
+    m_bkgFrac.push_back(m_measBkg/m_pole->getBkgSigma());
+  } else {
+    m_bkgFrac.push_back(-1.0);
+  }
+  m_sumProb.push_back(m_pole->getSumProb());
+  m_hypMax.push_back(m_pole->getHypTest()->max());
+  m_sigVar.push_back(m_pole->getSVar());
+  m_nBeltMin.push_back(double(m_pole->getNBeltMinUsed()));
+  m_nBeltMax.push_back(double(m_pole->getNBeltMaxUsed()));
+  m_nBelt.push_back(double(m_pole->getNBelt()));
+  m_status.push_back((ok ? 1.0:0.0));
 }
 
-void Coverage::updateStatistics() {
+void Coverage::updateStatistics(bool ok) {
   if (m_collectStats) {
     pushLimits();
-    pushMeas();
+    pushMeas(ok);
   }
 }
 
@@ -320,7 +337,16 @@ void Coverage::resetStatistics() {
   m_LL.clear();
   m_effStat.clear();
   m_bkgStat.clear();
+  m_effFrac.clear();
+  m_bkgFrac.clear();
   m_nobsStat.clear();
+  m_sumProb.clear();
+  m_hypMax.clear();
+  m_sigVar.clear();
+  m_nBeltMin.clear();
+  m_nBeltMax.clear();
+  m_nBelt.clear();
+  m_status.clear();
 }
 
 void Coverage::calcStatistics() {
@@ -329,6 +355,11 @@ void Coverage::calcStatistics() {
     calcStats(m_LL,m_aveLL,m_varLL);
     calcStats(m_effStat,m_aveEff,m_varEff);
     calcStats(m_bkgStat,m_aveBkg,m_varBkg);
+    calcStats(m_sigVar,m_aveSigVar, m_varSigVar);
+    calcStats(m_nBeltMax,m_aveNbeltMax, m_varNbeltMax);
+    calcStats(m_nBelt,m_aveNbelt, m_varNbelt);
+    calcStats(m_status,m_aveStatus, m_varStatus);
+    calcStats(m_hypMax,m_aveHypMax, m_varHypMax);
     //
     m_corrEffBkg = calcStatsCorr(m_effStat,m_bkgStat);
     if ((m_effDist!=DIST_NONE) && (m_varEff>0)) {
@@ -363,6 +394,21 @@ void Coverage::printStatistics() {
     std::cout << " upper lim. (mu,sig) =\t";
     coutFixed(6,m_aveUL); std::cout << "\t";
     coutFixed(6,sqrt(m_varUL)); std::cout << std::endl;
+    std::cout << " estimated limit     =\t";
+    coutFixed(6,m_aveHypMax); std::cout << "\t";
+    coutFixed(6,sqrt(m_varHypMax)); std::cout << std::endl;
+    std::cout << " max N(belt) used    =\t";
+    coutFixed(6,m_aveNbeltMax); std::cout << "\t";
+    coutFixed(6,sqrt(m_varNbeltMax)); std::cout << std::endl;
+    std::cout << " set N(belt)         =\t";
+    coutFixed(6,m_aveNbelt); std::cout << "\t";
+    coutFixed(6,sqrt(m_varNbelt)); std::cout << std::endl;
+    std::cout << " Indep. var (sigVar) =\t";
+    coutFixed(6,m_aveSigVar); std::cout << "\t";
+    coutFixed(6,sqrt(m_varSigVar)); std::cout << std::endl;
+    std::cout << " Success rate        =\t";
+    coutFixed(6,m_aveStatus); std::cout << "\t";
+    coutFixed(6,sqrt(m_varStatus)); std::cout << std::endl;
     std::cout << "========================" << std::endl;
   }
 }
@@ -370,16 +416,22 @@ void Coverage::printStatistics() {
 bool Coverage::makeDumpName(std::string base, std::string & name) {
   bool rval=false;
   if (base=="") return rval;
-  int eind = static_cast<int>(100.0*m_effMean);
-  int bind = static_cast<int>(100.0*m_bkgMean);
-  int sind = static_cast<int>(100.0*m_sTrueMean);
+  int eind  = static_cast<int>(100.0*m_effMean);
+  int deind = static_cast<int>(100.0*m_effSigma);
+  int bind  = static_cast<int>(100.0*m_bkgMean);
+  int dbind = static_cast<int>(100.0*m_bkgSigma);
+  int sind  = static_cast<int>(100.0*m_sTrueMean);
   int we = (eind>999 ? 4:3);
   int wb = (bind>999 ? 4:3);
   int ws = (sind>999 ? 4:3);
   std::ostringstream ostr;
   ostr << std::fixed << std::setfill('0') << "_s" << std::setw(ws) << sind
-       << "_e" << std::setw(we) << eind
-       << "_b" << std::setw(wb) << bind;
+       << "_e" << distTypeStr(m_effDist)
+       << "-"  << std::setw(we) << eind
+       << "-"  << std::setw(we) << deind
+       << "_b" << distTypeStr(m_bkgDist)
+       << "-"  << std::setw(wb) << bind
+       << "-"  << std::setw(wb) << dbind;
   name = base+ostr.str()+".dat";
   rval=true;
   return rval;
@@ -419,6 +471,7 @@ void Coverage::dumpExperiments(std::string name, bool limits) {
   *os << "# bkg           = " << m_bkgTrue.min() << std::endl;
   *os << "# bkg sigma     = " << m_bkgSigma << std::endl;
   *os << "# bkg dist      = " << distTypeStr(m_bkgDist) << std::endl;
+  *os << "# lhRatio       = " << (m_pole->usesNLR() ? "nlr":"pole") << std::endl;
   *os << "# corr.         = " << m_beCorr << std::endl;
   *os << "# coverage      = " << m_coverage << std::endl;
   *os << "# coverage unc. = " << m_errCoverage << std::endl;
@@ -432,21 +485,28 @@ void Coverage::dumpExperiments(std::string name, bool limits) {
 	<< m_nobsStat[i] << '\t'
 	<< std::setprecision(6)
 	<< m_effStat[i] << '\t'
-        << m_bkgStat[i];
-    if (dumpLimits) {
-      *os << std::fixed
-	  << std::setprecision(2)
-	  << '\t'
-	  << m_LL[i] << '\t'
-	  << m_UL[i];
-    }
-    *os << std::endl;
+	<< m_effFrac[i] << '\t'
+        << m_bkgStat[i] << '\t'\
+        << m_bkgFrac[i] << '\t'
+        << m_sigVar[i] << '\t'
+	<< std::setprecision(0)
+	<< m_nBelt[i] << '\t'
+	<< m_nBeltMin[i] << '\t'
+	<< m_nBeltMax[i] << '\t'
+	<< std::setprecision(0)
+	<< m_status[i] << '\t'
+	<< std::setprecision(2)
+	<< m_LL[i] << '\t'
+	<< m_UL[i] << '\t'
+        << m_sumProb[i] << '\t'
+	<< m_hypMax[i] << '\t'
+	<< std::endl;
   }
 #else
   for (i=0; i<sz; i++) {
     *os << m_nobsStat[i] << '\t'
 	<< m_effStat[i] << '\t'
-        << m_bkgStat[i];
+        << m_bkgStat[i] <<
     if (dumpLimits) {
 
       *os << '\t'
@@ -566,6 +626,7 @@ void Coverage::doLoop() {
   bool first = true;
   bool timingDone = false;
   int nWarnings=0;
+  int nTotal=0;
   const int maxWarnings=10;
   //
   m_pole->setCoverage(!m_collectStats); // make full limits when collecting statistics
@@ -589,29 +650,33 @@ void Coverage::doLoop() {
 	    startTimer();       // used for estimating the time for the run
 	    first = false;
 	  }
+	  nTotal++;
 	  generateExperiment(); // generate pseudoexperiment using given ditributions of signal,bkg and eff.
-	  m_pole->setNobserved(m_measNobs); // set values from generated experiment
+	  m_pole->setNObserved(m_measNobs); // set values from generated experiment
 	  m_pole->setEffMeas(m_measEff,m_effSigma,m_effDist);
 	  m_pole->setBkgMeas(m_measBkg,m_bkgSigma,m_bkgDist);
 	  m_pole->setEffBkgCorr(m_beCorr); // always the same...
 	  m_pole->setEffInt();         // reset the integral ranges
 	  m_pole->setBkgInt();
+	  m_pole->setTestHyp(m_hypRMin,m_hypRMax,m_hypRStep);        // recalculate hypothesis range
+	  //	  m_pole->initIntArrays(); // DONE in analyseExperiment()
+	  //	  m_pole->initBeltArrays();
 	  if (!m_pole->analyseExperiment()) { // calculate the limit of the given experiment
+	    updateStatistics(false);          // statistics (only if activated)
 	    if (nWarnings<maxWarnings) {
-	      std::cout << "WARNING: limit calculation failed - nbelt is probably too small ("
-		   << m_pole->getNBelt() << ") for Nobs = " << m_measNobs << std::endl;
-	      std::cout << "         probability    = " << m_pole->getSumProb() << std::endl;
-	      std::cout << "         lower lim norm = " << m_pole->getLowerLimitNorm() << std::endl;
-	      std::cout << "         upper lim norm = " << m_pole->getUpperLimitNorm() << std::endl;
-	      std::cout << "         will be ignored." << std::endl;
-	      nWarnings++;
+	      m_pole->printFailureMsg();
+	      m_pole->getMeasurement().dump();
+	      m_pole->printSetup();
+	      std::cout << "s(true) = " << m_sTrueMean << std::endl;
+	      std::cout << "Pseudoexperiment will be ignored!" << std::endl;
 	      if (nWarnings==maxWarnings) {
 		std::cout << "WARNING: previous message will not be repeated." << std::endl;
 	      }
 	    }
+	    nWarnings++;
 	  } else {
 	    updateCoverage();            // update the coverage
-	    updateStatistics();          // statistics (only if activated)
+	    updateStatistics(true);          // statistics (only if activated)
 	    if (!timingDone) {
 	      nest++;
 	      if (checkTimer(5)) {
@@ -635,6 +700,15 @@ void Coverage::doLoop() {
 	dumpExperiments();
       }
     }
+  }
+  double frate = (nTotal>0 ? double(nWarnings)/double(nTotal):0.0);
+  std::cout << ">>>Limit calculation failure rate: " << frate << std::endl;
+  if (frate>0.01) {
+    std::cout << "WARNING: The failure rate in the limit calculations is large (>0.01)." << std::endl;
+    std::cout << "         Possible cures:" << std::endl;
+    std::cout << "         1. Increase N_belt  ( Pole::setBelt(N) )" << std::endl;
+    std::cout << "         2. Increase hypothesis range ( Pole::setTestHyp() )" << std::endl;
+    std::cout << "         3. Increase integration precision (Pole::setEffInt(),setBkgInt() )" << std::endl;
   }
   endofRunTime();
   //  printClockUsage(m_nLoops*m_sTrue.n()*m_effTrue.n()*m_bkgTrue.n());
