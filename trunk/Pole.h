@@ -97,7 +97,7 @@
  *  Basic
  *  - setCL() : Confidence limit, default 0.9
  *    the requested confidence [0.0,1.0]
- *  - setNobserved() : Number of observed events
+ *  - setNObserved() : Number of observed events
  *  - setEffMeas() : Measured efficiency\n
  *    efficiency distribution (mean,sigma and distribution type ( DISTYPE ))
  *  - setBkgMeas() : Measured background\n
@@ -169,7 +169,7 @@ public:
   //! Set measurement
   void setMeasurement( const Measurement & measurement ) { m_measurement = measurement; }
   //
-  void setNobserved(int nobs) {m_measurement.setNobserved(nobs); }
+  void setNObserved(int nobs) {m_measurement.setNObserved(nobs); }
   //! distribution info on eff and bkg
   void setEffMeas(double mean,double sigma, DISTYPE dist=DIST_GAUS) { m_measurement.setEff(mean,sigma,dist); m_validInt = false; m_validBestMu = false;}
   void setBkgMeas(double mean,double sigma, DISTYPE dist=DIST_GAUS) { m_measurement.setBkg(mean,sigma,dist); m_validInt = false; m_validBestMu = false;}
@@ -177,8 +177,8 @@ public:
   ////////////////////////////////
   //
   bool checkEffBkgDists();
-  bool isFullyCorrelated() { return (((fabs(fabs(m_beCorr)-1.0)) < 1e-16)); }
-  bool isNotCorrelated()   { return (fabs(m_beCorr) < 1e-16); }
+  bool isFullyCorrelated() { return m_measurement.isFullyCorrelated(); } // { return (((fabs(fabs(m_beCorr)-1.0)) < 1e-16)); }
+  bool isNotCorrelated()   { return m_measurement.isNotCorrelated(); }   // { return (fabs(m_beCorr) < 1e-16); }
  
   // POLE construction 
   void setEffInt(double scale=-1.0, int n=0);
@@ -190,13 +190,12 @@ public:
   bool checkParams();
 
   // Set belt max value
-  void setBelt(int v)    { m_nBelt = v; m_suggestBelt = (v<1); }
-  void setBeltMax(int v) { m_nBeltMax = v; } //allocated maximum
+  void setBelt(int v)    { m_nBeltMaxUsed = 0; m_nBeltMinUsed = v; m_nBelt = v; m_suggestBelt = (v<1); }
   int  suggestBelt();                // will suggest a m_nBelt based on no. observed
   void setDmus(double dmus) { m_dmus = (dmus > 0.0 ? dmus:m_stepMin); }
 
   // POLE test hypothesis range
-  void setTestHyp(double step); // set test range based on the input measurement
+  void setTestHyp(double step=-1.0); // set test range based on the input measurement
   void setTestHyp(double low, double high, double step); // test mu=s+b for likelihood ratio
   void setNuppLim(int n=-1) { m_nUppLim = n; }
 
@@ -250,13 +249,14 @@ public:
   //
   // Access functions
   //
+  const int    getVerbose() const    { return m_verbose; }
   const double getStepMin() const    { return m_stepMin; }
   const double getCL() const         { return m_cl; }
   const double getSTrue() const      { return m_sTrue; }
   const bool   getCoverage() const   { return m_coverage; }
   //
   const Measurement & getMeasurement() const { return m_measurement; }
-  const int    getNObserved() const  { return m_measurement.getNobserved(); }
+  const int    getNObserved() const  { return m_measurement.getNObserved(); }
   // Efficiency
   const double  getEffMeas()  const  { return m_measurement.getEffMeas(); }
   const double  getEffSigma() const  { return m_measurement.getEffSigma(); }
@@ -266,6 +266,13 @@ public:
   const double  getBkgSigma() const  { return m_measurement.getBkgSigma(); }
   const DISTYPE getBkgDist()  const  { return m_measurement.getBkgDist(); }
   const double  getEffBkgCorr() const { return m_measurement.getBEcorr(); }
+  // Indep. variable
+  const double  getSVar()     const  { return BeltEstimator::getT(m_measurement.getNObserved(),
+								  m_measurement.getEffMeas(),
+								  m_measurement.getEffSigma(),
+								  m_measurement.getBkgMeas(),
+								  m_measurement.getBkgSigma(),
+								  m_normInt);}
   // range and steps in double integral (7), in principle infinite
   const double  getEffIntScale() const { return m_effIntScale; }
   const Range  *getEffRangeInt() const { return &m_effRangeInt; }
@@ -277,14 +284,22 @@ public:
   //
   const bool    isValidInt() const   { return m_validInt; }
   const unsigned int getNInt() const     { return m_nInt; }
-  const unsigned int getNIntMax() const  { return m_nIntMax; }
+  //  const unsigned int getNIntMax() const  { return m_nIntMax; }
   const std::vector<double> & getWeightInt() const { return m_weightInt; }
   const std::vector<double> & getEffInt() const    { return m_effInt; }
   const std::vector<double> & getBkgInt() const    { return m_bkgInt; }
+  double getEffIntMin() const { return m_effInt.front(); }
+  double getEffIntMax() const { return m_effInt.back(); }
+  double getBkgIntMin() const { return m_bkgInt.front(); }
+  double getBkgIntMax() const { return m_bkgInt.back(); }
+  double getEffIntNorm() const { return m_normEff; }
+  double getBkgIntNorm() const { return m_normBkg; }
+  double getIntNorm()    const { return m_normInt; }
   //
   const double  getDmus() const { return m_dmus; }
   const int     getNBelt() const { return m_nBelt; }
-  const int     getNBeltMax() const { return m_nBeltMax; }
+  const int     getNBeltMinUsed() const { return m_nBeltMinUsed; }
+  const int     getNBeltMaxUsed() const { return m_nBeltMaxUsed; }
   const bool    isValidBestMu() const  { return m_validBestMu; }
   const std::vector<double> & getBestMuProb() const { return m_bestMuProb; }
   const std::vector<double> & getBestMu() const { return m_bestMu; }
@@ -314,19 +329,22 @@ private:
   bool   m_coverage;
   // Measurement
   Measurement m_measurement;
+  double m_normEff;
+  double m_normBkg;
+  double m_normInt; // == 
   // TO BE REPLACED BY THE ABOVE Measurement CALSS
   // Number of observed events
-  int    m_nObserved;
+  //  int    m_nObserved;
   // Efficiency, gaussian
-  double  m_effMeas;
-  double  m_effSigma;
-  bool    m_effNoDist;
-  DISTYPE m_effDist;
+  //  double  m_effMeas;
+  //  double  m_effSigma;
+  //  bool    m_effNoDist;
+  //  DISTYPE m_effDist;
   // Background, gaussian
-  double  m_bkgMeas;
-  double  m_bkgSigma;
-  bool    m_bkgNoDist;
-  DISTYPE m_bkgDist;
+  //  double  m_bkgMeas;
+  //  double  m_bkgSigma;
+  //  bool    m_bkgNoDist;
+  //  DISTYPE m_bkgDist;
   // correlation between eff and bkg [-1.0..1.0]
   double  m_beCorr;
   ////////////////////////////////////////////////////
@@ -344,7 +362,7 @@ private:
   //
   bool    m_validInt;  // true if integral is valid
   unsigned int m_nInt;      // == m_effIntN*m_bkgIntN
-  unsigned int m_nIntMax;   // allocated
+  //  unsigned int m_nIntMax;   // allocated
   std::vector<double> m_weightInt; // array containing weights (Gauss(e)*Gauss(b)*de*db), size = n_points
   std::vector<double> m_effInt;    // array containg e used in integral (e)
   std::vector<double> m_bkgInt;    // array containg b used in integral (b)
@@ -354,8 +372,9 @@ private:
   // POLE
   double  m_dmus;       // step size in search for s_best (LHR)
   int     m_nBelt;      // how many Nobs are tested to find R (likelihood ratio)
-  int     m_nBeltMax;   // dito allocated
   bool    m_suggestBelt;// if true, always call suggestBelt(); set to true if setBelt(v) is called with v<1
+  int     m_nBeltMinUsed; // the minimum nBelt used for the calculation
+  int     m_nBeltMaxUsed; // the maximum nBelt used for the calculation
   //  std::vector<int> m_nBeltList; // list of suggested nBelt - filled in constructor
   bool    m_validBestMu;//
   std::vector<double> m_bestMuProb; // prob. of best mu=e*s+b, index == (N observed)
@@ -381,11 +400,15 @@ inline const bool Pole::normOK(double p) const {
 }
 
 inline const double Pole::calcProb(int n, double s) const {  
-  double p = 0.0; 
+  double p = 0.0;
+  double g;
   //
   for(unsigned int i=0;i<m_nInt;i++) {
-    p += m_weightInt[i]*m_poisson->getVal(n,m_effInt[i]*s + m_bkgInt[i]);
+    g = m_effInt[i]*s + m_bkgInt[i];
+    p += m_weightInt[i]*m_poisson->getVal(n,g);
+    //    if (m_verbose>9) std::cout << i << " : p= " << p << ", g = " << g << ", weight = " << m_weightInt[i] << ", " << m_effInt[i] << ", " << m_bkgInt[i] << std::endl;
   }
+  if (m_verbose>9) std::cout << "calcProb() : " << n << ", " << s << " => p = " << p << std::endl;
   return p;
 }
 //
