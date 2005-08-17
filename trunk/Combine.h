@@ -15,10 +15,14 @@ class Combine {
   void add(const Pole *point);
   void add(const std::vector<Pole *> poleList);
   //
+  void setSmax(double s) {m_sVecMax = s;}
+  //
   void init(); // called AFTER all points are added
   void doIt();
   //
   void printResult();
+  //
+  double getSmax(double s) {return m_sVecMax;}
   //
  private:
   std::vector<const Pole *> m_poleList;
@@ -33,10 +37,14 @@ class Combine {
   //
   // Tabulated Likelihood
   //
-  Range m_sRange;
+  Range                              m_sHypRange;
   std::vector<double>                m_sVector;
+  std::vector<int>                   m_sMinInd;
+  std::vector<int>                   m_sMaxInd;
   std::vector< std::vector<int> >    m_nVectors; // n-vectors used
   std::vector< std::vector<double> > m_likeliHood; // L(n[i],s[j]) = [i][j]
+  double m_sVecMax; // max s in sVec (L(n,s)). If < 0 => automatic
+  double m_sMaxUsed;// max used sVec == max s(max) encountered
 
   std::vector<double> m_lhRatio;
   double m_lowerLimit;
@@ -45,6 +53,8 @@ class Combine {
   bool   m_foundUpper;
   double m_lowNorm;
   double m_uppNorm;
+  double m_lowProb;
+  double m_uppProb;
   //
   unsigned int m_indexNobs; // index in nVectors of Nobs vector
   //

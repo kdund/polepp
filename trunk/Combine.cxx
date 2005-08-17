@@ -7,6 +7,8 @@
 Combine::Combine() {
   m_foundLower=false;
   m_foundUpper=false;
+  m_sVecMax = -1.0;
+  m_sMaxUsed = -1.0;
 }
 
 Combine::~Combine() {
@@ -63,82 +65,163 @@ void Combine::tabulateLikelihood() {
   std::cout << "Tabulating likelihood function" << std::endl;
   std::cout << "- Making nVector...." << std::endl;
   int nmeas = m_poleList.size();
-  std::vector<int> nvecRange;
+  const Pole *pole;
   //
-  int nrange=m_poleRef->getNBelt();
-  nvecRange.resize(nrange);
+  std::vector<int> nrange;
+  int nBeltMax=-1;
+  int nbelt;
+  int nvSize=1;
+  for (int i=0; i<nmeas; i++) {
+    pole = m_poleList[i];
+    nbelt = pole->getNBelt();
+    nrange.push_back(nbelt);
+    if (nbelt>nBeltMax) nBeltMax = nbelt;
+    nvSize *=(nbelt+1);
+    std::cout << "  " << i+1 << ". N(belt) = " << nbelt << std::endl;
+  }
+  //
   m_nVectors.clear();
-  // all possible n
-  for (int i=0; i<nrange; i++) nvecRange[i]=i;
   //
   std::vector< int > jj;
   jj.resize(nmeas,0);
   m_nVectors.push_back(jj);  
-  while (Combination::next_vector(jj,nrange-1)) {
-    m_nVectors.push_back(jj);  
+  while (Combination::next_vector(jj,nrange)) {
+    m_nVectors.push_back(jj);
   }
   //
   // sort them
   //
   std::sort(m_nVectors.begin(),m_nVectors.end());
+
+//   unsigned int ss;
+//   for (unsigned int n=0; n<m_nVectors.size(); n++) {
+//     std::cout << n;
+//     ss = m_nVectors[n].size();
+//     for (unsigned int i=0; i<ss; i++) {
+//       std::cout << "\t" << m_nVectors[n][i];
+//     }
+//     std::cout << std::endl;
+//   }
   //
   // -------------  nVectors done!
   //
   //
   // Obtain a proper range of s (m_sVector)
   // Use the maximum n and find the estimated s(up) for all points in poleList.
-  // Scale the maximum s with some safety-factor
+  // OLD: Scale the maximum s with some safety-factor
+  // NEW: Use the minimum s - the combined limit should be less than that.
   //
   std::cout << "- Obtaining range of s...." << std::endl;
-  const Pole *pole;
   double smax=0;
+  //  double smin=1000000.0;
   double s;
+  double h;
+  double hmax=0;
+  double hmin=1000000.0;
   for (int i=0; i<nmeas; i++) {
     pole = m_poleList[i];
     // s(max) estimate using n(max)
-    s = BeltEstimator::getSigUp(pole->getNObserved(),pole->getEffMeas(),pole->getEffSigma(),pole->getBkgMeas(),pole->getBkgSigma());
-    if (s>smax) smax=s;
+//     s = BeltEstimator::getSigUp(pole->getNObserved(),
+// 				pole->getEffDist(),pole->getEffMeas(),pole->getEffSigma(),
+// 				pole->getBkgDist(),pole->getBkgMeas(),pole->getBkgSigma(),
+// 				pole->getIntNorm());
+//
+// Find hypthesis scan range
+//
+    h = pole->getHypTest()->max();
+    if (h>hmax) hmax=h;
+    if (h<hmin) hmin=h;
+    //
+    // Find max s for the tabulation of L(n,s)
+    //
+    s = (static_cast<double>(pole->getNBelt()) - pole->getBkgIntMin())/pole->getEffIntMax();
+    if (s>smax) smax = s;
   }
-  smax *= 1.0; // increase the range by 10% - just to be sure (?)
-  double sstep = m_poleRef->getHypTest()->step();
-  if (sstep<=0) sstep = 0.01;
+  if (m_sVecMax>0.0) smax = m_sVecMax;
+  m_sMaxUsed = -1.0;
+  //
+  // Get hypthesis step size from ref.
+  //
+  double hstep = m_poleRef->getHypTest()->step();
+  if (hstep<=0) hstep = 0.01;
   //  sstep=0.1;
   //
+  // Fill sVector and sHypRange with values
+  //
   m_sVector.clear();
-  m_sRange.setRange(0.0,smax,sstep); // make range
-  std::cout << "- Range in s: [0.0, " << smax << "]" << std::endl;
-  for (int i=0; i<m_sRange.n(); i++) {
-    m_sVector.push_back(m_sRange.getVal(i));
+  m_sHypRange.setRange(0.0,hmin,hstep); // make range
+  //
+  int svSize = static_cast<int>((smax + hstep)/hstep + 0.5);
+  for (int i=0; i<svSize; i++) {
+    m_sVector.push_back(static_cast<double>(i)*hstep);
   }
+  //
+  std::cout << "- Hypothesis scan range     : [0.0, " << hmin << "]" << std::endl;
+  std::cout << "- s(max) in tabulated L(n,s): [0.0, " << smax << "]" << std::endl;
+  //
   //
   // -------- sVector done
   //
   //
   // Loop over all (nVectors, sVector) and calulate L(n,s)
   //
-  double lh;
-  std::cout << "Size of nVectors   : " << m_nVectors.size() << std::endl;
-  std::cout << "Size of nVectors[0]: " << m_nVectors[0].size() << std::endl;
-  std::cout << "Size of sVector    : " << m_sVector.size() << std::endl;
-  std::cout << "Size of poleList   : " << m_poleList.size() << std::endl;
-
-
+  // Save only those L(n,s)>phLim (=0.0001) in order to reduce size of matrix.
+  //
+//   std::cout << "Size of nVectors   : " << m_nVectors.size() << std::endl;
+//   std::cout << "Size of nVectors[0]: " << m_nVectors[0].size() << std::endl;
+//   std::cout << "Size of sVector    : " << m_sVector.size() << std::endl;
+//   std::cout << "Size of poleList   : " << m_poleList.size() << std::endl;
+//
   std::cout << "- Calculate L(n,s)...." << std::endl;
   m_likeliHood.resize(m_nVectors.size());
-  std::cout << "- Number of L(n,s) to be calculated = " << m_nVectors.size()*m_sVector.size()*m_poleList.size() << std::endl;
+  std::cout << "- Max number of L(n,s) to be calculated = " << m_nVectors.size()*m_sVector.size() << std::endl;
+  m_sMinInd.resize(m_nVectors.size());
+  m_sMaxInd.resize(m_nVectors.size());
+  int nok=0;
+  int ntot=0;
+  double plh,lh;
+  int ismin,ismax; // indecis of min and max s for the current n
+  bool isminOK;
+  const double plhLim = 0.0001; // min Lh
+  std::vector<double> tmpLh;  // temporary storage
+  tmpLh.resize(m_sVector.size(),0.0);
+  //
   for (unsigned int n=0; n<m_nVectors.size(); n++) {
-    //    std::cout << " n=" << n << std::endl;
-    m_likeliHood[n].resize(m_sVector.size(),1.0);
+    if (n%1000==0) std::cout << "  N vector " << n << " out of " << m_nVectors.size() << std::endl;
+    m_sMinInd[n] = -1;
+    m_sMaxInd[n] = -1;
+    isminOK = false;
+    ismin = -1;
+    ismax = -1;
     for (unsigned int m=0; m<m_sVector.size(); m++) {
       s = m_sVector[m];
+      plh = 1.0;
       for (unsigned int p=0; p<m_poleList.size(); p++) { // loop over all points
 	pole = m_poleList[p];
 	lh = pole->calcProb(m_nVectors[n][p],s);     // L(n(p),s(m))
-	m_likeliHood[n][m] *=lh;                     // L(n1,s(m))*L(n2,s(m))*..../
-	//	std::cout << "n,s,lh = " << p << ": " << m_nVectors[n][p] << ", " << s << ", " << lh << std::endl;
+	plh*=lh;                     // L(n1,s(m))*L(n2,s(m))*..../
+	//	if (n==12) std::cout << "n,s,lh = " << p << ": " << m_nVectors[n][p] << ", " << s << ", " << lh << std::endl;
       }
+      tmpLh[m] = plh; // save it temporarily
+      //
+      // lh might fluctuate around min before steadily remaining above threshhold.
+      // The same is true when the upper s is reached.
+      //
+      if ((plh>plhLim) && (!isminOK)) { // first time above threshhold - save s
+	ismin = m;
+	isminOK = true;
+      }
+      if (plh>plhLim) ismax = m;
+      ntot++;
     }
+    for (int m=ismin; m<ismax; m++) {
+      m_likeliHood[n].push_back(tmpLh[m]);
+      nok++;
+    }
+    m_sMinInd[n] = ismin;
+    m_sMaxInd[n] = ismax;
   }
+  std::cout << "- Actual number of L(n,s) calculated = " << nok << std::endl;
   std::cout << "- Tabulating DONE!" << std::endl;
   //
   // -------- Likelihood construction done
@@ -146,12 +229,15 @@ void Combine::tabulateLikelihood() {
 }
 
 unsigned int Combine::getNvecIndex(std::vector<int> & nvec) const {
-  unsigned int nmax =  m_nVectors.back().front();
-  unsigned int nsize = m_nVectors.front().size();
+  std::vector<int> nmax =  m_nVectors.back();     // vector containg the maximum n(belt) per Pole point
+  unsigned int nsize = m_nVectors.front().size(); // number of points
+  unsigned int nFullSize = m_nVectors.size();
   if (nvec.size() != nsize) {
     std::cerr << "WARNING: Input vector of faulty size (" << nvec.size() << " <> " << nsize << ")\n";
     return 0;
   }
+  //
+  // Find index in array of vectors matching the given vector
   //
   unsigned int ofs = 0;
   unsigned int npp=0;
@@ -161,42 +247,63 @@ unsigned int Combine::getNvecIndex(std::vector<int> & nvec) const {
     if (i==0) {
       npp=1;
     } else {
-      npp *= (nmax+1);
+      npp *= nmax[nvecInd+1]+1;
     }
-    if (nvec[nvecInd]>int(nmax)) {
-      std::cout << "WARNING: Too large element in input vector (" << nvec[nvecInd] << " > " << nmax << ")\n";
-      std::cout << "         " << nvecInd << ",  nsize = " << nsize << ",  nmax = " << nmax << std::endl;
+    if (nvec[nvecInd]>int(nmax[nvecInd])) {
+      std::cout << "WARNING: Too large element in input vector (" << nvec[nvecInd] << " > " << nmax[nvecInd] << ")\n";
+      std::cout << "         " << nvecInd << ",  nsize = " << nsize << ",  nmax = " << nmax[i] << std::endl;
       return 0;
     }
-    ofs += npp*nvec[nvecInd];
+    ofs += npp*(nvec[nvecInd]);
+  }
+  if (ofs>=nFullSize) {
+    std::cout << "ERROR: Offset too large - input vector not in range or...bug? Ofs = " << ofs << std::endl;
+    return 0;
   }
   return ofs;
 }
 
 double Combine::getLikelihood(int nind, double s) {
-  if (s<0.0) return 0.0;
-  if (s>m_sVector.back()) return 0.0;
+  //  bool verb = (nind==12);
   if ((nind<0) || (nind>int(m_nVectors.size()))) return 0.0;
+  int ismin = m_sMinInd[nind];
+  int ismax = m_sMaxInd[nind];
+  if (ismin==ismax) return 0.0;
+  double smin = m_sVector[ismin];
+  double smax = m_sVector[ismax];
+  //  if (verb) {
+  //    std::cout << "s, s range: " << s << " => " << smin << "," << smax << std::endl;
+  //  }
+  if (s<smin) return 0.0;
+  if (s>smax) return 0.0;
+  //
   //
   // Establish closest s in m_sVector
   //
   int ind0, ind1;
-  int index = int(s/m_sRange.step());
-  double sA = m_sRange.getVal(index);
+  double step=0.01;
+  if (m_sVector.size()>1)
+    step= m_sVector[1]-m_sVector[0];
+  int index = int(s/step);
+  double sA = m_sVector[index];
   double s0, s1, ds;
-  int ssize = m_likeliHood[0].size(); // size in s
+  int ssize = ismax-ismin; // nr of saved lhR
   if (sA>s) {
     ind1 = index;
     ind0 = (index>1 ? index-1:0);
-    s0 = m_sRange.getVal(ind0);
+    s0 = m_sVector[ind0];
     s1 = sA;
   } else {
-    ind1 = (index+1<ssize ? index+1:ssize-1);
+    ind1 = (index+1<ismax ? index+1:ismax-1);
     ind0 = index;
     s0 = sA;
-    s1 = m_sRange.getVal(ind1);
+    s1 = m_sVector[ind1];
   }
   ds = s1-s0;
+  ind0 = ind0 - ismin;
+  ind1 = ind1 - ismin;
+  if (ind1>=ssize) ind1 = ssize-1;
+  if (ind0<0)      ind0 = 0;
   double lh0 = m_likeliHood[nind][ind0];
   double lh1 = m_likeliHood[nind][ind1];
   double rval;
@@ -227,16 +334,26 @@ void Combine::setBestMuScan(int nind) {
   double smin=100000;
   double smax=0;
   double s;
+  int n;
+  double emin,emax,bmin,bmax,bmeas,emeas;
   //
   for (int i=0; i<nmeas; i++) {
     pole = m_poleList[i];
-    s = pole->getDmus() + (static_cast<double>(m_nVectors[nind][i]) - pole->getBkgRangeInt()->min())/pole->getEffMeas();
+    n = m_nVectors[nind][i];
+
+    bmeas = pole->getBkgMeas();
+    bmin  = pole->getBkgRangeInt()->min();
+    bmax  = pole->getBkgRangeInt()->max();
+
+    emin  = pole->getEffRangeInt()->min();
+    emax  = pole->getEffRangeInt()->max();
+    emeas = pole->getEffMeas();
+    s = (static_cast<double>(n) - bmin)/emeas;
     if (s>smax) smax=s;
     //
-    s = (static_cast<double>(m_nVectors[nind][i]) - pole->getBkgRangeInt()->max())/pole->getEffRangeInt()->max();
+    s = (static_cast<double>(n) - bmax)/emax;
     if (s<0.0) s=0.0;
     if (s<smin) smin=s;
-    
   }
   m_bestMuScan.setRange(smin,smax,m_poleRef->getDmus());
   //  std::cout << "Set s_best scan range to: [ " << smin << ":" << smax << " ] with ds = " << m_poleRef->getDmus() << std::endl;
@@ -282,11 +399,13 @@ void Combine::findBestMu(int ind) {
 //   std::cout << sbest << " " << std::endl;
   m_bestMu[ind]     = sbest;
   m_bestMuProb[ind] = lhMax;
+  //
+  //  if (sbest>m_sMaxUsed) m_sMaxUsed=sbest;
 }
 
 void Combine::findBestMu() {
   // loop over ALL vectors of n....
-  std::cout << "Finding all s_best..." << std::endl;
+  std::cout << "- Finding all s_best..." << std::endl;
 
   //
   // Loop over all vectors
@@ -298,8 +417,9 @@ void Combine::findBestMu() {
 //     }
 //     std::cout << std::endl;
     findBestMu(i);
+    //    std::cout << "s(best) = " << m_bestMu[i] << " , P = " << m_bestMuProb[i] << std::endl;
   }
-  std::cout << "Done!" << std::endl;
+  std::cout << "- Done!" << std::endl;
 }
 
 double Combine::calcLimit(double s) {
@@ -307,7 +427,11 @@ double Combine::calcLimit(double s) {
   double p;
   for (unsigned n=0; n<m_nVectors.size(); n++) {
     p = getLikelihood(n,s);
-    m_lhRatio[n] = p/m_bestMuProb[n];
+    if (m_bestMuProb[n]>0.0) {
+      m_lhRatio[n] = p/m_bestMuProb[n];
+    } else {
+      m_lhRatio[n] = 0.0; //(n==m_indexNobs ? 0.0:0.001); // this is just to make sure that CHECK!!!!
+    }
     normProb += p;
   }
   //
@@ -324,13 +448,17 @@ double Combine::calcLimit(double s) {
     done = ((n==m_lhRatio.size()) || (sumProb>m_poleRef->getCL()));
   }
   //
-  if (sumProb<m_poleRef->getCL()) {
+  double dCL = sumProb-m_poleRef->getCL();
+  //  std::cout << "findLimits(): " << s << " norm = " << normProb << " sump = " << sumProb << std::endl;
+  if (dCL<0.0) {
     if (m_foundLower) {
       m_upperLimit = s;
       m_uppNorm = normProb;
+      m_uppProb = sumProb;
     } else {
       m_lowerLimit = s;
       m_lowNorm = normProb;
+      m_lowProb = sumProb;
       m_foundLower = true;
       m_foundUpper = false;
     }
@@ -343,31 +471,31 @@ double Combine::calcLimit(double s) {
 }
 
 void Combine::findLimits() {
-  std::cout << "Finding limits..." << std::endl;
+  std::cout << "- Finding limits..." << std::endl;
   m_foundLower = false;
   m_foundUpper = false;
   m_lowerLimit = 0;
   m_upperLimit = 0;
   //
   bool done=false;
-  int ismax =  int(m_sVector.size());
+  int ihmax =  m_sHypRange.n();
   int i=0;
-  double stst;
+  double htst;
   double pnorm;
   //
   double pnormMax=0;
-  unsigned int indUpp=m_sVector.size()-1;
+  int indUpp=0;
   while (!done) {
-    stst = m_sVector[i];
-    pnorm = calcLimit(stst);
+    htst = m_sHypRange.getVal(i);
+    pnorm = calcLimit(htst);
     if (pnorm>pnormMax) pnormMax = pnorm;
-    done = ((i==ismax) ||
+    i++;
+    done = ((i==ihmax) ||
 	    (m_foundUpper) ||
 	    (!m_poleRef->normOK(pnorm)));
     if (done) indUpp=i; 
-    i++;
   }
-  if (indUpp+1==m_sVector.size()) { // Got the last tested s as upper limit -> WARNING
+  if (indUpp==ihmax) { // Got the last tested h as upper limit -> WARNING
     std::cout << "WARNING: Upper limit is equal to upper test scan limit!";
     std::cout << "         Increase the scan range to be sure." << std::endl;
   }
@@ -377,16 +505,25 @@ void Combine::findLimits() {
     limitsOK = (m_poleRef->normOK(m_lowNorm) && m_poleRef->normOK(m_uppNorm)); // a bit ugly...
   }
   if (limitsOK) {
-    std::cout << "Limits: [ " << m_lowerLimit << " , " << m_upperLimit << " ]" << std::endl;
+    std::cout << std::endl;
+    std::cout << "  Limits: [ " << m_lowerLimit << " , " << m_upperLimit << " ]" << std::endl;
+    std::cout << "  P(lower limit) = " << m_lowProb << std::endl;
+    std::cout << "  P(upper limit) = " << m_uppProb << std::endl;
+    //    std::cout << "  s(max) used    = " << m_sMaxUsed << std::endl;
+    std::cout << std::endl;
   } else {
-    std::cout << "Limits not OK!" << std::endl;
+    std::cout << std::endl;
+    std::cout << "Limits NOT OK!" << std::endl;
     std::cout << "Limits: [ " << m_lowerLimit << " , " << m_upperLimit << " ]" << std::endl;
-    std::cout << "ismax = " << ismax << std::endl;
-    std::cout << "lowNorm = " << m_lowNorm << std::endl;
-    std::cout << "uppNorm = " << m_uppNorm << std::endl;
-    std::cout << "lowFound = " << m_foundLower << std::endl;
-    std::cout << "uppFound = " << m_foundUpper << std::endl;
-
+    std::cout << "ihmax = " << ihmax << std::endl;
+    std::cout << "P(lower limit)    = " << m_lowProb << "   => should be <= CL" << std::endl;
+    std::cout << "P(upper limit)    = " << m_uppProb << "   => should be <= CL" << std::endl;
+    std::cout << "Norm(lower limit) = " << m_lowNorm << "   => should be ~ 1.0" << std::endl;
+    std::cout << "Norm(upper limit) = " << m_uppNorm << "   => should be ~ 1.0" << std::endl;
+    std::cout << "Found lower = " << m_foundLower << std::endl;
+    std::cout << "Found upper = " << m_foundUpper << std::endl;
+    //    std::cout << "s(max) used    = " << m_sMaxUsed << std::endl;
+    std::cout << std::endl;
   }
 }
 
