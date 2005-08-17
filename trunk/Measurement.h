@@ -57,7 +57,7 @@ class Measurement {
   virtual ~Measurement() {}
   //
   void copy( const Measurement & m) {
-    m_nObserved = m.getNobserved();
+    m_nObserved = m.getNObserved();
     m_effMeas   = m.getEffMeas();
     m_effSigma  = m.getEffSigma();
     m_effDist   = m.getEffDist();
@@ -76,7 +76,7 @@ class Measurement {
   }
 
   inline bool operator==( const Measurement & m ) {
-    return ( ( m_nObserved == m.getNobserved()) ||
+    return ( ( m_nObserved == m.getNObserved()) ||
 	     ( m_effMeas   == m.getEffMeas()) ||
 	     ( m_effSigma  == m.getEffSigma()) ||
 	     ( m_effDist   == m.getEffDist()) ||
@@ -97,7 +97,8 @@ class Measurement {
   void setBkgSigma( const double v ) { m_bkgSigma = v; }
   void setBkgDist( const DISTYPE v ) { m_bkgDist  = v; }
   void setBEcorr(double corr) { m_beCorr = corr; }
-  void setNobserved(int nobs) { m_nObserved = nobs; }
+  void setNObserved(int nobs) { m_nObserved = nobs; }
+  void dump() const;
   //
   const double  getEffMeas()   const { return m_effMeas; }
   const double  getEffSigma()  const { return m_effSigma; }
@@ -107,9 +108,16 @@ class Measurement {
   const DISTYPE getBkgDist()   const { return m_bkgDist; }
   const double  getBEcorr()    const { return m_beCorr; }
   const double  getBEcorrInv() const { return m_beCorrInv; }
-  const int     getNobserved() const { return m_nObserved; }
+  const int     getNObserved() const { return m_nObserved; }
   //
-  const double getSignal()    const { return (double(m_nObserved) - m_bkgMeas)/m_effMeas; }
+  const double getSignal()     const { return (double(m_nObserved) - m_bkgMeas)/m_effMeas; }
+  const double getSignalUnc()  const { 
+    double s = getSignal();
+    return sqrt(double(m_nObserved)+m_bkgSigma*m_bkgSigma+s*s*m_effSigma*m_effSigma)/m_effMeas;
+  }
+  //
+  bool isFullyCorrelated() const { return (((fabs(fabs(m_beCorr)-1.0)) < 1e-16)); }
+  bool isNotCorrelated() const   { return (fabs(m_beCorr) < 1e-16); }
   //
  protected:
   std::string m_name;
