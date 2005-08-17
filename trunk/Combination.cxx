@@ -12,7 +12,24 @@ namespace Combination {
     return true;
   }
 
+  bool add(std::vector<int> & cnt, int elem, std::vector<int> max) {
+    if (elem<0) return false;
+    if (elem>int(cnt.size())-1) return false;
+    cnt[elem]++;
+    if (cnt[elem]>max[elem]) {
+      cnt[elem] = 0;
+      --elem;
+      return add(cnt,elem,max);
+    }
+    return true;
+  }
+
   bool next_vector(std::vector<int> & vec, int max) {
+    int elem = int(vec.size())-1;
+    return add(vec,elem,max);
+  }
+
+  bool next_vector(std::vector<int> & vec, std::vector<int> max) {
     int elem = int(vec.size())-1;
     return add(vec,elem,max);
   }
