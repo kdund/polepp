@@ -17,7 +17,7 @@ Poisson::~Poisson() {
 }
 
 void Poisson::init(int nlambda, int nn, double lmax) {
-  std::cout << nlambda << ", " << nn << ", " << lmax << std::endl;
+  //  std::cout << nlambda << ", " << nn << ", " << lmax << std::endl;
   m_nLambda = nlambda;
   m_nN = nn;
   m_nTot = nn*nlambda;
@@ -52,16 +52,43 @@ void Poisson::init(int nlambda, int nn, double lmax) {
 
 const double Poisson::rawPoisson(int n, double s) const {
   double prob;
-  if(s<50.0) {
-    prob = (pow(s,n)/exp(lgamma(n+1)))*exp(-s);
+  double nlnl,lnn,lnf;
+  prob = 0.0;
+  nlnl = double(n)*log(s);  // n*ln(s)
+  lnn  = lgamma(n+1);       // ln(fac(n))
+  lnf  = nlnl - lnn - s;
+  if (isinf(lnf) || isnan(lnf)) {
+    prob=(n==0 ? 1.0:0.0);
   } else {
-    double sigma = sqrt(s); // gaussian aprox.
-    double c = 1.0L/(sqrt(2.0*M_PI)*sigma);
-    double t = (double(n)-s)/sigma;
-    prob = c*exp(-0.5L*t*t);
+    prob=exp(lnf);
+  }
+  if (isnan(prob)) {
+    std::cout << "NaN in rawPoisson: " << n << ", " << s << ", " << prob << std::endl;
   }
   return prob;
 }
+
+// const double Poisson::rawPoisson(int n, double s) const {
+//   double prob;
+//   double pp, pl;
+//   prob = 0.0;
+//   if(s<50.0) {
+//     pp = pow(s,n);
+//     if (!isinf(pp)) {
+//       pl = exp(lgamma(n+1));
+//       if (!isinf(pl)) prob = (pp/exp(lgamma(n+1)))*exp(-s);
+//     }
+//   } else {
+//     double sigma = sqrt(s); // gaussian aprox.
+//     double c = 1.0L/(sqrt(2.0*M_PI)*sigma);
+//     double t = (double(n)-s)/sigma;
+//     prob = c*exp(-0.5L*t*t);
+//   }
+//   if (isnan(prob)) {
+//     std::cout << "NaN in rawPoisson: " << n << ", " << s << ", " << prob << std::endl;
+//   }
+//   return prob;
+// }
 
 Gauss::Gauss() {
   m_data = 0;    // for the destructor

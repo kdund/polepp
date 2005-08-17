@@ -16,6 +16,7 @@ public:
   inline const double getVal(int no, double s) const;
   const double *getData() const { return m_data; }
   const int getNdata() const    { return m_nTot; }
+  const double rawPoisson(int n, double s) const;
 private:
   unsigned long m_nLambda;
   unsigned long m_nN;
@@ -24,7 +25,7 @@ private:
   double m_dL;
   double *m_data;
   //
-  const double rawPoisson(int n, double s) const;
+
 };
 
 class Gauss {
@@ -108,7 +109,15 @@ inline const double Gauss::getVal2D(double x1, double mu1, double x2, double mu2
   rval *= 1.0/sdetC;
   return rval;
 }
-
+  //
+  // Log normal
+  // x is log-normal if y=lnx is normal
+  // E(f) = exp(nmean + 0.5*nsigma^2)
+  // V(f) = (exp(nsigma^2)-1)*E(f)^2
+  // nmean  = mean of lnx  = ln(m^2/sqrt(m^2+s^2))
+  // nsigma = sigma of lnx = sqrt(ln((s^2/m^2)+1))
+  // normaly you know x and [E(x), V(x) (estimates of m and s)]
+  //
 inline const double Gauss::getValLogN(double x, double nmean, double nsigma) const {
   return (x>0.0 ? getVal(log(x),nmean,nsigma)/x:0.0);
 }
@@ -116,30 +125,42 @@ inline const double Gauss::getLNMean(double mean,double sigma) const {
   return log(mean*mean/sqrt(sigma*sigma + mean*mean));
 }
 inline const double Gauss::getLNSigma(double mean,double sigma) const {
-  return sqrt(log(sigma*sigma/mean/mean+1));
+  return sqrt(log((sigma*sigma/(mean*mean))+1));
 }
 
 inline const double Poisson::getVal(int no, double s) const {
   double rval;
   double ests;
-  unsigned long sind  = static_cast<int>(s/m_dL);
-  unsigned long index = no+sind*m_nN;
-  double df,df2,ndl;
-  //
-  if (index<m_nTot) {
-    rval = m_data[index];
-    ests = static_cast<double>(sind)*m_dL;
-    df = -(s-ests);
-    df2=  0.0;
-    if (sind>0) {
-      ndl = static_cast<double>(no)/ests;
-      df = rval*(ndl-1.0)*(s-ests);
-      if (rval<0.01)
-	df2 = 0.5*rval*((ndl-1.0)*(ndl-1.0) - (1.0+(ndl/ests)))*(s-ests)*(s-ests);
-    }
-    rval += df + df2;
-  } else {
+  if (static_cast<unsigned int>(no)>=m_nN) {
     rval = rawPoisson(no,s);
+  } else {
+    unsigned long sind  = static_cast<unsigned long>(s/m_dL);
+    unsigned long index = no+sind*m_nN;
+    double df,df2,ndl;
+
+    if (index<m_nTot) {
+      rval = m_data[index];
+      ests = static_cast<double>(sind)*m_dL;
+      df = -(s-ests);
+      df2=  0.0;
+      if (sind>0) {
+	ndl = static_cast<double>(no)/ests;
+	df = rval*(ndl-1.0)*(s-ests);
+	if (rval<0.01)
+	  df2 = 0.5*rval*((ndl-1.0)*(ndl-1.0) - (1.0+(ndl/ests)))*(s-ests)*(s-ests);
+      }
+      rval += df + df2;
+    } else {
+      rval = rawPoisson(no,s);
+    }
+  }
+  if (isnan(rval)) {
+    std::cout << " (n,s) = " << no << ", " << s << std::endl;
+//     std::cout << " index = " << index
+//               << " sind  = " << sind
+//               << " dL    = " << m_dL
+//               << std::endl;
+      
   }
   return rval;
 }
