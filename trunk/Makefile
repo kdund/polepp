@@ -1,21 +1,26 @@
 ROOTCFLAGS = $(shell root-config --cflags)
 ROOTLIBS   = $(shell root-config --libs)
-LDOBJS     =  Pdf.o Range.o Random.o Coverage.o Pole.o Combination.o Combine.o PseudoExperiment.o Measurement.o
+LDOBJS     =  Pdf.o Range.o Random.o Coverage.o Pole.o Combination.o Combine.o PseudoExperiment.o Measurement.o Power.o
 LDFLAGS    = -g -fPIC -shared
 ###CFLAGS     = -O
 # Use -g to include debug info
 # Use -pg for profiling info
 CFLAGS     = -g -O
-SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx poleconst.cxx
-INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h Measurement.h PseudoExperiment.h
-SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Range.cxx Pdf.cxx Combination.cxx PseudoExperiment.cxx Measurement.cxx
+SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx poleconst.cxx polepow.cxx
+INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h Measurement.h PseudoExperiment.h Power.h
+SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Range.cxx Pdf.cxx Combination.cxx PseudoExperiment.cxx Measurement.cxx Power.cxx
 LDFILE	     = libPole++.so
 LIBS         = -L./ -lPole++
 
-all:		$(LDFILE) polelim polebelt polecov exptest plotexp estbelt poleconst polecomb
+all:		$(LDFILE) polelim polebelt polecov exptest plotexp estbelt poleconst polecomb polepow
 
 $(LDFILE):	$(LDOBJS)
 		g++ $(LDFLAGS) $(LDOBJS) -o $(LDFILE)
+
+polepow:	polepow.o
+		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
+polepow.o:	polepow.cxx
+		g++ $(CFLAGS) -Wall -c $<
 
 polecomb:       polecomb.o
 		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
@@ -82,6 +87,8 @@ Combination.o:	Combination.cxx Combination.h
 Observable.o:	Observable.cxx Observable.h Random.h
 		g++ $(CFLAGS) -Wall -c $<
 Measurement.o:	Measurement.cxx Measurement.h
+		g++ $(CFLAGS) -Wall -c $<
+Power.o:	Power.cxx Power.h
 		g++ $(CFLAGS) -Wall -c $<
 
 package:	$(SRCLIB) $(SRCTOOLS) Makefile
