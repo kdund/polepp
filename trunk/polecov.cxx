@@ -33,7 +33,10 @@ void my_sighandler(int a) {
     std::cout << "WARNING (" << timestamp << " ) Job aborting (signal = " << a
 	      << " ). Will output data from unfinnished loop.\n" << std::endl;
     gCoverage.calcCoverage();
-    gCoverage.outputCoverageResult(0);
+    gCoverage.outputCoverageResult(0); // always output
+    gCoverage.calcStatistics();        // only if collecting stats
+    gCoverage.printStatistics();       // ditto
+    gCoverage.dumpExperiments();       // only if dump filename is defined
     exit(-1);
   }
 }
@@ -148,14 +151,14 @@ void processArgs(int argc, char *argv[]) {
     if (doExamples.getValue()) {
     }
     //
-    PDF::gPoisson.init(50000,100,50);
-    PDF::gGauss.init(50000,10.0);
+    PDF::gPoisson.init(100000,200,100);
+    PDF::gGauss.init(0,10.0);
     //
     gPole.setPoisson(&PDF::gPoisson);
     gPole.setGauss(&PDF::gGauss);
     gPole.setNLR(doNLR.getValue());
     gPole.setVerbose(verbosePol.getValue());
-    gPole.setNobserved(0);
+    gPole.setNObserved(0);
     gPole.setCoverage(true);
     gPole.setCL(confLevel.getValue());
     gPole.setDmus(dMus.getValue());
@@ -167,9 +170,7 @@ void processArgs(int argc, char *argv[]) {
     gPole.setBkgInt(bkgIntScale.getValue(),bkgIntN.getValue());
     //
     gPole.setBelt(nBelt.getValue());
-    gPole.setBeltMax(nBelt.getValue()*2);
-    gPole.setTestHyp(muTestMin.getValue(), muTestMax.getValue(), muTestStep.getValue());
-    gPole.printSetup();
+    gPole.setTestHyp(muTestMin.getValue(), muTestMax.getValue(), muTestStep.getValue()); // also set in gCoverage
     if (useTabulated.getValue()) {
       //      gPole.initPoisson(100000,100,50);
       //      gPole.initPoisson(500000,100,50);
@@ -181,6 +182,7 @@ void processArgs(int argc, char *argv[]) {
     gPole.initIntArrays();
     gPole.initBeltArrays();
 
+    gPole.printSetup();
     //
     gCoverage.setDumpBase(dump.getValue().c_str());
     gCoverage.setFixedSig(doFixSig.getValue());
@@ -188,6 +190,8 @@ void processArgs(int argc, char *argv[]) {
     gCoverage.setBkgDist( bkgMin.getValue(), bkgSigma.getValue(), static_cast<DISTYPE>(bkgDist.getValue()));
     gCoverage.setEffBkgCorr(beCorr.getValue());
     gCoverage.checkEffBkgDists(); // will make sure the settings above are OK - it will update pole if changes are made
+    //
+    gCoverage.setTestHyp(muTestMin.getValue(), muTestMax.getValue(), muTestStep.getValue());
     //
     gCoverage.setVerbose(verboseCov.getValue());
     gCoverage.setPole(&gPole);

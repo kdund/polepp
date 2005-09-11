@@ -4,6 +4,7 @@
 #include "Pole.h"
 #include "Combine.h"
 
+
 Combine::Combine() {
   m_foundLower=false;
   m_foundUpper=false;
@@ -27,8 +28,8 @@ bool Combine::isOK(const Pole *point) {
   //
   // First make sure it is an ok object
   //
-  if (point==0) return rval;
-
+  if (point==0)            return rval;
+  if (findPoint(point)>-1) return rval;
   //
   // Object is OK - make no further tests if it's the first object added
   //
@@ -55,6 +56,527 @@ void Combine::add(const std::vector<Pole *> poleList) {
     add(poleList[i]);
   }
 }
+//
+// Correlation matrix:
+//---------------------
+//
+//   b11 b12 ... b1N | c11 0    ...   |
+//   b21 ...      .  | 0   c22  0 ... |
+//    .           .  | .              |
+//   bN1 ...     bNN | ...        cNN |
+//   ----------------------------------
+//   c11 0    ...    | e11 e12 ...e1N |
+//   0   c22 0 ...   | e21 ...     .  |
+//   .               |  .          .  |
+//   0 ...       cNN | eN1 ...    eNN |
+//
+// where c11 is the correlation between b1 and e1
+
+void Combine::initCorrelations() {
+  unsigned int i,n;
+  n = 2*m_poleList.size(); // n = 2 * n experiments
+  m_corrMat.resize(n);
+  m_corrMatFlag.resize(n);
+  //
+  // Set unit matrix
+  //
+  for (i=0; i<n; i++) {
+    m_corrMat[i].resize(n,0.0);
+    m_corrMat[i][i] = 1.0;
+    m_corrMatFlag[i].resize(n,0);
+    m_corrMatFlag[i][i] = 2;
+  }
+}
+//
+// Check is a pole is correlated with any other in a list
+//
+bool Combine::isCorrelated(const Pole *pole, std::vector<const Pole *> poleList, bool doEff) {
+  if (pole==0) return false;
+  int psize = int(poleList.size());
+  int i=0;
+  bool done=(i>=psize);
+  //
+  bool rval = false;
+  int pindRef;
+  int pind = findPoint(pole);
+  int mofs = (doEff ? m_poleList.size():0);
+  //
+  if (pind>-1) {
+    while (!done) {
+      pindRef = findPoint(poleList[i]);
+      if (pindRef>-1) {
+	if (pind != pindRef) {
+	  rval = ( ! isNotCorrelated(m_corrMat[pind+mofs][pindRef+mofs]) );
+	}
+      }
+      i++;
+      done = (rval || (i==psize));
+    }
+  }
+  return rval;
+}
+//
+// TODO: Add check that p1 and p2 are of proper distributions
+// TODO: Hard-coded for 2 experiments
+//
+bool Combine::correlation(const Pole *p1, const Pole *p2, const double corr, bool isBkg) {
+  int n1, n2, nexp;
+  //
+  bool rval = false;
+  int nb1 = findPoint(p1);
+  int nb2 = findPoint(p2);
+  if ((nb1>-1) && (nb2>-1)) {
+    nexp = m_poleList.size();
+    int ne1 = nb1+nexp;
+    int ne2 = nb2+nexp;
+    if (isBkg) {
+      n1 = nb1;
+      n2 = nb2;
+    } else {
+      n1 = ne1;
+      n2 = ne2;
+    }
+    int cflag = corrFlag(corr);
+    m_corrMat[n1][n2] = corr;
+    m_corrMat[n2][n1] = corr;
+    m_corrMatFlag[n1][n2] = cflag;
+    m_corrMatFlag[n2][n1] = cflag;
+    //
+    // Bkg-Eff correlation in experiment
+    //
+    double beCorr;
+    beCorr = p1->getEffBkgCorr();
+    cflag = corrFlag(beCorr);
+    m_corrMat[ne1][nb1] = beCorr;
+    m_corrMat[nb1][ne1] = beCorr;
+    m_corrMatFlag[ne1][nb1] = cflag;
+    m_corrMatFlag[nb1][ne1] = cflag;
+    //
+    // ditto for 2nd exp
+    //
+    beCorr = p2->getEffBkgCorr();
+    cflag = corrFlag(beCorr);
+    m_corrMat[ne2][nb2] = beCorr;
+    m_corrMat[nb2][ne2] = beCorr;
+    m_corrMatFlag[ne2][nb2] = cflag;
+    m_corrMatFlag[nb2][ne2] = cflag;
+
+    rval = true;
+  }
+  return rval;
+}
+//
+// Creates the multidim. integral, taking into account the correlations between experiments
+// TODO: hard-coded 2d
+//
+void Combine::makeCorrInt() {
+  int nexp = m_poleList.size(); // n experiments
+  int neint,nbint;
+  const Range *range;
+  //
+  std::vector<int> nBkgRange;
+  std::vector<int> nEffRange;
+  //
+  // Loop over experiments and create ranges.
+  // These are used to make vectors of all eff and bkg (indecis)
+  // for the weight integral.
+  //
+  const Pole *polem1,*pole, *pole1, *pole2;
+
+  std::vector<const Pole*> prevPoles;
+
+  std::cout << "Looping over exps" << std::endl;
+  polem1 = 0;
+  for (int p=0; p<nexp; p++) {
+    std::cout << " #" << p << std::endl;
+    pole = m_poleList[p];
+    if (!isBkgCorr(pole,prevPoles)) {
+      range = pole->getBkgRangeInt();
+      nbint = range->n();
+      nBkgRange.push_back(nbint-1);
+    }
+    //
+    if (!isEffCorr(pole,prevPoles)) {
+      range = pole->getEffRangeInt();
+      neint = range->n();
+      nEffRange.push_back(neint-1);
+    }
+    //
+    prevPoles.push_back(pole);
+  }
+  //
+  int nbkg = makeIndVector(nBkgRange,m_bkgInt);
+  std::cout << "Made bkg int vector = " << nbkg << std::endl;
+  int neff = makeIndVector(nEffRange,m_effInt);
+  std::cout << "Made eff int vector = " << neff << std::endl;
+  std::cout << "Calculate weight" << std::endl;
+  m_weightInt.resize(neff);
+  std::cout << "Weight size = " << m_weightInt.size() << std::endl;
+  // NOTE: if fully correlated this neff is change to the eff range of the first experiment
+  //
+  // Now, calculate the weight for each combination of bkg and eff.
+  //
+  double de,eff;
+  double pd;
+  //
+  double effPdf, bkgPdf;
+  double de1,de2;
+  double db1,db2;
+  double bkg1,bkg2;
+  double eff1,eff2;
+  double bkgMeas1,bkgMeas2;
+  double effMeas1,effMeas2;
+  double effSigma1,effSigma2;
+  double bkgSigma1,bkgSigma2;
+  double edetc=0,esdetc=0,eseff1=0,eseff2=0,eveffc=0; // for 2d gauss
+  double bdetc=0,bsdetc=0,bseff1=0,bseff2=0,bveffc=0; // for 2d gauss
+  const Range *erng1,*erng2;
+  const Range *brng1,*brng2;
+  double ecorr,bcorr;
+  bool effIsCorr, bkgIsCorr;
+  double norm;
+  //
+  norm = 0.0;
+
+  pole1 = m_poleList[0];
+  pole2 = m_poleList[1];
+  //
+  // eff specifics
+  //
+  erng1 = m_poleList[0]->getEffRangeInt();
+  erng2 = m_poleList[1]->getEffRangeInt();
+  //
+  ecorr = m_corrMat[2][3];
+  std::cout << "Eff correlation = " << ecorr << std::endl;
+  effIsCorr = isFullyCorrelated(ecorr);
+  //
+  if (effIsCorr) {
+    neff = pole1->getEffRangeInt()->n();
+    //    m_weightInt.resize(neff);
+  } else {
+    edetc = PDF::gGauss.getDetC(pole1->getEffSigma(),pole2->getEffSigma(),ecorr);
+    esdetc = sqrt(edetc);
+    eveffc = PDF::gGauss.getVeffCorr(edetc,pole1->getEffSigma(),pole2->getEffSigma(),ecorr);
+    eseff1 = PDF::gGauss.getVeff(edetc,pole1->getEffSigma());
+    eseff2 = PDF::gGauss.getVeff(edetc,pole2->getEffSigma());
+    std::cout << edetc << " : " << edetc << " : " << eveffc << " : " << eseff1 << " : " << eseff2 << std::endl;
+  }
+  //
+  effMeas1 = pole1->getEffMeas();
+  effMeas2 = pole2->getEffMeas();
+
+  effSigma1 = pole1->getEffSigma();
+  effSigma2 = pole2->getEffSigma();
+  //
+  de1 = erng1->step();
+  de2 = erng2->step();
+  //
+  // Bkg specifics
+  //
+  brng1 = m_poleList[0]->getBkgRangeInt();
+  brng2 = m_poleList[1]->getBkgRangeInt();
+  //
+  bcorr = m_corrMat[0][1];
+  std::cout << "Bkg correlation = " << bcorr << std::endl;
+  bkgIsCorr = isFullyCorrelated(bcorr);
+
+  if (bkgIsCorr) {
+    nbkg = pole1->getBkgRangeInt()->n();
+  } else {
+    bdetc = PDF::gGauss.getDetC(pole1->getBkgSigma(),pole2->getBkgSigma(),bcorr);
+    bsdetc = sqrt(bdetc);
+    bveffc = PDF::gGauss.getVeffCorr(bdetc,pole1->getBkgSigma(),pole2->getBkgSigma(),bcorr);
+    bseff1 = PDF::gGauss.getVeff(bdetc,pole1->getBkgSigma());
+    bseff2 = PDF::gGauss.getVeff(bdetc,pole2->getBkgSigma());
+    std::cout << bdetc << " : " << bdetc << " : " << bveffc << " : " << bseff1 << " : " << bseff2 << std::endl;
+  }
+    //
+  bkgMeas1 = pole1->getBkgMeas();
+  bkgMeas2 = pole2->getBkgMeas();
+
+  bkgSigma1 = pole1->getBkgSigma();
+  bkgSigma2 = pole2->getBkgSigma();
+    //
+  db1 = brng1->step();
+  db2 = brng2->step();
+
+  for (int i=0; i<neff; i++) {
+    eff1 = erng1->getVal(m_effInt[i][0]); // eff val of b
+    eff2 = erng2->getVal(m_effInt[i][1]); // ditto for exp 2
+    if (effIsCorr) {
+      effPdf = PDF::gGauss.getVal(eff1,effMeas1,effSigma1)*de1;
+    } else {
+      effPdf = PDF::gGauss.getVal2D(eff1,effMeas1,eff2,effMeas2,esdetc,eseff1,eseff2,eveffc)*de1*de2;
+    }
+
+    //    std::cout << "e1 = " << eff1 << "  e2 = " << eff2 << std::endl;
+
+    ////////////////////// UNCORRELATED VERSION
+    //
+    // Calculate PDF: f1(e1)*f2(e2)*...fN(eN)*de1*de2*...deN
+    // NOTE: Only uncorrelated gaussian is implemented at the moment
+    //
+//     for (int p=0; p<nexp; p++) {
+//       pole = m_poleList[p];
+//       //
+//       eff = pole->getEffRangeInt()->getVal(m_effInt[i][p]); // get eff in point i and experiment p
+//       de  = pole->getEffRangeInt()->step();
+//       effPdf *= PDF::gGauss.getVal(eff,pole->getEffMeas(),pole->getEffSigma())*de; // multiply the efficiencies - no corr, gauss
+//     }
+    //
+    // Background: gaussian, allowing correlation between experiments
+    // NOTE: hardcoded at the moment for combining 2 experiments.
+    //
+    //    std::cout << " sdetc = " << sdetc << " veffc = " << veffc << " seff1 = " << seff1 << " seff2 = " << seff2
+    //	      << " bmeas1 = " << bkgMeas1 << " bmeas2 = " << bkgMeas2 << std::endl;
+    //
+    for (int j=0; j<nbkg; j++) {
+      bkg1 = brng1->getVal(m_bkgInt[j][0]); // bkg val of b
+      bkg2 = brng2->getVal(m_bkgInt[j][1]); // ditto for exp 2
+      if (bkgIsCorr) {
+	bkgPdf = PDF::gGauss.getVal(bkg1,bkgMeas1,bkgSigma1)*db1; // fully correlated
+      } else {
+	bkgPdf  = PDF::gGauss.getVal2D(bkg1,bkgMeas1,bkg2,bkgMeas2,bsdetc,bseff1,bseff2,bveffc)*db1*db2;
+      }
+      //      std::cout << "b1 = " << bkg1 << "  b2 = " << bkg2 << std::endl;
+      pd = bkgPdf*effPdf;
+      m_weightInt[i].push_back(pd);
+      norm += pd;
+      //      std::cout << m_bkgInt[j][0] << ":" << m_bkgInt[j][1] << "   p(b)  = " << bkgPdf << " p(e)  = " << effPdf << " w = " << pd << std::endl;
+    }
+  }
+  for (int i=0; i<neff; i++) {
+    for (int j=0; j<nbkg; j++) {
+      m_weightInt[i][j] = m_weightInt[i][j]/norm;
+    }
+  }
+  std::cout << "Weight size = " << m_weightInt.size() << std::endl;
+  std::cout << "Normalisation of weights: " << norm << std::endl;
+}
+
+const double Combine::calcProb(std::vector<int> nvec, double s) const {  
+  double prob;
+  double sumProb = 0.0;
+  double g;
+  //
+  // loop over all eff and bkg vectors
+  // loop over all experiments
+  // p = Sum{e,b,p} w[e][b]*Po(n[p]|e*s+b)
+  //
+  const Range *effr,*bkgr;
+  for(unsigned int i=0; i<m_effInt.size(); i++) {
+    for(unsigned int j=0; j<m_bkgInt.size(); j++) {
+      prob = 1.0;
+      if (m_weightInt[i][j]>1e-16) {
+	for (unsigned int p=0; p<m_poleList.size(); p++) {
+	  effr = m_poleList[p]->getEffRangeInt();
+	  bkgr = m_poleList[p]->getBkgRangeInt();
+	  g = effr->getVal(m_effInt[i][p])*s + bkgr->getVal(m_bkgInt[j][p]);
+	  prob *= PDF::gPoisson.getVal(nvec[p],g);
+	}
+	prob *= m_weightInt[i][j];
+	sumProb += prob;
+      }
+    }
+  }
+  //  if (m_verbose>9) std::cout << "calcProb() : " << n[0] << ", " << s << " => p = " << p << std::endl;
+  return sumProb;
+}
+
+int Combine::makeIndVector(const int ndim, std::vector< std::vector<int> > & nvec) {
+  //
+  int nmeas = m_poleList.size();
+  nvec.clear();
+  //
+  std::vector< int > jj;
+  jj.resize(nmeas,0);
+  nvec.push_back(jj);  
+  while (Combination::next_vector(jj,ndim)) {
+    nvec.push_back(jj);
+  }
+  //
+  // sort them
+  //
+  std::sort(nvec.begin(),nvec.end());
+
+  return nvec.size();
+}
+
+int Combine::makeIndVector(const std::vector<int> & ndim, std::vector< std::vector<int> > & nvec) {
+  //
+  int nmeas = m_poleList.size();
+  nvec.clear();
+  for (int i=0; i<nmeas; i++) {
+    std::cout << i << " : " << ndim[i] << std::endl;
+  }
+  //
+  std::vector< int > jj;
+  jj.resize(nmeas,0);
+  nvec.push_back(jj);
+  while (Combination::next_vector(jj,ndim)) {
+    nvec.push_back(jj);
+  }
+  //
+  // sort them
+  //
+  std::sort(nvec.begin(),nvec.end());
+
+  return nvec.size();
+}
+
+void Combine::tabulateLikelihoodCorr() {
+  //
+  // * Fill m_nVectors
+  // * Calculate a proper range of s
+  // * Calculate L(n,s) and save them
+  //
+  std::cout << "Tabulating likelihood function (CORR)" << std::endl;
+  std::cout << "- Making nVector...." << std::endl;
+  int nmeas = m_poleList.size();
+  const Pole *pole;
+  //
+  std::vector<int> nrange;
+  int nBeltMax=-1;
+  int nbelt;
+  int nvSize=1;
+  for (int i=0; i<nmeas; i++) {
+    pole = m_poleList[i];
+    nbelt = pole->getNBelt();
+    nrange.push_back(nbelt);
+    if (nbelt>nBeltMax) nBeltMax = nbelt;
+    nvSize *=(nbelt+1);
+    std::cout << "  " << i+1 << ". N(belt) = " << nbelt << std::endl;
+  }
+  //
+  makeIndVector(nrange,m_nVectors);
+  //
+  //
+  // -------------  nVectors done!
+  //
+  //
+  // Obtain a proper range of s (m_sVector)
+  // Use the maximum n and find the estimated s(up) for all points in poleList.
+  // OLD: Scale the maximum s with some safety-factor
+  // NEW: Use the minimum s - the combined limit should be less than that.
+  //
+  std::cout << "- Obtaining range of s...." << std::endl;
+  double smax=0;
+  //  double smin=1000000.0;
+  double s;
+  double h;
+  double hmax=0;
+  double hmin=1000000.0;
+  for (int i=0; i<nmeas; i++) {
+    pole = m_poleList[i];
+    //
+    // Find hypthesis scan range
+    //
+    h = pole->getHypTest()->max();
+    if (h>hmax) hmax=h;
+    if (h<hmin) hmin=h;
+    //
+    // Find max s for the tabulation of L(n,s)
+    //
+    s = (static_cast<double>(pole->getNBelt()) - pole->getBkgIntMin())/pole->getEffIntMax();
+    if (s>smax) smax = s;
+  }
+  if (m_sVecMax>0.0) smax = m_sVecMax;
+  m_sMaxUsed = -1.0;
+  //
+  // Get hypthesis step size from ref.
+  //
+  double hstep = m_poleRef->getHypTest()->step();
+  if (hstep<=0) hstep = 0.01;
+  //  sstep=0.1;
+  //
+  // Fill sVector and sHypRange with values
+  //
+  m_sVector.clear();
+  m_sHypRange.setRange(0.0,hmin,hstep); // make range
+  //
+  double smaxStep = 0.1;
+  int svSize = static_cast<int>((smax + smaxStep)/smaxStep + 0.5);
+  for (int i=0; i<svSize; i++) {
+    m_sVector.push_back(static_cast<double>(i)*smaxStep);
+  }
+  //
+  std::cout << "- Hypothesis scan range     : [0.0, " << hmin << "]" << std::endl;
+  std::cout << "- s(max) in tabulated L(n,s): [0.0, " << smax << "]" << std::endl;
+  //
+  //
+  // -------- sVector done
+  //
+  //
+  // Loop over all (nVectors, sVector) and calulate L(n,s)
+  //
+  // Save only those L(n,s)>phLim (=0.0001) in order to reduce size of matrix.
+  //
+//   std::cout << "Size of nVectors   : " << m_nVectors.size() << std::endl;
+//   std::cout << "Size of nVectors[0]: " << m_nVectors[0].size() << std::endl;
+//   std::cout << "Size of sVector    : " << m_sVector.size() << std::endl;
+//   std::cout << "Size of poleList   : " << m_poleList.size() << std::endl;
+//
+  std::cout << "- Calculate L(n,s)...." << std::endl;
+  m_likeliHood.resize(m_nVectors.size());
+  std::cout << "- Max number of L(n,s) to be calculated = " << m_nVectors.size()*m_sVector.size() << std::endl;
+  m_sMinInd.resize(m_nVectors.size());
+  m_sMaxInd.resize(m_nVectors.size());
+  int nok=0;
+  int ntot=0;
+  double plh,lhmax,lhsmax;
+  int ismin,ismax; // indecis of min and max s for the current n
+  bool isminOK;
+  const double plhLim = 0.0000001; // min Lh
+  std::vector<double> tmpLh;  // temporary storage
+  tmpLh.resize(m_sVector.size(),0.0);
+  //
+  for (unsigned int n=0; n<m_nVectors.size(); n++) {
+    lhmax = -1.0;
+    lhsmax = -1.0;
+    if (n%10==0) std::cout << "  N vector " << n << " out of " << m_nVectors.size() << std::endl;
+    m_sMinInd[n] = -1;
+    m_sMaxInd[n] = -1;
+    isminOK = false;
+    ismin = -1;
+    ismax = -1;
+    for (unsigned int m=0; m<m_sVector.size(); m++) {
+      s = m_sVector[m];
+      plh = calcProb(m_nVectors[n],s);     // L(nvec,s(m))
+      tmpLh[m] = plh; // save it temporarily
+      //
+      // lh might fluctuate around min before steadily remaining above threshhold.
+      // The same is true when the upper s is reached.
+      //
+      if ((plh>plhLim) && (!isminOK)) { // first time above threshhold - save s
+	ismin = m;
+	isminOK = true;
+      }
+      if (plh>plhLim) {
+	ismax = m;
+	//	std::cout << "s(m) = " << s << " => " << plh << std::endl;
+      }
+      if (plh>lhmax) {
+	lhmax = plh;
+	lhsmax = s;
+      }
+      ntot++;
+    }
+    for (int m=ismin; m<ismax; m++) {
+      m_likeliHood[n].push_back(tmpLh[m]);
+      nok++;
+    }
+    //    std::cout << "s range = " << ismin << ":" << ismax << std::endl;
+    //    std::cout << "lhmax   = " << lhmax << " at s = " << lhsmax << std::endl;
+    m_sMinInd[n] = ismin;
+    m_sMaxInd[n] = ismax;
+  }
+  std::cout << "- Actual number of L(n,s) calculated = " << nok << std::endl;
+  std::cout << "- Tabulating DONE!" << std::endl;
+  //
+  // -------- Likelihood construction done
+  //
+}
+
 
 void Combine::tabulateLikelihood() {
   //
@@ -80,19 +602,8 @@ void Combine::tabulateLikelihood() {
     std::cout << "  " << i+1 << ". N(belt) = " << nbelt << std::endl;
   }
   //
-  m_nVectors.clear();
+  makeIndVector(nrange,m_nVectors);
   //
-  std::vector< int > jj;
-  jj.resize(nmeas,0);
-  m_nVectors.push_back(jj);  
-  while (Combination::next_vector(jj,nrange)) {
-    m_nVectors.push_back(jj);
-  }
-  //
-  // sort them
-  //
-  std::sort(m_nVectors.begin(),m_nVectors.end());
-
 //   unsigned int ss;
 //   for (unsigned int n=0; n<m_nVectors.size(); n++) {
 //     std::cout << n;
@@ -120,14 +631,9 @@ void Combine::tabulateLikelihood() {
   double hmin=1000000.0;
   for (int i=0; i<nmeas; i++) {
     pole = m_poleList[i];
-    // s(max) estimate using n(max)
-//     s = BeltEstimator::getSigUp(pole->getNObserved(),
-// 				pole->getEffDist(),pole->getEffMeas(),pole->getEffSigma(),
-// 				pole->getBkgDist(),pole->getBkgMeas(),pole->getBkgSigma(),
-// 				pole->getIntNorm());
-//
-// Find hypthesis scan range
-//
+    //
+    // Find hypthesis scan range
+    //
     h = pole->getHypTest()->max();
     if (h>hmax) hmax=h;
     if (h<hmin) hmin=h;
@@ -177,6 +683,7 @@ void Combine::tabulateLikelihood() {
   std::cout << "- Max number of L(n,s) to be calculated = " << m_nVectors.size()*m_sVector.size() << std::endl;
   m_sMinInd.resize(m_nVectors.size());
   m_sMaxInd.resize(m_nVectors.size());
+  m_lhNorm.resize(m_nVectors.size());
   int nok=0;
   int ntot=0;
   double plh,lh;
@@ -186,13 +693,16 @@ void Combine::tabulateLikelihood() {
   std::vector<double> tmpLh;  // temporary storage
   tmpLh.resize(m_sVector.size(),0.0);
   //
+  double sumTot=0;
   for (unsigned int n=0; n<m_nVectors.size(); n++) {
-    if (n%1000==0) std::cout << "  N vector " << n << " out of " << m_nVectors.size() << std::endl;
+    if (n%100==0) std::cout << "  N vector " << n << " out of " << m_nVectors.size() << std::endl;
     m_sMinInd[n] = -1;
     m_sMaxInd[n] = -1;
+    m_lhNorm[n] = 1.0;
     isminOK = false;
     ismin = -1;
     ismax = -1;
+
     for (unsigned int m=0; m<m_sVector.size(); m++) {
       s = m_sVector[m];
       plh = 1.0;
@@ -214,13 +724,18 @@ void Combine::tabulateLikelihood() {
       if (plh>plhLim) ismax = m;
       ntot++;
     }
+    double tmpSum=0;
     for (int m=ismin; m<ismax; m++) {
       m_likeliHood[n].push_back(tmpLh[m]);
+      tmpSum += tmpLh[m];
       nok++;
     }
+    sumTot += tmpSum;
     m_sMinInd[n] = ismin;
     m_sMaxInd[n] = ismax;
+    m_lhNorm[n] = tmpSum; // THIS IS NOT A NORM!
   }
+  std::cout << "NORM: " << sumTot << std::endl;
   std::cout << "- Actual number of L(n,s) calculated = " << nok << std::endl;
   std::cout << "- Tabulating DONE!" << std::endl;
   //
@@ -228,10 +743,11 @@ void Combine::tabulateLikelihood() {
   //
 }
 
-unsigned int Combine::getNvecIndex(std::vector<int> & nvec) const {
-  std::vector<int> nmax =  m_nVectors.back();     // vector containg the maximum n(belt) per Pole point
-  unsigned int nsize = m_nVectors.front().size(); // number of points
-  unsigned int nFullSize = m_nVectors.size();
+
+unsigned int Combine::getIndVector(std::vector<int> & nvec, std::vector< std::vector<int> > & allVectors) const {
+  std::vector<int> nmax =  allVectors.back();     // vector containg the maximum n(belt) per Pole point
+  unsigned int nsize = allVectors.front().size(); // number of points
+  unsigned int nFullSize = allVectors.size();
   if (nvec.size() != nsize) {
     std::cerr << "WARNING: Input vector of faulty size (" << nvec.size() << " <> " << nsize << ")\n";
     return 0;
@@ -303,6 +819,7 @@ double Combine::getLikelihood(int nind, double s) {
   ind0 = ind0 - ismin;
   ind1 = ind1 - ismin;
   if (ind1>=ssize) ind1 = ssize-1;
+  if (ind0>=ssize) ind0 = ssize-1;
   if (ind0<0)      ind0 = 0;
   double lh0 = m_likeliHood[nind][ind0];
   double lh1 = m_likeliHood[nind][ind1];
@@ -315,13 +832,17 @@ double Combine::getLikelihood(int nind, double s) {
   } else {
     rval = ((lh1-lh0)/(s1-s0))*(s-s0) + lh0;
   }
-//   std::cout << "N(ind) = " << nind << std::endl;
-//   std::cout << "s0     = " << s0 << std::endl;
-//   std::cout << "s1     = " << s1 << std::endl;
-//   std::cout << "s      = " << s << std::endl;
-//   std::cout << "lh0    = " << lh0 << std::endl;
-//   std::cout << "lh1    = " << lh1 << std::endl;
-//   std::cout << "lh     = " << rval << std::endl;
+  if (rval>2.0) {
+    std::cout << "N(ind) = " << nind << std::endl;
+    std::cout << "ind0   = " << ind0 << std::endl;
+    std::cout << "ind1   = " << ind1 << std::endl;
+    std::cout << "s0     = " << s0 << std::endl;
+    std::cout << "s1     = " << s1 << std::endl;
+    std::cout << "s      = " << s << std::endl;
+    std::cout << "lh0    = " << lh0 << std::endl;
+    std::cout << "lh1    = " << lh1 << std::endl;
+    std::cout << "lh     = " << rval << std::endl;
+  }
   return rval;
 }
 
@@ -392,11 +913,11 @@ void Combine::findBestMu(int ind) {
       sbest = sscan;
     }
   }
-//   std::cout << "SBEST: ";
-//   for (unsigned int i=0; i<m_poleList.size(); i++) {
-//     std::cout << m_nVectors[ind][i] << " ";
-//   }
-//   std::cout << sbest << " " << std::endl;
+  //   std::cout << "SBEST: ";
+  //   for (unsigned int i=0; i<m_poleList.size(); i++) {
+  //     std::cout << m_nVectors[ind][i] << " ";
+  //   }
+  //   std::cout << sbest << " " << std::endl;
   m_bestMu[ind]     = sbest;
   m_bestMuProb[ind] = lhMax;
   //
@@ -427,6 +948,23 @@ double Combine::calcLimit(double s) {
   double p;
   for (unsigned n=0; n<m_nVectors.size(); n++) {
     p = getLikelihood(n,s);
+
+//     if (m_useNLR) {
+//       double g;
+//       if (n>m_measurement.getBkgMeas()) {
+// 	g = static_cast<double>(n);
+//       } else {
+// 	g = m_measurement.getBkgMeas();
+//       }
+//       if (g==0) {
+// 	rval=1.0;
+//       } else {
+// 	rval = m_poisson->getVal(n,g);
+//       }
+//     } else {
+//       rval = m_bestMuProb[n];
+//     }
+
     if (m_bestMuProb[n]>0.0) {
       m_lhRatio[n] = p/m_bestMuProb[n];
     } else {
@@ -438,15 +976,25 @@ double Combine::calcLimit(double s) {
   bool done=false;
   unsigned int n=0;
   double sumProb=0;
+  double lh=0;
+//   if (normProb>0.9) {
+//     std::cout << "Index N(obs) = " << m_indexNobs << std::endl;
+//   }
+//  std::cout << "\nSearch..." << std::endl;
   while (!done) {
     if (n!=m_indexNobs) {
       if (m_lhRatio[n]>m_lhRatio[m_indexNobs]) {
-	sumProb += getLikelihood(n,s);
+	lh = getLikelihood(n,s);
+	sumProb += lh;
       }
     }
+    //    std::cout << " n = " << n << " => lh = " << lh << "  RL: " << m_lhRatio[n] << " > " << m_lhRatio[m_indexNobs] << std::endl;
     n++;
     done = ((n==m_lhRatio.size()) || (sumProb>m_poleRef->getCL()));
   }
+//   if (normProb>0.9) {
+//     std::cout << "Sumprob = " << sumProb << std::endl;
+//   }
   //
   double dCL = sumProb-m_poleRef->getCL();
   //  std::cout << "findLimits(): " << s << " norm = " << normProb << " sump = " << sumProb << std::endl;
@@ -467,6 +1015,9 @@ double Combine::calcLimit(double s) {
       m_foundUpper = true;
     }
   }
+  if (m_foundLower) {
+    //    std::cout << s << " : sumProb = " << sumProb << " : normProb = " << normProb << std::endl;
+  }
   return normProb;
 }
 
@@ -476,6 +1027,10 @@ void Combine::findLimits() {
   m_foundUpper = false;
   m_lowerLimit = 0;
   m_upperLimit = 0;
+  m_lowProb=0;
+  m_lowNorm=0;
+  m_uppProb=0;
+  m_uppNorm=0;
   //
   bool done=false;
   int ihmax =  m_sHypRange.n();
@@ -491,8 +1046,9 @@ void Combine::findLimits() {
     if (pnorm>pnormMax) pnormMax = pnorm;
     i++;
     done = ((i==ihmax) ||
-	    (m_foundUpper) ||
-	    (!m_poleRef->normOK(pnorm)));
+	    (m_foundUpper));// ||
+    //	    (!(fabs(pnorm-1.0)<1.0e-1)));
+    //	    (!m_poleRef->normOK(pnorm)));
     if (done) indUpp=i; 
   }
   if (indUpp==ihmax) { // Got the last tested h as upper limit -> WARNING
@@ -502,13 +1058,15 @@ void Combine::findLimits() {
   //  std::cout << "Max norm = " << pnormMax << std::endl;
   bool limitsOK = false;
   if (m_foundLower && m_foundUpper) {
-    limitsOK = (m_poleRef->normOK(m_lowNorm) && m_poleRef->normOK(m_uppNorm)); // a bit ugly...
+    limitsOK = ((fabs(m_lowNorm-1.0)<1e-1) && (fabs(m_uppNorm-1.0)<1.0e-1)); // a bit ugly...
   }
   if (limitsOK) {
     std::cout << std::endl;
     std::cout << "  Limits: [ " << m_lowerLimit << " , " << m_upperLimit << " ]" << std::endl;
     std::cout << "  P(lower limit) = " << m_lowProb << std::endl;
     std::cout << "  P(upper limit) = " << m_uppProb << std::endl;
+    std::cout << "  Norm(lower limit) = " << m_lowNorm << "   => should be ~ 1.0" << std::endl;
+    std::cout << "  Norm(upper limit) = " << m_uppNorm << "   => should be ~ 1.0" << std::endl;
     //    std::cout << "  s(max) used    = " << m_sMaxUsed << std::endl;
     std::cout << std::endl;
   } else {
@@ -531,7 +1089,21 @@ void Combine::init() {
 
   tabulateLikelihood();
 
-  m_indexNobs = getNvecIndex(m_nVecObs);
+  m_indexNobs = getIndVector(m_nVecObs,m_nVectors);
+
+  m_bestMu.resize(m_nVectors.size());
+  m_bestMuProb.resize(m_nVectors.size());
+
+  m_lhRatio.resize(m_nVectors.size());
+}
+
+void Combine::initCorr() {
+
+  makeCorrInt();
+
+  tabulateLikelihoodCorr();
+
+  m_indexNobs = getIndVector(m_nVecObs,m_nVectors);
 
   m_bestMu.resize(m_nVectors.size());
   m_bestMuProb.resize(m_nVectors.size());

@@ -220,19 +220,22 @@ public:
   void initIntArrays();   // will initialise integral arrays (if needed)
   void initBeltArrays();  // will initialise belt arrays (if needed)
   void initIntegral();    // calculates double integral kernal (eff*bkg*db*de) according to setup (7)
+  void initIntegral(std::vector<double> & eff, std::vector<double> & bkg, std::vector<double> & weight);
 
   // POLE
   inline const double calcProb(int n, double s) const; // calculates probability (7)
   void findBestMu(int n); // finds the best fit (mu=s+b) for a given n. Fills m_bestMu[n] and m_bestMuProb[n].
   void findAllBestMu();   // dito for all n (loop n=0; n<m_nMuUsed)
-  void calcConstruct(double s);
-  double calcBelt(double s, int & n1, int & n2); // calculate (4) and find confidence belt
+  void calcConstruct(double s, bool verb);
+  double calcBelt(double s, int & n1, int & n2,bool verb,double muMinProb=1e-5); // calculate (4) and find confidence belt
   double calcLimit(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
+  double calcLimitOLD(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
   void   calcLh(double s); // fills the likelihood array
-  double calcLhRatio(double s); // fills the likelihood ratio array
+  double calcLhRatio(double s, int & nb1, int & nb2, double minMuProb=1e-5); // fills the likelihood ratio array
   bool limitsOK(); // check if calculated limit is OK using the sum of probs.
   inline const bool normOK(double p) const;
   void setNormMaxDiff(double dpmax=0.001) { m_normMaxDiff=dpmax; }
+  void findPower();
   void findConstruct();
   void findBelt();
   bool findLimits();        // finds CL limits
@@ -296,6 +299,7 @@ public:
   double getBkgIntNorm() const { return m_normBkg; }
   double getIntNorm()    const { return m_normInt; }
   //
+  const double  getLsbest(int n) const;
   const double  getDmus() const { return m_dmus; }
   const int     getNBelt() const { return m_nBelt; }
   const int     getNBeltMinUsed() const { return m_nBeltMinUsed; }
@@ -305,6 +309,7 @@ public:
   const std::vector<double> & getBestMu() const { return m_bestMu; }
   const std::vector<double> & getMuProb() const { return m_muProb; }
   const std::vector<double> & getLhRatio() const { return m_lhRatio; }
+  const double getMuProb(int n) const { if ((n>m_nBeltMaxUsed)||(n<m_nBeltMinUsed)) return 0.0; return m_muProb[n];}
   //
   const double getSumProb() const    { return m_sumProb; }
   const double getLowerLimit() const { return m_lowerLimit; }
@@ -394,6 +399,22 @@ private:
   //
   bool   m_useNLR; // Use Gary Hills likelihood ratio
 };
+
+inline const double Pole::getLsbest(int n) const {
+  double rval = 0.0;
+  if (m_useNLR) {
+    double g;
+    if (n>m_measurement.getBkgMeas()) {
+      g = static_cast<double>(n);
+    } else {
+      g = m_measurement.getBkgMeas();
+    }
+    rval = m_poisson->getVal(n,g);
+  } else {
+    rval = m_bestMuProb[n];
+  }
+  return rval;
+}
 
 inline const bool Pole::normOK(double p) const {
   return (fabs(p-1.0)<m_normMaxDiff);

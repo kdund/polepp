@@ -213,7 +213,8 @@ void Coverage::calcCoverage() {
   if (m_totalCount>0) {
     m_coverage = static_cast<double>(m_insideCount)/static_cast<double>(m_totalCount);
     if (m_insideCount>0) {
-      m_errCoverage = m_coverage*sqrt((1.0-m_pole->getCL())/static_cast<double>(m_insideCount));
+      //      m_errCoverage = m_coverage*( (sqrt((1.0-m_pole->getCL())/static_cast<double>(m_insideCount))));
+      m_errCoverage = sqrt(m_coverage*(1.0-m_coverage)/static_cast<double>(m_totalCount));
     }
   }
 }

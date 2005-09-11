@@ -85,7 +85,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     pole->setGauss(&PDF::gGauss);
     pole->setNLR(doNLR.getValue());
     pole->setCL(confLevel.getValue());
-    pole->setNobserved(nObs.getValue());
+    pole->setNObserved(nObs.getValue());
     //
     pole->setEffMeas( effMeas.getValue(), effSigma.getValue(), static_cast<DISTYPE>(effDist.getValue()) );
     pole->setBkgMeas( bkgMeas.getValue(), bkgSigma.getValue(), static_cast<DISTYPE>(bkgDist.getValue()) );
@@ -99,13 +99,12 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     pole->setEffInt(effIntScale.getValue(),effIntN.getValue());
     pole->setBkgInt(bkgIntScale.getValue(),bkgIntN.getValue());
     //
-    pole->setBelt(belt.getValue()); // call after nObserved is set.
-    pole->setBeltMax(belt.getValue()*2); // maximum allocated
+    pole->setBelt(belt.getValue());
     pole->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
     //
     if (useTabulated.getValue()) {
-      pole->initPoisson(50000,100,50);
-      pole->initGauss(50000,10.0);
+      PDF::gPoisson.init(100000,200,100);
+      PDF::gGauss.init(0,10.0);
     }
     pole->initIntArrays();
     pole->initBeltArrays();
@@ -124,12 +123,12 @@ int main(int argc, char *argv[]) {
   //
   processArgs(&pole, argc, argv);
   //
-  if (pole.checkParams()) {
-    pole.printSetup();
-    if (pole.analyseExperiment()) {
-      pole.printLimit(true);
-    } else {
-      pole.printFailureMsg();
-    }
+  //  if (pole.checkParams()) {
+  pole.printSetup();
+  if (pole.analyseExperiment()) {
+    pole.printLimit(true);
+  } else {
+    pole.printFailureMsg();
   }
+  //  }
 }
