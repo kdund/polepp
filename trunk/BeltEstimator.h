@@ -90,9 +90,13 @@ public:
     // In order to smooth the dependance of n, another factor is introduced:
     // ncorr = sqrt(n-b)
     //
-//     double ncorr = double(n) - b;
-//     if ((n==0) || (ncorr<0.5)) ncorr=1.0/sqrt(2);
-    return nf*(s+ds);
+    double ncorr = double(n) - b;
+    if (ncorr<0.5) {
+      ncorr=1.0;
+    } else {
+      ncorr = pow(ncorr,-0.37); // optimum squeeze for UL estimation
+    }
+    return nf*(s+ds)*ncorr;
 
   }
   //
@@ -118,37 +122,42 @@ public:
   // New upper limit estimator
   //
   static double getSigUp(int n, DISTYPE de, double e, double se, DISTYPE db, double b, double sb, double norm=1.0) {
-    double a0,a1,a2,scale;
+    double a0,a1,a2;
     double t,ul=0;
-    scale = 1.0;
+    double deltaN = double(n)-b;
+    const double feLim=1.5;
+    //
     switch (de) {
     case DIST_LOGN:
-      a0 = 2.0;
-      a1 = 0.5;
-      a2 = exp(-0.7*double(n)+0.7);
-      t = getT(n,e,se,b,sb,norm);
-      ul = a2*t*t+a1*t+a0;
-      break;
+//       a0 = 2.0;
+//       a1 = 0.5;
+//       a2 = exp(-0.7*double(n)+0.7);
+//       t = getT(n,e,se,b,sb,norm);
+//       ul = a2*t*t+a1*t+a0;
+//       break;
     case DIST_GAUS:
     default:
-      a0 = 3.5;
-      a1 = 2.7;
       double fe = (se>0.0 ? e/se:10.0);
-      if (fe>4.0) {
-	a0 = 5.0;
-	a1 = 1.2;
+      if (fe>8.0) {
+	a0 = 0.0;
+	a1 = 3.9;
+	a2 = 0.0;
       } else {
-	a0 = 5.0;
-	a1 = 4.0;
+	a0 = 2.0;
+	a1 = 2.0;
+	a2 = 0.7;
       }
-      if (fe<1.0) {
-	t = getT(n,se,se,b,sb,norm); // for e/se<1.0, the upper limit is ~ constant for all t (which are large)
-	scale = 1.0;
+      if ((de==DIST_GAUS) && (fe<feLim) && (deltaN<0.5)) {
+	t = getT(n,feLim*se,se,b,sb,norm); // for e/se<1.5, the upper limit is ~ constant for all t (which are large)
       } else {
 	t = getT(n,e,se,b,sb,norm);
-	scale = 1.0;
+	if (t>6.0) {
+	  a0 = -15.0;
+	  a1 = 10.0;
+	  a2 = 0.0;
+	}
       }
-      ul = scale*(a1*t+a0);
+      ul = (a2*t*t+a1*t+a0);
     }
     return ul;
   }
@@ -168,15 +177,28 @@ public:
     // Log-normal limits are more narrow -> belt rises more steeply -> larger nBelt is required
     //
     double napp=20;
-    double u = getSigUp(n,de,e,se,db,b,sb,norm);
+    double deCorr = (de>0 ? pow(se,0.75):1.0);
+    double dN = double(n)-b;
+    bool nZero = (dN<0.5);
+    double t = getT(n,e,se,b,sb,norm)*deCorr;
+    double a0,a1,a2;
     if (de==DIST_LOGN) {
-      napp = 1.5*u*u + 2.5*u + 25.0;
+      if (nZero) {
+	a2 = 0.7;
+	a1 = 3.0;
+	a0 = 0.25;
+      } else {
+	a2 = exp(-0.22*dN+1.45);
+	a1 = 1.0;
+	a0 = exp( 0.22*dN-1.37);
+      }
+      napp = a0+a1*t+a2*t*t;
     } else {
       double fe = (se>0.0 ? e/se:10.0);
-      if (fe>4.0) {
-	napp = 2.0*u+30.0;
+      if (fe>8.0) {
+	napp = 46.0*t+20.0;
       } else {
-	napp = 5.0*u+45.0;
+	napp = 28.0*t+30.0;
       }
     }
     return int(napp+0.5);
