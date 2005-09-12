@@ -12,6 +12,7 @@ class PseudoExperiment: public Measurement {
   PseudoExperiment( const PseudoExperiment &exp ) { copy(exp); m_sTrue = exp.getTrueSignal(); m_fixed = exp.isFixed();}
   ~PseudoExperiment() {};
 
+  void setMeasurement( const Measurement & m ) { copy(m); m_fixed = false; m_sTrue = m.getSignal(); }
   void setTrueSignal( double s ) { m_sTrue = s; }
   void setRandomGenerator(Random & rndGen) { m_rnd = rndGen; }
   void setFixed(bool flag=true) { m_fixed=flag; } // true: nobs is just (e*s + b), else nobs = Po(e*s+b)
