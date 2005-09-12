@@ -40,7 +40,7 @@ public:
   inline const double getVal2D(double x1, double mu1, double x2, double mu2, double sdetC, double seff1, double seff2, double veffc) const;
   inline const double getDetC(double s1,double s2,double c) const { return (s1*s1*s2*s2*(1.0-c*c)); }
   inline const double getVeff(double detC, double s) const { return (detC/(s*s)); }
-  inline const double getVeffCorr(double detC, double s1, double s2, double corr) const { return (detC/(corr*s1*s2));}
+  inline const double getVeffCorr(double detC, double s1, double s2, double corr) const { return ((corr*s1*s2)/detC);}
   // Log-Normal
   inline const double getValLogN(double x, double nmean, double nsigma) const;
   inline const double getLNMean(double mean,double sigma) const;
@@ -91,12 +91,12 @@ inline const double Gauss::getVal2D(double x1, double mu1, double s1, double x2,
   double sdetC = sqrt(getDetC(s1,s2,corr));
   double seff1 = sdetC/s2;
   double seff2 = sdetC/s1;
-  double veffc = sdetC*sdetC/(corr*s1*s2);
+  double veffc = (corr*s1*s2)/sdetC*sdetC;
   //
   double rval;
   rval  = getVal(x1,mu1,seff1)*seff1;
   rval *= getVal(x2,mu2,seff2)*seff2;
-  rval *= exp((x1-mu1)*(x2-mu2)/veffc);
+  rval *= exp((x1-mu1)*(x2-mu2)*veffc);
   rval *= 1.0/sdetC;
   return rval;
 }
@@ -105,7 +105,7 @@ inline const double Gauss::getVal2D(double x1, double mu1, double x2, double mu2
   double rval;
   rval  = getVal(x1,mu1,seff1)*seff1;
   rval *= getVal(x2,mu2,seff2)*seff2;
-  rval *= exp((x1-mu1)*(x2-mu2)/veffc);
+  rval *= exp((x1-mu1)*(x2-mu2)*veffc);
   rval *= 1.0/sdetC;
   return rval;
 }
