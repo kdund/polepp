@@ -116,8 +116,8 @@ class Measurement {
     return sqrt(double(m_nObserved)+m_bkgSigma*m_bkgSigma+s*s*m_effSigma*m_effSigma)/m_effMeas;
   }
   //
-  bool isFullyCorrelated() const { return (((fabs(fabs(m_beCorr)-1.0)) < 1e-16)); }
-  bool isNotCorrelated() const   { return (fabs(m_beCorr) < 1e-16); }
+  bool isFullyCorrelated(double eps=1e-16) const { return (((fabs(fabs(m_beCorr)-1.0)) < eps)); }
+  bool isNotCorrelated(double eps=1e-16)   const { return (fabs(m_beCorr) < eps); }
   //
  protected:
   std::string m_name;

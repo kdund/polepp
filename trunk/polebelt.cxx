@@ -88,7 +88,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     pole->setGauss(&PDF::gGauss);
     pole->setNLR(doNLR.getValue());
     pole->setCL(confLevel.getValue());
-    pole->setNobserved(nObs.getValue());
+    pole->setNObserved(nObs.getValue());
     //
     pole->setEffMeas( effMeas.getValue(), effSigma.getValue(), static_cast<DISTYPE>(effDist.getValue()) );
     pole->setBkgMeas( bkgMeas.getValue(), bkgSigma.getValue(), static_cast<DISTYPE>(bkgDist.getValue()) );
@@ -103,7 +103,6 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     pole->setBkgInt(bkgIntScale.getValue(),bkgIntN.getValue());
     //
     pole->setBelt(belt.getValue()); // call after nObserved is set.
-    pole->setBeltMax(belt.getValue()*2); // maximum allocated
     pole->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
     //
     pole->initIntArrays();
@@ -135,10 +134,10 @@ int main(int argc, char *argv[]) {
     pole.findBelt();
     //
     pole.printLimit(true);
-//     pole.setNobserved(4);
+//     pole.setNObserved(4);
 //     pole.analyseExperiment();
 //     pole.printLimit();
-//     pole.setNobserved(6);
+//     pole.setNObserved(6);
 //     pole.analyseExperiment();
 //     pole.printLimit();
   }
