@@ -558,7 +558,8 @@ void Pole::initIntegral() {
 	}
       }
       if (dosumbkg) sum_bkg_prob += bkg_prob*db; // only for first loop
-      norm_prob = eff_prob*bkg_prob*de*db;
+      norm_prob = eff_prob*bkg_prob*de*db; //TODO
+      //      norm_prob = eff_prob*bkg_prob*de*db/((effs+de)*(bkgs+db)); //1/mu prior
       //
       // Fill the arrays (integral)
       //
@@ -662,7 +663,7 @@ void Pole::findBestMu(int n) {
     if(mu_s_min<0) {mu_s_min = 0.0;}
     mu_s_min = (mu_s_max-mu_s_min)*0.8 + mu_s_min;
     //    dmu_s = 0.01; // HARDCODED:: Change!
-    int ntst = int((mu_s_max-mu_s_min)/m_dmus);
+    int ntst = 1+int((mu_s_max-mu_s_min)/m_dmus);
     //// TEMPORARY CODE - REMOVE /////
     //    ntst = 1000;
     //    m_dmus = (mu_s_max-mu_s_min)/double(ntst);
@@ -742,6 +743,7 @@ double Pole::calcLhRatio(double s, int & nbMin, int & nbMax, double minMuProb) {
     }
     if (lowNfound && (!upNfound)) nInBelt++;
     n++;
+    //    std::cout << "calcLhRatio: " << n << ", p = " << m_muProb[n] << ", lhSbest = " << lhSbest << std::endl;
   }
   //
   if (nbMin<m_nBeltMinUsed) m_nBeltMinUsed = nbMin;
@@ -1046,7 +1048,7 @@ double Pole::calcBelt(double s, int & n1, int & n2, bool verb, double muMinProb)
   //
   // Get RL(n,s)
   //
-  double norm_p = calcLhRatio(s,nBeltMinUsed,nBeltMaxUsed);
+  double norm_p = calcLhRatio(s,nBeltMinUsed,nBeltMaxUsed,muMinProb);
   //
   // Sort RL
   //
@@ -1076,6 +1078,7 @@ double Pole::calcBelt(double s, int & n1, int & n2, bool verb, double muMinProb)
       if ((n<nmin)||(nmin<0)) nmin=n;
       if ((n>nmax)||(nmax<0)) nmax=n;
     }
+    //    std::cout << "calcBelt: " << i << " , " << n << " , " << m_lhRatio[n] << std::endl;
     //
     i++;
     done = ((i==nBeltMaxUsed) || sumProb>m_cl);
@@ -1088,9 +1091,9 @@ double Pole::calcBelt(double s, int & n1, int & n2, bool verb, double muMinProb)
   n1 = nmin;
   n2 = nmax;
   if (verb) {
-    std::cout << "CONFBELT: " << s << "\t" << n1 << "\t" << n2 << "\t" << sumProb << "\t"
-	      << m_lhRatio[n1] << "\t" << m_lhRatio[n2] << "\t" << norm_p << "\t"
-	      << index[0] << "\t" << m_lhRatio[index[0]] << std::endl;
+    std::cout << "CONFBELT: " << s << "\t" << n1 << "\t" << n2 << "\t" << sumProb << std::endl;
+    //	      << m_lhRatio[n1] << "\t" << m_lhRatio[n2] << "\t" << norm_p << "\t"
+    //	      << index[0] << "\t" << m_lhRatio[index[0]] << " , nBelt: " << nBeltMinUsed << " , " << nBeltMaxUsed << std::endl;
   }
   return sumProb;
 }
@@ -1209,6 +1212,14 @@ void Pole::findConstruct() {
     i++;
     done = (i==m_hypTest.n()); // must loop over all hypothesis
   }
+}
+
+int Pole::findNMin() { // calculates the minimum N rejecting s = 0.0
+  int n1,n2;
+  double sumP = calcBelt(0.0,n1,n2,true,-1.0);
+  //
+  std::cout << "NMIN0:\t" << n2 << "\t" << sumP << std::endl;
+  return n2;
 }
 
 void Pole::findBelt() {
