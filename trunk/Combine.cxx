@@ -307,6 +307,7 @@ void Combine::makeCorrInt() {
       effPdf = PDF::gGauss.getVal(eff1,effMeas1,effSigma1)*de1;
     } else {
       effPdf = PDF::gGauss.getVal2D(eff1,effMeas1,eff2,effMeas2,esdetc,eseff1,eseff2,eveffc)*de1*de2;
+      effPdf = effPdf/((eff1+de1)*(eff2+de2)); //PRIOR
     }
 
     //    std::cout << "e1 = " << eff1 << "  e2 = " << eff2 << std::endl;
@@ -337,6 +338,7 @@ void Combine::makeCorrInt() {
 	bkgPdf = PDF::gGauss.getVal(bkg1,bkgMeas1,bkgSigma1)*db1; // fully correlated
       } else {
 	bkgPdf  = PDF::gGauss.getVal2D(bkg1,bkgMeas1,bkg2,bkgMeas2,bsdetc,bseff1,bseff2,bveffc)*db1*db2;
+	bkgPdf = bkgPdf/((bkg1+db1)*(bkg2+db2)); //PRIOR
       }
       //      std::cout << "b1 = " << bkg1 << "  b2 = " << bkg2 << std::endl;
       pd = bkgPdf*effPdf;
