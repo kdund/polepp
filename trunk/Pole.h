@@ -237,6 +237,7 @@ public:
   void setNormMaxDiff(double dpmax=0.001) { m_normMaxDiff=dpmax; }
   void findPower();
   void findConstruct();
+  int  findNMin();
   void findBelt();
   bool findLimits();        // finds CL limits
   bool findCoverageLimits();//  same as previous but stop if it's obvious that initial true mean is inside or outside
