@@ -20,9 +20,11 @@ class Combine {
   bool corrBkg(const Pole *p1, const Pole *p2, const double corr) { return correlation(p1,p2,corr,true); }
   //
   void setSmax(double s) {m_sVecMax = s;}
+  void setPoleCorr(Pole *p) { m_poleCorr = p; }
   ///////////////////////////////////////////
   void initCorrelations(); //TODO: init of correlation matrix - name confusing???
   void makeCorrInt(); // TODO: keep this one but needs to be modified for the general case.
+  void makeCorrIntCDF(); // CDF CASE : TEMP!
   void initCorr(); // TODO: temp. solution for correlated experiments - to be removed
   ///////////////////////////////////////////
   void init(); // called AFTER all points are added
@@ -50,6 +52,7 @@ class Combine {
  private:
   const Pole *m_poleRef; // first Pole object added
   std::vector<const Pole *> m_poleList;
+  Pole *m_poleCorr; // TEMP CDF: correlated object
   std::vector<int>          m_nVecObs;
   //
   std::vector< std::vector<double> >       m_corrMat;   // [2*expInd][2*expInd]
@@ -57,7 +60,11 @@ class Combine {
   //
   std::vector< std::vector<int> >          m_bkgInt;    // [bkgInd][expInd]
   std::vector< std::vector<int> >          m_effInt;
+  std::vector<double>          m_effIntC; // correlated eff TEMP FOR CDF COMBINATION
   std::vector< std::vector<double> >       m_weightInt; // [effInd][bkgInd]
+  std::vector<double> m_wbkg;
+  std::vector<double> m_weff;
+  std::vector<double> m_weffC;
 
   //
   // Vectors for the s(best) scan in n-space
@@ -143,6 +150,7 @@ class Combine {
   bool isBkgCorr(const Pole *pole, std::vector<const Pole *> poleList) { return isCorrelated(pole,poleList,false); }
 
   const double calcProb(std::vector<int> nvec, double s) const;
+  const double calcProbCDF(std::vector<int> nvec, double s) const;
   
   const bool corrOK(DISTYPE d1, DISTYPE d2) const {
     bool p1ok = ((d1 == DIST_GAUS) || (d1 == DIST_GAUSCORR));
