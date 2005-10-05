@@ -1,45 +1,38 @@
-#include "Observable.h"
+#define OBSERVABLE_CXX
+#include "ObsNew.h"
 
-void PdfGauss::tabulate() {
-  if (m_tableNpts<=0) return;
-  if (m_table)        return; // table already defined
-  //
-  double mu;
-  m_tabDmu = m_tabMuMax/double(m_tableNpts);
-  //
-  m_table = new double[m_tableNpts];
-  for (int i=0; i<m_tableNpts; i++) {
-    mu = m_tabDmu*double(i);
-    m_table[i] = phi(mu);
-  }
-}
-
-void PdfPoisson::tabulate() {
-  if (m_tableNpts<=0) return;
-  if (m_table)        return; // table already defined
-  //
-  m_table = new double[m_tableNpts];
-  //
-  double lmb;
-  unsigned long index;
-  for (int i=0; i<m_tabLmbN; i++) {
-    lmb = m_tabDlmb*double(i);
-    for (int j=0; j<m_tabNmax; j++) {
-      index = i*m_tabNmax +j;
-      m_table[index] = rawPoisson(int(j),lmb);
+namespace OBS {
+  Base *makeObservable(PDFN::DISTYPE dist) {
+    Base *obs=0;
+    switch (dist) {
+    case PDFN::DIST_UNDEF:
+      break;
+    case PDFN::DIST_NONE:
+      break;
+    case PDFN::DIST_POIS:
+      obs=new ObservablePois();
+      obs->setPdf(&PDFN::gPoisson);
+      break;
+    case PDFN::DIST_GAUS:
+      obs=new ObservableGauss();
+      obs->setPdf(&PDFN::gGauss);
+      break;
+    case PDFN::DIST_FLAT:
+      //      obs=new ObservableFlat();
+      std::cout << "WARNING: Not yet implemented - ObservableFlat()" << std::endl;
+      break;
+    case PDFN::DIST_LOGN:
+      //      obs=new ObservableLogN();
+      std::cout << "WARNING: Not yet implemented - ObservableLogN()" << std::endl;
+      break;
+    default:
+      std::cout << "WARNING: Unknown distribution = " << distTypeStr(dist) << std::endl;
+      break;
     }
+    if (obs) {
+      obs->setRndGen(&RND::gRandom);
+      obs->validate();
+    }
+    return obs;
   }
-}
-
-double PdfPoisson::rawPoisson(int n, double s) {
-  double prob;
-  if(s<50.0) {
-    prob = (pow(s,n)/exp(lgamma(n+1)))*exp(-s);
-  } else {
-    double sigma = sqrt(s); // gaussian aprox.
-    double c = 1.0L/(sqrt(2.0*M_PI)*sigma);
-    double t = (double(n)-s)/sigma;
-    prob = c*exp(-0.5L*t*t);
-  }
-  return prob;
-}
+};
