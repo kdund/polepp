@@ -94,6 +94,8 @@ class Combine {
   double m_uppNorm;
   double m_lowProb;
   double m_uppProb;
+
+  double m_normProb; // Normalisation of full PDF - not unity if more than 1 exp. - see setNormProb()
   //
   unsigned int m_indexNobs; // index in nVectors of Nobs vector
   //
@@ -149,7 +151,9 @@ class Combine {
   bool isEffCorr(const Pole *pole, std::vector<const Pole *> poleList) { return isCorrelated(pole,poleList,true); }
   bool isBkgCorr(const Pole *pole, std::vector<const Pole *> poleList) { return isCorrelated(pole,poleList,false); }
 
+  const double setNormProb() {std::cout << "setNormProb: Not yet implemented!" << std::endl;};
   const double calcProb(std::vector<int> nvec, double s) const;
+  const double setNormProbCDF();
   const double calcProbCDF(std::vector<int> nvec, double s) const;
   
   const bool corrOK(DISTYPE d1, DISTYPE d2) const {
