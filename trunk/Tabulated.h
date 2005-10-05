@@ -4,13 +4,14 @@
 #include <iostream>
 #include <cmath>
 
+template <typename T>
 class TabFun {
 public:
   TabFun();
   virtual ~TabFun();
   //
   void init(double xmin, double xmax, int n);
-  virtual double F(double x) = 0;
+  virtual double F(double x);
   virtual double getVal(double x);
   //
 protected:
