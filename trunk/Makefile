@@ -67,6 +67,30 @@ obstest:	obstest.o Observable.o
 obstest.o:	obstest.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
+pdftst:		pdftst.o PdfNew.o
+		g++ $(CFLAGS) -Wall $< PdfNew.o $(LIBS)  -o $@
+pdftst.o:	pdftst.cxx PdfNew.h
+		g++ $(CFLAGS) -Wall -c $<
+
+pdftstold:	pdftstold.o
+		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
+pdftstold.o:	pdftstold.cxx
+		g++ $(CFLAGS) -Wall -c $<
+
+meastst:	meastst.o PdfNew.o MeasNew.o ObsNew.o
+		g++ $(CFLAGS) -Wall $< MeasNew.o ObsNew.o PdfNew.o $(LIBS)  -o $@
+meastst.o:	meastst.cxx PdfNew.h MeasNew.h ObsNew.h
+		g++ $(CFLAGS) -Wall -c $<
+
+PdfNew.o: 	PdfNew.cxx PdfNew.h
+		g++ $(CFLAGS) -Wall -c $<
+
+MeasNew.o: 	MeasNew.cxx MeasNew.h
+		g++ $(CFLAGS) -Wall -c $<
+
+ObsNew.o: 	ObsNew.cxx ObsNew.h
+		g++ $(CFLAGS) -Wall -c $<
+
 Combine.o:      Combine.cxx Combine.h
 		g++ $(CFLAGS) -Wall -c $<
 

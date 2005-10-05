@@ -20,8 +20,11 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
 
     ValueArg<int>    nObs(      "","nobs",     "number observed events",false,1,"int");
     ValueArg<double> confLevel( "","cl",       "confidence level",false,0.9,"float");
-    ValueArg<double> sTrue(     "","strue",   "s_true, only used if -C is active",false,1.0,"float");
-    SwitchArg        coverage(  "C","coverage", "For coverage studies",false);
+    ValueArg<double> sTrue(     "","strue",   "s_true = s0",false,1.0,"float");
+    ValueArg<double> s1min(     "","s1min",   "s1_min",false,1.0,"float");
+    ValueArg<double> s1max(     "","s1max",   "s1_max",false,1.0,"float");
+    ValueArg<double> s1step(     "","s1step",   "s1_step",false,0.1,"float");
+
     SwitchArg        doNLR("N","nlr", "Use NLR",false);
     SwitchArg        useTabulated("T","tab","Use tabulated poisson",false);
     //
@@ -41,16 +44,18 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     //
     ValueArg<double> hypTestMin( "","hmin",   "hypothesis test min" ,false,0.0,"float");
     ValueArg<double> hypTestMax( "","hmax",   "hypothesis test max" ,false,35.0,"float");
-    ValueArg<double> hypTestStep("","hstep",  "hypothesis test step" ,false,0.01,"float");
+    ValueArg<double> hypTestStep("","hstep",  "hypothesis test step" ,false,0.1,"float");
     //
     ValueArg<double> effIntScale( "","escale","eff n sigma in integral", false,5.0,"float");
     ValueArg<int>    effIntN("","en",   "eff: N points in integral",    false,21,"int");
     ValueArg<double> bkgIntScale( "","bscale","bkg n sigma in integral", false,5.0,"float");
     ValueArg<int>    bkgIntN("","bn",   "bkg: N points in integral",    false,21,"int");
 
-    ValueArg<int>    doVerbose(   "V","verbose", "verbose pole",    false,0,"int");
+    ValueArg<int>    doVerbPole(  "V","vpole",   "verbose pole",     false,0,"int");
+    ValueArg<int>    doVerbPow(   "P","vpower",  "verbose power",    false,0,"int");
     //
-    cmd.add(doVerbose);
+    cmd.add(doVerbPole);
+    cmd.add(doVerbPow);
     cmd.add(doNLR);
     cmd.add(useTabulated);
     //
@@ -77,7 +82,10 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     cmd.add(beCorr);
 
     cmd.add(sTrue);
-    cmd.add(coverage);
+    cmd.add(s1min);
+    cmd.add(s1max);
+    cmd.add(s1step);
+
     cmd.add(confLevel);
     cmd.add(nObs);
     cmd.add(nLoops);
@@ -96,8 +104,9 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     pole->checkEffBkgDists();
     pole->setEffBkgCorr(beCorr.getValue());
 
-    pole->setTrueSignal(sTrue.getValue());
-    pole->setCoverage(coverage.getValue());
+    pole->setTrueSignal(sTrue.getValue()); // s0
+    
+    pole->setCoverage(false);
 
     pole->setDmus(dMus.getValue());
     pole->setEffInt(effIntScale.getValue(),effIntN.getValue());
@@ -113,8 +122,12 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     pole->initIntArrays();
     pole->initBeltArrays();
     //
-    pole->setVerbose(doVerbose.getValue());
-
+    pole->setVerbose(doVerbPole.getValue());
+    //
+    gPower.setPole(pole);
+    gPower.setHypSignal(sTrue.getValue());
+    gPower.setTrueSignal(s1min.getValue(),s1max.getValue(),s1step.getValue());
+    gPower.setVerbose(doVerbPow.getValue());
     gPower.setLoops(nLoops.getValue());
 
   }
@@ -132,9 +145,6 @@ int main(int argc, char *argv[]) {
   //  if (pole.checkParams()) {
   pole.printSetup();
 
-  gPower.setPole(&pole);
-  gPower.setTrueSignal(*(pole.getHypTest()));
-  gPower.setHypSignal(pole.getSTrue());
   //
   gPower.doLoop();
 
