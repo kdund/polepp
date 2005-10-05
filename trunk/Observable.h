@@ -139,7 +139,7 @@ public:
     if (name) m_name=name;
     if (description) m_description=description;
   }
-  Observable(Pdf<T> *pdf, Random *rndgen, const char *name, const char *description=0) {
+  Observable(Pdf<T> *pdf, RND::Random *rndgen, const char *name, const char *description=0) {
     m_pdf=pdf; m_rndGen=rndgen; m_valid=((pdf!=0)&&(rndgen!=0));
     m_locked=false;
     m_lockedValue=0;
@@ -148,7 +148,7 @@ public:
   }
   virtual ~Observable() {};
   //
-  void setRndGen(Random *rndgen) {m_rndGen = rndgen;}
+  void setRndGen(RND::Random *rndgen) {m_rndGen = rndgen;}
   //
   virtual T rnd()=0;
   void setLockedValue(T val) { m_lockedValue = val;}
@@ -156,7 +156,7 @@ public:
   //
   T       getLockedValue()   { return m_lockedValue;}
   Pdf<T> *getPDF()           { return m_pdf;}
-  Random *getRndGen()        { return m_rndGen;}
+  RND::Random *getRndGen()        { return m_rndGen;}
   bool    valid()            { return m_valid;}
 
   T       operator()()       { return (m_locked ? m_lockedValue:rnd()); }
@@ -169,7 +169,7 @@ public:
   //
 protected:
   Pdf<T> *m_pdf;
-  Random *m_rndGen;
+  RND::Random *m_rndGen;
   bool    m_valid;
   bool    m_locked;
   T       m_lockedValue;
@@ -180,17 +180,17 @@ protected:
 class ObservableGauss : public Observable<double> {
 public:
   ObservableGauss():Observable<double>() {};
-  ObservableGauss(PdfGauss *pdf, Random *rndGen, const char *name, const char *desc=0):Observable<double>(pdf,rndGen,name,desc) {};
+  ObservableGauss(PdfGauss *pdf, RND::Random *rndGen, const char *name, const char *desc=0):Observable<double>(pdf,rndGen,name,desc) {};
   ~ObservableGauss() {};
   //
   //  void setPDF(PdfGauss *pdf) {m_pdf = pdf;}
-  inline double rnd() {return (m_valid ? m_rndGen->gaus(dynamic_cast<PdfGauss *>(m_pdf)->getMean(),dynamic_cast<PdfGauss *>(m_pdf)->getSigma()):0);}
+  inline double rnd() {return (m_valid ? m_rndGen->gauss(dynamic_cast<PdfGauss *>(m_pdf)->getMean(),dynamic_cast<PdfGauss *>(m_pdf)->getSigma()):0);}
 };
 
 class ObservablePoisson : public Observable<int> {
 public:
   ObservablePoisson():Observable<int>() {};
-  ObservablePoisson(PdfPoisson *pdf, Random *rndGen, const char *name, const char *desc=0):Observable<int>(pdf,rndGen,name,desc) {};
+  ObservablePoisson(PdfPoisson *pdf, RND::Random *rndGen, const char *name, const char *desc=0):Observable<int>(pdf,rndGen,name,desc) {};
   ~ObservablePoisson() {};
   //
   //  void setPDF(PdfPoisson *pdf) {m_pdf = pdf;}
