@@ -4,135 +4,226 @@
 // One measurement consists of N(observed) plus a number of nuisance parameters.
 // The signal is a function of these parameters and N. It is implemented in getSignal().
 //
+// The idea with this is:
+// A measurement consists of a N(obs) + a number of nuisance parameters
+//
 #include <string>
+#include <list>
+#include <vector>
+#include "ObsNew.h"
 
-//! Distribution type of nuisance parameters
-enum DISTYPE {
-  DIST_NONE=0,   /*!< No distrubution */
-  DIST_GAUS,     /*!< Gaussian */
-  DIST_FLAT,     /*!< Flat */
-  DIST_LOGN,     /*!< Log-Normal */
-  DIST_GAUSCORR  /*!< Correlated gauss (eff,bkg) */
-};
-/*!
-  Returns a string corresponding to the given DISTYPE.
- */
-inline const std::string distTypeStr(DISTYPE dt) {
-  std::string rval;
-  switch (dt) {
-  case DIST_NONE:
-    rval = "None";
-    break;
-  case DIST_GAUS:
-    rval = "Gauss";
-    break;
-  case DIST_FLAT:
-    rval = "Flat";
-    break;
-  case DIST_LOGN:
-    rval = "LogN";
-    break;
-  case DIST_GAUSCORR:
-    rval = "GaussCorr";
-    break;
-  default:
-    rval = "Unknown";
-    break;
-  }
-  return rval;
-}
-
+//
+// Note virtual functions:
+//  getM(s) : m = f(s,nuisance) ; i.e the relation between measured value, signal and nuisance params
+//  getSignal(m,nuisance) ...
+//
+template <typename T>
 class Measurement {
  public:
-  Measurement():m_nObserved(0),
-		m_effMeas(0),m_effSigma(0),m_effDist(DIST_NONE),
-		m_bkgMeas(0),m_bkgSigma(0),m_bkgDist(DIST_NONE), m_beCorr(0), m_beCorrInv(0) {}
-  Measurement(int nobs,
-	      double effmeas, double effsigma, DISTYPE effdist,
-	      double bkgmeas, double bkgsigma, DISTYPE bkgdist, double corr=0)
-    :m_nObserved(nobs),m_effMeas(effmeas),m_effSigma(effsigma),m_effDist(effdist),
-     m_bkgMeas(bkgmeas),m_bkgSigma(bkgsigma),m_bkgDist(bkgdist), m_beCorr(corr) { m_beCorrInv = sqrt(1.0-m_beCorr*m_beCorr);}
+  Measurement() { m_observable=0; }
+  Measurement(const char *name, const char *desc=0) { m_observable=0; m_name = name; m_description = desc;}
+  Measurement(const Measurement<T> & m) { copy(m); }
 
-  Measurement(const Measurement & m) {}
-  virtual ~Measurement() {}
+  virtual ~Measurement() { if (m_observable) delete m_observable; deleteNuisance(); }
   //
-  void copy( const Measurement & m) {
-    m_nObserved = m.getNObserved();
-    m_effMeas   = m.getEffMeas();
-    m_effSigma  = m.getEffSigma();
-    m_effDist   = m.getEffDist();
-    m_bkgMeas   = m.getBkgMeas();
-    m_bkgSigma  = m.getBkgSigma();
-    m_bkgDist   = m.getBkgDist();
-    m_beCorr    = m.getBEcorr();
-    m_beCorrInv = m.getBEcorrInv();
-  }
-
-  inline Measurement & operator=( const Measurement & m ) {
-    if (this!=&m) {
-      copy(m);
-    }
+  inline Measurement const & operator=( Measurement<T> const & m ) {
+    copy(m);
     return *this;
   }
-
-  inline bool operator==( const Measurement & m ) {
-    return ( ( m_nObserved == m.getNObserved()) ||
-	     ( m_effMeas   == m.getEffMeas()) ||
-	     ( m_effSigma  == m.getEffSigma()) ||
-	     ( m_effDist   == m.getEffDist()) ||
-	     ( m_bkgMeas   == m.getBkgMeas()) ||
-	     ( m_bkgSigma  == m.getBkgSigma()) ||
-	     ( m_bkgDist   == m.getBkgDist()) ||
-	     ( m_beCorr    == m.getBEcorr()) );
+  inline bool operator==( const Measurement<T> & m ) {
+    bool rval = false;
+    return rval;
   }
 
-  void setName(const char *name)   { m_name = name; }
-  void setDescr(const char *descr) { m_description = descr; }
-  void setEff(double effmeas, double effsigma, DISTYPE effdist) { m_effMeas = effmeas; m_effSigma = effsigma; m_effDist = effdist; }
-  void setBkg(double bkgmeas, double bkgsigma, DISTYPE bkgdist) { m_bkgMeas = bkgmeas; m_bkgSigma = bkgsigma; m_bkgDist = bkgdist; }
-  void setEffMeas( const double v )  { m_effMeas  = v; }
-  void setEffSigma( const double v ) { m_effSigma = v; }
-  void setEffDist( const DISTYPE v ) { m_effDist  = v; }
-  void setBkgMeas( const double v )  { m_bkgMeas  = v; }
-  void setBkgSigma( const double v ) { m_bkgSigma = v; }
-  void setBkgDist( const DISTYPE v ) { m_bkgDist  = v; }
-  void setBEcorr(double corr) { m_beCorr = corr; }
-  void setNObserved(int nobs) { m_nObserved = nobs; }
-  void dump() const;
+  void setTrueSignal(double s)               { m_trueSignal = s; }
+  void setObservable(OBS::BaseType<T> * obs) { if (m_observable) delete m_observable; m_observable = (obs ? obs->clone():0); }
+  void setName(const char *name)             { m_name = name; }
+  void setDescription(const char *descr)     { m_description = descr; }
   //
-  const double  getEffMeas()   const { return m_effMeas; }
-  const double  getEffSigma()  const { return m_effSigma; }
-  const DISTYPE getEffDist()   const { return m_effDist; }
-  const double  getBkgMeas()   const { return m_bkgMeas; }
-  const double  getBkgSigma()  const { return m_bkgSigma; }
-  const DISTYPE getBkgDist()   const { return m_bkgDist; }
-  const double  getBEcorr()    const { return m_beCorr; }
-  const double  getBEcorrInv() const { return m_beCorrInv; }
-  const int     getNObserved() const { return m_nObserved; }
-  //
-  const double getSignal()     const { return (double(m_nObserved) - m_bkgMeas)/m_effMeas; }
-  const double getSignalUnc()  const { 
-    double s = getSignal();
-    return sqrt(double(m_nObserved)+m_bkgSigma*m_bkgSigma+s*s*m_effSigma*m_effSigma)/m_effMeas;
+  OBS::Base *addNuisance(OBS::Base * nuPar) { if (nuPar) m_nuisancePars.push_back( nuPar ); return nuPar;}
+  void deleteNuisance() {
+    for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
+	 it != m_nuisancePars.end();
+	 ++it) {
+      if (*it) delete *it;
+    }
+    m_nuisancePars.clear();
+  }
+  void dump() const {
+    std::cout << "-----------MEASUREMENT------------------------\n";
+    if (m_observable) m_observable->dump();
+    std::cout << "----------------------------------------------\n";
+  }
+
+  void copyNuisanceList(std::list< OBS::Base * > & newList ) const {
+    newList.clear();
+    if (m_nuisancePars.size()>0) {
+      for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
+	   it !=  m_nuisancePars.end();
+	   ++it) {
+	(*it)->rnd(); // save copies
+      }
+    }
   }
   //
-  bool isFullyCorrelated(double eps=1e-16) const { return (((fabs(fabs(m_beCorr)-1.0)) < eps)); }
-  bool isNotCorrelated(double eps=1e-16)   const { return (fabs(m_beCorr) < eps); }
+  const double getTrueSignal() const        { return m_trueSignal; }
+  const T getObsVal() const                 { return (m_observable ? m_observable->getObservedValue():0); }
+  const double getObsPdfMean() const        { return (m_observable ? m_observable->getPdfMean():0); }
+  const double getObsPdfSigma() const       { return (m_observable ? m_observable->getPdfSigma():0); }
+  const PDFN::DISTYPE getObsPdfDist() const { return (m_observable ? m_observable->getPdfDist():0); }
+  //
+  OBS::BaseType<T> *getObservable() const   { return m_observable; }
+  const std::string & getName()                      const { return m_name;}
+  const std::string & getDescription()               const { return m_description;}
+  const std::list< OBS::Base * > & getNuisanceList() const { return m_nuisancePars; }
+
+  const double rndObs() { OBS::BaseType<T> *p = static_cast< OBS::BaseType<T> * >(m_observable); return (*p)(); }
+  //
+  virtual const T getM(double s)=0;
+  virtual const double getSignal()=0;
+  virtual const double getSignalUnc()=0; 
+
+  bool generateObservation() { // generates a random pseudoexperiment and stores this in the observed parts of the observables
+    //
+    // First set observed nuisance to random values
+    //
+    for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
+	 it !=  m_nuisancePars.end();
+       ++it) {
+      //      obs = static_cast< OBS::Base * >(*it);
+      (*it)->setObservedRnd(); // set to a random value according to pdf
+    }
+    //
+    // get the new average to be used
+    //
+    double mean = getM(m_trueSignal);
+    m_observable->setPdfMean(mean);
+    //
+    // ...and then the observable
+    //
+    OBS::BaseType<T> *obs = static_cast< OBS::BaseType<T> * >(m_observable);
+    obs->setObservedRnd();
+    //
+    return true;
+  }
   //
  protected:
+  void copy(const Measurement & other) {
+    if (this != &other) {
+      m_name        = other.getName();
+      m_description = other.getDescription();
+      m_trueSignal  = other.getTrueSignal();
+      if (m_observable) delete m_observable;
+      m_observable  = other.clone(); // make a clone - note PDF object is NOT cloned... pointer retained (speed/mem issues)
+      other.copyNuisanceList(m_nuisancePars);// idem
+    }
+  }
+  OBS::Base *makeNuisance(OBS::Base *np, PDFN::DISTYPE dist) {
+    if (np==0) {
+      np = OBS::makeObservable(dist);
+      addNuisance(np);
+    }
+    return np;
+  }
+
   std::string m_name;
   std::string m_description;
   //
-  int     m_nObserved;
-  double  m_effMeas;
-  double  m_effSigma;
-  DISTYPE m_effDist;
-  double  m_bkgMeas;
-  double  m_bkgSigma;
-  DISTYPE m_bkgDist;
-  double  m_beCorr;
-  double  m_beCorrInv;
+
+  double                                  m_trueSignal;
+  OBS::BaseType<T>                       *m_observable;
+  std::list< OBS::Base * >                m_nuisancePars;
+  std::vector< std::vector<double> >      m_corrMat;
 };
 
+class MeasPois : public Measurement<int> {
+ public:
+  MeasPois() : Measurement<int>() {};
+  MeasPois(const char *name, const char *desc=0) : Measurement<int>(name,desc) {};
+  MeasPois(OBS::ObservablePois * obs) : Measurement<int>(obs->getName().c_str(),obs->getDescription().c_str()) {
+    m_observable = obs->clone();
+  }
+  virtual ~MeasPois() {}
+  //
+  void setObservable(OBS::ObservablePois * obs) { if (m_observable) delete m_observable; m_observable = (obs ? obs->clone():0); }
+
+  virtual const int    getM(double s) { return 0;}
+  virtual const double getSignal()    { return 0;}
+  virtual const double getSignalUnc() { return 0;}
+
+};
+
+class MeasPoisEB : public MeasPois {
+ public:
+  MeasPoisEB() : MeasPois() { m_eff=0; m_bkg=0; }
+  MeasPoisEB(const char *name, const char *desc=0) : MeasPois(name,desc) { m_eff=0; m_bkg=0; }
+  virtual ~MeasPoisEB() { }
+  //
+  void setEffObs(double eff) {
+    if (m_eff) {
+      m_eff->setObservedValue(eff);
+    }
+  }
+  void setBkgObs(double bkg) {
+    if (m_bkg) {
+      m_bkg->setObservedValue(bkg);
+    }
+  }
+
+  void setEffPdf(double eff, double sigma, PDFN::DISTYPE dist) {
+    m_eff = static_cast< OBS::BaseType<double> *>(makeNuisance(m_eff,dist));
+    m_eff->setPdfMean(eff);
+    m_eff->setPdfSigma(sigma);
+  }
+
+  void setBkgPdf(double bkg, double sigma, PDFN::DISTYPE dist) {
+    m_bkg = static_cast< OBS::BaseType<double> *>(makeNuisance(m_bkg,dist));
+    m_bkg->setPdfMean(bkg);
+    m_bkg->setPdfSigma(sigma);
+  }
+
+  const double getEffObs() { return (m_eff ? m_eff->getObservedValue():0); }
+  const double getBkgObs() { return (m_bkg ? m_bkg->getObservedValue():0); }
+
+  OBS::BaseType<double> *getEffPdf() {
+    return m_eff;
+  }
+  const double getEffPdfMean() {
+    return (m_eff ? m_eff->getPdfMean():0);
+  }
+  const double getEffPdfSigma() {
+    return (m_eff ? m_eff->getPdfSigma():0);
+  }
+  const PDFN::DISTYPE getEffPdfDist() {
+    return (m_eff ? m_eff->getPdfDist():PDFN::DIST_UNDEF);
+  }
+
+  OBS::BaseType<double> *getBkgPdf() {
+    return m_bkg;
+  }
+  const double getBkgPdfMean() {
+    return (m_bkg ? m_bkg->getPdfMean():0);
+  }
+  const double getBkgPdfSigma() {
+    return (m_bkg ? m_bkg->getPdfSigma():0);
+  }
+  const PDFN::DISTYPE getBkgPdfDist() {
+    return (m_bkg ? m_bkg->getPdfDist():PDFN::DIST_UNDEF);
+  }
+
+  virtual const int    getM(double s) {
+    return static_cast<int>(m_eff->getObservedValue()*s + m_bkg->getObservedValue());
+  }
+
+  virtual const double getSignal() {
+    double dn = m_observable->getObservedValue() - m_bkg->getObservedValue();
+    double e = m_eff->getObservedValue(); // >0
+    return (e>0 ? dn/e : 0);
+  }
+
+ private:
+  OBS::BaseType<double> *m_eff; // pointers to nuisance params in list
+  OBS::BaseType<double> *m_bkg;
+};
 
 #endif
