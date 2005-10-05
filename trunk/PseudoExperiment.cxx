@@ -21,8 +21,8 @@ void PseudoExperiment::generateMeasurement(Measurement & rval) {
   case DIST_GAUSCORR:
     notOk = true;
     while (notOk) {
-      double z1 = m_rnd.gaus(0.0,1.0);
-      double z2 = m_rnd.gaus(0.0,1.0);
+      double z1 = m_rnd.gauss(0.0,1.0);
+      double z2 = m_rnd.gauss(0.0,1.0);
       effMeas = m_effMeas + z1*m_effSigma;
       bkgMeas = m_bkgMeas + m_bkgSigma*(m_beCorr*z1 + m_beCorrInv*z2);
       notOk = ((bkgMeas<0.0) || (effMeas<0.0));
@@ -37,7 +37,7 @@ void PseudoExperiment::generateMeasurement(Measurement & rval) {
   case DIST_GAUS:
     notOk = true;
     while (notOk) {
-      effMeas = m_rnd.gaus(m_effMeas,m_effSigma); // measured efficiency
+      effMeas = m_rnd.gauss(m_effMeas,m_effSigma); // measured efficiency
       notOk   = (effMeas<0.0);
     }
     break;
@@ -59,7 +59,7 @@ void PseudoExperiment::generateMeasurement(Measurement & rval) {
   case DIST_GAUS:
     notOk = true;
     while (notOk) {
-      bkgMeas    = m_rnd.gaus(m_bkgMeas,m_bkgSigma); // measured background
+      bkgMeas    = m_rnd.gauss(m_bkgMeas,m_bkgSigma); // measured background
       notOk = (bkgMeas<0.0);
     }
   case DIST_GAUSCORR: // already taken care of above

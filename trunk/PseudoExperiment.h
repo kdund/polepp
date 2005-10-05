@@ -14,11 +14,11 @@ class PseudoExperiment: public Measurement {
 
   void setMeasurement( const Measurement & m ) { copy(m); m_fixed = false; m_sTrue = m.getSignal(); }
   void setTrueSignal( double s ) { m_sTrue = s; }
-  void setRandomGenerator(Random & rndGen) { m_rnd = rndGen; }
+  void setRandomGenerator(RND::Random & rndGen) { m_rnd = rndGen; }
   void setFixed(bool flag=true) { m_fixed=flag; } // true: nobs is just (e*s + b), else nobs = Po(e*s+b)
   //
-  const Random & getRandomGenerator() const { return m_rnd; }
-  Random *       getRandomGenerator() { return &m_rnd; }
+  const RND::Random & getRandomGenerator() const { return m_rnd; }
+  RND::Random *       getRandomGenerator() { return &m_rnd; }
   const double   getTrueSignal() const { return m_sTrue; }
   const bool     isFixed() const { return m_fixed; }
   //
@@ -37,7 +37,7 @@ class PseudoExperiment: public Measurement {
 
  private:
   double m_sTrue;
-  Random m_rnd;
+  RND::Random m_rnd;
   bool   m_fixed;
 };
 
