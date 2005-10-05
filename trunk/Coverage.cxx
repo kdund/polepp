@@ -133,8 +133,8 @@ void Coverage::generateExperiment() {
   case DIST_GAUSCORR:
     notOk = true;
     while (notOk) {
-      double z1 = m_rnd.gaus(0.0,1.0);
-      double z2 = m_rnd.gaus(0.0,1.0);
+      double z1 = m_rnd.gauss(0.0,1.0);
+      double z2 = m_rnd.gauss(0.0,1.0);
       m_measEff = m_effMean + z1*m_effSigma;
       m_measBkg = m_bkgMean + m_bkgSigma*(m_beCorr*z1 + m_beCorrInv*z2);
       notOk = ((m_measEff<0.0)||(m_measBkg<0.0));
@@ -149,7 +149,7 @@ void Coverage::generateExperiment() {
   case DIST_GAUS:
     notOk = true;
     while (notOk) {
-      m_measEff    = m_rnd.gaus(m_effMean,m_effSigma); // measured efficiency
+      m_measEff    = m_rnd.gauss(m_effMean,m_effSigma); // measured efficiency
       notOk = (m_measEff<0.0);
     }
     break;
@@ -171,7 +171,7 @@ void Coverage::generateExperiment() {
   case DIST_GAUS:
     notOk = true;
     while (notOk) {
-      m_measBkg    = m_rnd.gaus(m_bkgMean,m_bkgSigma); // measured background
+      m_measBkg    = m_rnd.gauss(m_bkgMean,m_bkgSigma); // measured background
       notOk = (m_measBkg<0.0);
     }
   case DIST_GAUSCORR: // already taken care of above

@@ -91,7 +91,7 @@ private:
   int    m_verbose;
   //
   unsigned int m_rndSeed;
-  Random m_rnd;
+  RND::Random m_rnd;
   // pointer to Pole class
   Pole  *m_pole;
   // loop ranges
