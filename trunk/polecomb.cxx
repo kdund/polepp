@@ -24,30 +24,34 @@ int main(int argc, char *argv[]) {
   // CDFcc: limit(pole) -> 
   //
   double ep,dep,epref;
-  ep = 1.0/9.9e-8;
-  epref = ep;
-  ep = ep/epref;
-  dep = ep*0.131; // uncorr
-  //dep = ep*0.119; // corr
-  //dep = ep*0.177; // total
+  double epC,depC;
+  ep = 1.0;
+  epref = 1.0/(0.786/1785.0); // 0.786 = uncorr eff, 1785 = n events
+  dep  = ep*0.131; // uncorr
   Measurement CDFcc(0,
 		    ep,   dep,  DIST_GAUS,
 		    0.81, 0.12, DIST_GAUS);
   //
   // CDFcf: limit(pole) -> [0.00,3.55]
   //
-  ep = 1.0/1.57e-7/epref;
+  ep = (696.0/0.485)/epref;
   dep = ep*0.113; // uncorr
-  //dep = ep*0.119; // corr
-  //dep = ep*0.164; // total
   Measurement CDFcf(0,
 		    ep,   dep,  DIST_GAUS,
 		    0.66, 0.13, DIST_GAUS);
+  //
+  // An aditional pole object for the 100% correlated uncertainty
+  //
+  epC  = 1.0;
+  depC = 0.155;
+  Measurement CDFcorr(0,
+		      epC,   depC,  DIST_GAUS,
+		      0,     0,     DIST_NONE);
 
   //
   // DO: limit(pole) ->
   //
-  ep = 1.0/6.14e-8/epref;
+  ep = 1.0/6.14e-8/epref; // WRONG
   dep = ep*0.092;// uncorr
   //dep = ep*0.119; // corr
   //dep = ep*0.150; // total
@@ -75,6 +79,7 @@ int main(int argc, char *argv[]) {
   //
   std::vector<Pole *> poleList;
   //
+  Pole poleCorr;
   Pole *pole;
   Pole poleArr[10];
   Measurement m[10];
@@ -85,35 +90,43 @@ int main(int argc, char *argv[]) {
 //   m[1] = exp99;
 //     m[2] = exp00;
   //
+  poleCorr.setMeasurement(CDFcorr); // CDF TEMP: correlated bit
+  //
   for (unsigned int i=0; i<2; i++) {
     //    pmSig.generateMeasurement(m[i]);
-    if (i!=42) {
-      poleArr[i].setMeasurement(m[i]);
-      poleList.push_back(&poleArr[i]);
-    }
+    poleArr[i].setMeasurement(m[i]);
+    poleList.push_back(&poleArr[i]);
   }
   
-  for (unsigned int i=0; i<poleList.size(); i++) {
-    pole = poleList[i];
+  for (unsigned int i=0; i<poleList.size()+1; i++) { // TEMP
+    if (i<poleList.size()) { // TEMP
+      pole = poleList[i];
+    } else {
+      pole = &poleCorr;
+    }
     pole->setPoisson(&PDF::gPoisson);
     pole->setGauss(&PDF::gGauss);
     pole->setCL(0.95);
-    pole->setDmus(0.01);
-    pole->setBelt(30);
-    pole->setEffInt(5.0,21); // integrate +-5 sigma around eff and bkg
-    pole->setBkgInt(5.0,21); // integrate +-5 sigma around eff and bkg
+    pole->setDmus(0.05);
+    pole->setBelt(10);
+    pole->setEffInt(5.0,20); // integrate +-5 sigma around eff and bkg
+    pole->setBkgInt(5.0,20); // integrate +-5 sigma around eff and bkg
     pole->setTestHyp(0.0,3.0,0.01); // should be called AFTER the integration construct has been initiated (needs the norm)
     pole->initAnalysis();
 
     pole->setNLR(false);
     pole->printSetup();
-    combine.add(pole);
+    if (i<poleList.size()) combine.add(pole); // TEMP
   }
   //
-  //  combine.initCorrelations();
-  //  combine.corrEff(poleList[0],poleList[1],1.0);
-  combine.setSmax(5.0);
-  combine.init();
-  //  combine.initCorr();
+  if (true) {
+    combine.setSmax(5.0);
+    combine.setPoleCorr(&poleCorr);
+    combine.initCorrelations();
+    //    combine.corrEff(poleList[0],poleList[1],0.0);
+    combine.initCorr();
+  } else {
+    combine.init();
+  }
   combine.doIt();
 }
