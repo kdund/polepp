@@ -696,7 +696,7 @@ void Pole::findAllBestMu() {
   for (int n=0; n<m_nBelt; n++) {
     findBestMu(n);
   }
-  if (m_verbose>1) {
+  if (m_verbose>2) {
     std::cout << "First 10 from best fit (mean,prob):" << std::endl;
     std::cout << m_bestMu.size() << ":" << m_bestMuProb.size() << std::endl;
     for (int i=0; i<10; i++) {
@@ -762,6 +762,7 @@ double Pole::calcLimit(double s) {
   //
   double norm_p = calcLhRatio(s,nBeltMinUsed,nBeltMaxUsed);
   if (m_verbose>2) {
+    std::cout << "Normalisation over n for s = " << s << " is " << norm_p << std::endl;
     if ((norm_p>1.5) || (norm_p<0.5)) {
       std::cout << "Normalisation off (" << norm_p << ") for s= " << s << std::endl;
       for (int n=0; n<nBeltMaxUsed; n++) {
@@ -1180,7 +1181,7 @@ void Pole::findPower() {
 	}
       }
       power = powerp+powerm;
-      std::cout << "POWER:\t" << m_hypTest.getVal(i) << "\t" << m_hypTest.getVal(j) << "\t" << powerm << "\t" << powerp << "\t" << power << "\t" << pcl << std::endl;
+      std::cout << "POWER:\t" << m_hypTest.getVal(i) << "\t" << m_hypTest.getVal(j) << "\t" << power << "\t" << "0\t" << pcl << std::endl;
     }
     power = powerm+powerp;
     if (nm+np==0) {

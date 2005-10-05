@@ -38,11 +38,13 @@ bool Power::calculate(double strue) {
   //  m_pole->setTestHyp();
   //  m_pole->initAnalysis();
   if (!m_pole->usesNLR()) {
+    if (m_verbose>1) std::cout << "Finding all best mu" << std::endl;
     m_pole->findAllBestMu();
   }
   //  const Range *hyprng = m_pole->getHypTest();
   //  std::cout << "Hyp test range min/max: " << hyprng->min() << " : " << hyprng->max() << std::endl;
   //  std::cout << "H0 = " << m_sHyp << " , H1 = " << strue << std::endl;
+  if (m_verbose>1) std::cout << "Calculating belt" << std::endl;
   m_probHyp  = m_pole->calcBelt(m_sHyp,m_n1hyp, m_n2hyp,false,-1.0);
   m_probTrue = m_pole->calcBelt(strue,m_n1true,m_n2true,false,-1.0); // muProb is now for H1 (true)
 //   std::cout << std::endl;
@@ -73,7 +75,7 @@ void Power::updatePower() {
 }
 
 void Power::outputResult() {
-  std::cout << "POWER:\t" << m_sHyp << "\t" << m_pole->getSTrue() << "\t" << m_power << "\t" << m_powerUnc
+  std::cout << "POWER:\t" << m_sHyp << "\t" << m_pole->getSTrue() << "\t" << m_power << "\t" << m_powerUnc << "\t" << m_sumP
     //	    << "\t" << m_sumPOutside << "\t" << m_sumP
     //	    << "\t" << m_nOutside << "\t" << m_nTotal
 	    << std::endl;
@@ -99,7 +101,7 @@ void Power::doLoop() {
   //
   for (is=0; is<m_sRange.n(); is++) {
     strue = m_sRange.getVal(is);
-    //    std::cout << "POWERLOOP: S(true) = " << strue << std::endl;
+    if (m_verbose>1) std::cout << "POWERLOOP: S(true) = " << strue << std::endl;
     if (strue>m_sHyp) {
       smin = m_sHyp;
       smax = strue;
@@ -120,14 +122,18 @@ void Power::doLoop() {
 // 	first = false;
 //       }
       nTotal++;
+      if (m_verbose>1) std::cout << "Generating experiment " << j << std::endl;
       m_experiment.generateMeasurement(m_measurement); // generate pseudoexperiment using given ditributions of signal,bkg and eff.
       
+      if (m_verbose>1) std::cout << "Set measurement+init arrays" << std::endl;
       m_pole->setMeasurement(m_measurement);
       m_pole->setEffInt();         // reset the integral ranges
       m_pole->setBkgInt();
       m_pole->initIntArrays();
       m_pole->initBeltArrays();
+      if (m_verbose>1) std::cout << "Init integral" << std::endl;
       m_pole->initIntegral();
+      if (m_verbose>1) std::cout << "Calculate..." << std::endl;
       if (!calculate(strue)) {
 	if (nWarnings<maxWarnings) {
 	  m_pole->printFailureMsg();

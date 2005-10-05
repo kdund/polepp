@@ -17,6 +17,7 @@ class Power {
   void setTrueSignal( const Range & rng ) { m_sRange = rng; }
   void setHypSignal(double s) { m_sHyp = s; }
   void setLoops(int n) { m_nLoops = n; }
+  void setVerbose(int v) {m_verbose = v;}
 
   const double   getMinSignal()   const { return m_sRange.min(); }
   const double   getMaxSignal()   const { return m_sRange.max(); }
@@ -46,7 +47,7 @@ class Power {
   int     m_nLoops;
   //
   double  m_sHyp;
-  Range   m_sRange;
+  Range   m_sRange; // range of s0
 
   double  m_probHyp;
   double  m_probTrue;
@@ -63,7 +64,7 @@ class Power {
   double  m_power;
   double  m_powerUnc;
 
-
+  int     m_verbose;
 };
 
 #endif
