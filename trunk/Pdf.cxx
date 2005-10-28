@@ -1,7 +1,7 @@
 #define PDF_CXX
-#include "PdfNew.h"
+#include "Pdf.h"
 
-namespace PDFN {
+namespace PDF {
 
   Poisson  gPoisson;
   PoisTab  gPoisTab;
@@ -9,4 +9,3 @@ namespace PDFN {
   GaussTab gGaussTab;
 
 };
-

@@ -9,7 +9,7 @@
 /*!
   
  */
-namespace PDFN {
+namespace PDF {
   enum DISTYPE {
     DIST_UNDEF,    /*!< No distrubution defined*/
     DIST_NONE,     /*!< No distrubution */
@@ -17,7 +17,7 @@ namespace PDFN {
     DIST_GAUS,     /*!< Gaussian */
     DIST_FLAT,     /*!< Flat */
     DIST_LOGN,     /*!< Log-Normal */
-    DIST_GAUSCORR  /*!< Correlated gauss (eff,bkg) */
+    DIST_GAUS2D    /*!< Correlated gauss (eff,bkg) */
   };
   /*!
     Returns a string corresponding to the given DISTYPE.
@@ -43,8 +43,8 @@ namespace PDFN {
     case DIST_LOGN:
       rval = "LogN";
       break;
-    case DIST_GAUSCORR:
-      rval = "GaussCorr";
+    case DIST_GAUS2D:
+      rval = "Gauss 2D";
       break;
     default:
       rval = "Unknown";
@@ -56,7 +56,7 @@ namespace PDFN {
   class Base {
   public:
     Base() { m_dist=DIST_UNDEF; }
-    Base(const char *name) { m_dist=DIST_UNDEF; if (name) m_name=name; }
+    Base(const char *name, DISTYPE d=DIST_UNDEF, double m=0.0, double s=0.0):m_dist(d), m_mean(m), m_sigma(s) { if (name) m_name=name; }
     Base(const Base & other) { copy(other); }
     virtual ~Base() {};
     //
@@ -88,7 +88,7 @@ namespace PDFN {
   class BaseType: public Base {
   public:
     BaseType():Base() {}
-    BaseType(const char *name):Base(name) {}
+    BaseType(const char *name, DISTYPE d=DIST_NONE, double m=0.0, double s=0.0):Base(name,d,m,s) {}
     BaseType(const BaseType<T> & other):Base() {
       if (this!=&other) {
 	Base::copy(other);
@@ -104,12 +104,8 @@ namespace PDFN {
 
   class Gauss : public BaseType<double> {
   public:
-    Gauss():BaseType<double>("Gaussian") {
-      m_mean=0.0; m_sigma=1.0; m_dist=DIST_GAUS;
-    }
-    Gauss(double mean, double sigma):BaseType<double>("Gaussian") {
-      m_mean=mean; m_sigma=sigma; m_dist=DIST_GAUS;
-    }
+    Gauss():BaseType<double>("Gaussian",DIST_GAUS,0.0,1.0) {}
+    Gauss(double mean, double sigma):BaseType<double>("Gaussian",DIST_GAUS,mean,sigma) {}
     Gauss(const Gauss & other):BaseType<double>(other) {}
     virtual ~Gauss() {};
     //
@@ -117,15 +113,48 @@ namespace PDFN {
     inline const double phi(double mu) const;
     inline const double getVal(double x, double mean, double sigma) const;
   };
-  
+
+  class Gauss2D : public Gauss {
+  public:
+    Gauss2D():Gauss() { m_name="Gauss2D"; m_dist=DIST_GAUS2D; }
+		  Gauss2D(double mean, double sigma):Gauss(mean,sigma) { m_name="Gauss2D"; m_dist=DIST_GAUS2D; }
+    Gauss2D(const Gauss2D & other):Gauss(other) {}
+    virtual ~Gauss2D() {};
+    //
+    inline const double getVal2D(double x1, double mu1, double s1, double x2, double mu2, double s2, double corr) const;
+    inline const double getVal2D(double x1, double mu1, double x2, double mu2, double sdetC, double seff1, double seff2, double veffc) const;
+    inline const double getDetC(double s1,double s2,double c) const { return (s1*s1*s2*s2*(1.0-c*c)); }
+    inline const double getVeff(double detC, double s) const { return (detC/(s*s)); }
+    inline const double getVeffCorr(double detC, double s1, double s2, double corr) const { return ((corr*s1*s2)/detC);}
+  };
+
+  class LogNormal : public Gauss {
+  public:
+    LogNormal():Gauss(1.0,1.0)                             { m_name="LogNormal"; m_dist=DIST_LOGN; }
+    LogNormal(double mean, double sigma):Gauss(mean,sigma) { m_name="LogNormal"; m_dist=DIST_LOGN; }
+    LogNormal(const LogNormal & other):Gauss(other) {}
+    virtual ~LogNormal() {};
+    //
+    void setMean( double m)  { m_mean = m;  m_logMean = getLogMean(m,m_sigma); m_logSigma = getLogSigma(m,m_sigma); }
+    void setSigma( double m) { m_sigma = m; m_logMean = getLogMean(m_mean,m);  m_logSigma = getLogSigma(m_mean,m); }
+    //
+    inline const double getLogMean(double mean,double sigma) const  { return log(mean*mean/sqrt(sigma*sigma + mean*mean)); }
+    inline const double getLogSigma(double mean,double sigma) const { return sqrt(log((sigma*sigma/(mean*mean))+1)); }
+
+    inline const double F(double x) const {return (x>0.0 ? Gauss::getVal(log(x),m_logMean,m_logSigma)/x:0.0);}
+    inline const double getVal(double x, double m, double s) const {
+      if (x<=0) return 0.0;
+      return Gauss::getVal(log(x),getLogMean(m,s), getLogSigma(m,s))/x;
+    }
+  protected:
+    double m_logMean;
+    double m_logSigma;
+  };
+
   class Poisson : public BaseType<int> {
   public:
-    Poisson():BaseType<int>("Poisson") {
-      m_mean=0.0; m_sigma=0.0; m_dist=DIST_POIS;
-    }
-    Poisson(double lambda):BaseType<int>("Poisson") {
-      m_mean=lambda; m_sigma=sqrt(lambda); m_dist=DIST_POIS;
-    }
+    Poisson():BaseType<int>("Poisson",DIST_POIS,1.0,1.0) {}
+    Poisson(double lambda):BaseType<int>("Poisson",DIST_POIS,lambda,sqrt(lambda)) {}
     Poisson(const Poisson & other):BaseType<int>(other) {}
 
     virtual ~Poisson() {}
@@ -400,6 +429,28 @@ namespace PDFN {
     return phi(mu)/sigma;
   }
 
+  inline const double Gauss2D::getVal2D(double x1, double mu1, double s1, double x2, double mu2, double s2, double corr) const {
+    double sdetC = sqrt(getDetC(s1,s2,corr));
+    double seff1 = sdetC/s2;
+    double seff2 = sdetC/s1;
+    double veffc = (corr*s1*s2)/sdetC*sdetC;
+    //
+    double rval;
+    rval  = getVal(x1,mu1,seff1)*seff1;
+    rval *= getVal(x2,mu2,seff2)*seff2;
+    rval *= exp((x1-mu1)*(x2-mu2)*veffc);
+    rval *= 1.0/sdetC;
+    return rval;
+  }
+  
+  inline const double Gauss2D::getVal2D(double x1, double mu1, double x2, double mu2, double sdetC, double seff1, double seff2, double veffc) const {
+    double rval;
+    rval  = getVal(x1,mu1,seff1)*seff1;
+    rval *= getVal(x2,mu2,seff2)*seff2;
+    rval *= exp((x1-mu1)*(x2-mu2)*veffc);
+    rval *= 1.0/sdetC;
+    return rval;
+  }
   inline const double Poisson::F(int x) const {
     return raw(x,m_mean);
   }

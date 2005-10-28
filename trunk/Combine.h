@@ -69,13 +69,13 @@ class Combine {
   //
   // Vectors for the s(best) scan in n-space
   //
-  Range m_bestMuScan;               // scan range in s
+  Range<double> m_bestMuScan;               // scan range in s
   std::vector<double> m_bestMu;     // s(best)
   std::vector<double> m_bestMuProb; // L(n,s(best))
   //
   // Tabulated Likelihood
   //
-  Range                              m_sHypRange;
+  Range<double>                              m_sHypRange;
   std::vector<double>                m_sVector;
   std::vector<int>                   m_sMinInd;
   std::vector<int>                   m_sMaxInd;

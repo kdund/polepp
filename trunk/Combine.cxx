@@ -173,7 +173,7 @@ bool Combine::correlation(const Pole *p1, const Pole *p2, const double corr, boo
 void Combine::makeCorrInt() {
   int nexp = m_poleList.size(); // n experiments
   int neint,nbint;
-  const Range *range;
+  const Range<double> *range;
   //
   std::vector<int> nBkgRange;
   std::vector<int> nEffRange;
@@ -232,8 +232,8 @@ void Combine::makeCorrInt() {
   double bkgSigma1,bkgSigma2;
   double edetc=0,esdetc=0,eseff1=0,eseff2=0,eveffc=0; // for 2d gauss
   double bdetc=0,bsdetc=0,bseff1=0,bseff2=0,bveffc=0; // for 2d gauss
-  const Range *erng1,*erng2;
-  const Range *brng1,*brng2;
+  const Range<double> *erng1,*erng2;
+  const Range<double> *brng1,*brng2;
   double ecorr,bcorr;
   bool effIsCorr, bkgIsCorr;
   double norm;
@@ -370,7 +370,7 @@ void Combine::makeCorrInt() {
 void Combine::makeCorrIntCDF() {
   int nexp = m_poleList.size(); // n experiments
   int neint,nbint;
-  const Range *range;
+  const Range<double> *range;
   //
   std::vector<int> nBkgRange;
   std::vector<int> nEffRange;
@@ -428,8 +428,8 @@ void Combine::makeCorrIntCDF() {
   double effMeas1,effMeas2,effMeasC;
   double effSigma1,effSigma2,effSigmaC;
   double bkgSigma1,bkgSigma2;
-  const Range *erng1,*erng2,*erngC;
-  const Range *brng1,*brng2;
+  const Range<double> *erng1,*erng2,*erngC;
+  const Range<double> *brng1,*brng2;
   double ecorr,bcorr;
   bool effIsCorr, bkgIsCorr;
   double norm;
@@ -528,7 +528,7 @@ const double Combine::calcProb(std::vector<int> nvec, double s) const {
   // loop over all experiments
   // p = Sum{e,b,p} w[e][b]*Po(n[p]|e*s+b)
   //
-  const Range *effr,*bkgr;
+  const Range<double> *effr,*bkgr;
   for(unsigned int i=0; i<m_effInt.size(); i++) {
     for(unsigned int j=0; j<m_bkgInt.size(); j++) {
       prob = 1.0;
@@ -568,7 +568,7 @@ const double Combine::calcProbCDF(std::vector<int> nvec, double s) const {
   // loop over all experiments
   // p = Sum{e,b,p} w[e][b]*Po(n[p]|e*s+b)
   //
-  const Range *effr,*bkgr;
+  const Range<double> *effr,*bkgr;
   double w;
   for(unsigned int j=0; j<m_bkgInt.size(); j++) {
     for(unsigned int i=0; i<m_effInt.size(); i++) {

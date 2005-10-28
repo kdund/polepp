@@ -95,9 +95,9 @@ private:
   // pointer to Pole class
   Pole  *m_pole;
   // loop ranges
-  Range  m_sTrue;
-  Range  m_effTrue;
-  Range  m_bkgTrue;
+  Range<double>  m_sTrue;
+  Range<double>  m_effTrue;
+  Range<double>  m_bkgTrue;
   int    m_nLoops;   // number of loops
   // flags if true, the corresponding observable is kept fixed when generating experiments
   bool   m_fixedEff;

@@ -1,15 +1,15 @@
 ROOTCFLAGS = $(shell root-config --cflags)
 ROOTLIBS   = $(shell root-config --libs)
-LDOBJS     =  Pdf.o Range.o Random.o Coverage.o Pole.o Combination.o Combine.o PseudoExperiment.o Measurement.o Power.o
+LDOBJS     =  Pdf.o Random.o Coverage.o Pole.o Combination.o Combine.o Measurement.o Power.o
 LDFLAGS    = -g -fPIC -shared
 ###CFLAGS     = -O
 # Use -g to include debug info
 # Use -pg for profiling info
 CFLAGS     = -g -O
 SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx poleconst.cxx polepow.cxx
-INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h Measurement.h PseudoExperiment.h Power.h
-SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Range.cxx Pdf.cxx Combination.cxx PseudoExperiment.cxx Measurement.cxx Power.cxx
-LDFILE	     = libPole++.so
+INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h Measurement.h Power.h
+SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Pdf.cxx Combination.cxx Measurement.cxx Power.cxx
+LDFILE	     = libPole++.so.1
 LIBS         = -L./ -lPole++
 
 all:		$(LDFILE) polelim polebelt polecov exptest plotexp estbelt poleconst polecomb polepow
@@ -77,18 +77,9 @@ pdftstold:	pdftstold.o
 pdftstold.o:	pdftstold.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
-meastst:	meastst.o PdfNew.o MeasNew.o ObsNew.o
-		g++ $(CFLAGS) -Wall $< MeasNew.o ObsNew.o PdfNew.o $(LIBS)  -o $@
-meastst.o:	meastst.cxx PdfNew.h MeasNew.h ObsNew.h
-		g++ $(CFLAGS) -Wall -c $<
-
-PdfNew.o: 	PdfNew.cxx PdfNew.h
-		g++ $(CFLAGS) -Wall -c $<
-
-MeasNew.o: 	MeasNew.cxx MeasNew.h
-		g++ $(CFLAGS) -Wall -c $<
-
-ObsNew.o: 	ObsNew.cxx ObsNew.h
+meastst:	meastst.o
+		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
+meastst.o:	meastst.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
 Combine.o:      Combine.cxx Combine.h
@@ -96,11 +87,7 @@ Combine.o:      Combine.cxx Combine.h
 
 Pole.o:		Pole.cxx Pole.h Pdf.h Range.h
 		g++ $(CFLAGS) -Wall -c $<
-Range.o:	Range.cxx Range.h
-		g++ $(CFLAGS) -Wall -c $<
 Coverage.o:	Coverage.cxx Coverage.h Range.h Random.h Pole.h Pdf.h
-		g++ $(CFLAGS) -Wall -c $<
-PseudoExperiment.o:	PseudoExperiment.cxx PseudoExperiment.h
 		g++ $(CFLAGS) -Wall -c $<
 Random.o:	Random.cxx Random.h
 		g++ $(CFLAGS) -Wall -c $<

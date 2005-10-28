@@ -14,7 +14,7 @@ class Power {
 
   void setPole(Pole *pole) { m_pole = pole; if (pole) m_experiment.setMeasurement(pole->getMeasurement()); }
   void setTrueSignal( double smin, double smax, double sstep ) { m_sRange.setRange(smin,smax,sstep); }
-  void setTrueSignal( const Range & rng ) { m_sRange = rng; }
+  void setTrueSignal( const Range<double> & rng ) { m_sRange<double> = rng; }
   void setHypSignal(double s) { m_sHyp = s; }
   void setLoops(int n) { m_nLoops = n; }
   void setVerbose(int v) {m_verbose = v;}
@@ -47,7 +47,7 @@ class Power {
   int     m_nLoops;
   //
   double  m_sHyp;
-  Range   m_sRange; // range of s0
+  Range<double>   m_sRange; // range of s0
 
   double  m_probHyp;
   double  m_probTrue;

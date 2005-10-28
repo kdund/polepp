@@ -41,7 +41,7 @@ bool Power::calculate(double strue) {
     if (m_verbose>1) std::cout << "Finding all best mu" << std::endl;
     m_pole->findAllBestMu();
   }
-  //  const Range *hyprng = m_pole->getHypTest();
+  //  const Range<double> *hyprng = m_pole->getHypTest();
   //  std::cout << "Hyp test range min/max: " << hyprng->min() << " : " << hyprng->max() << std::endl;
   //  std::cout << "H0 = " << m_sHyp << " , H1 = " << strue << std::endl;
   if (m_verbose>1) std::cout << "Calculating belt" << std::endl;

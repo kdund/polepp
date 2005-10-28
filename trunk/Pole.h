@@ -167,7 +167,7 @@ public:
   void setCL(double cl)    { m_cl = cl; }
 
   //! Set measurement
-  void setMeasurement( const Measurement & measurement ) { m_measurement = measurement; }
+  void setMeasurement( const MeasPoisEB & m ) { m_measurement.copy(m); }
   //
   void setNObserved(int nobs) {m_measurement.setNObserved(nobs); }
   //! distribution info on eff and bkg
@@ -213,8 +213,6 @@ public:
   // Tabulated PDF's
   void setPoisson(const PDF::Poisson *pdf) {m_poisson=pdf;}
   void setGauss(const PDF::Gauss *pdf) {m_gauss=pdf;}
-  void initPoisson(int nlambda=10000, int nn=51, double lmbmax=100); // will init poisson table
-  void initGauss(int ndata  =10000, double mumax=1000.0); // will init gauss table
   ///////////////////////////////
   //
   void initIntArrays();   // will initialise integral arrays (if needed)
@@ -279,12 +277,12 @@ public:
 								  m_normInt);}
   // range and steps in double integral (7), in principle infinite
   const double  getEffIntScale() const { return m_effIntScale; }
-  const Range  *getEffRangeInt() const { return &m_effRangeInt; }
+  const Range<double>  *getEffRangeInt() const { return &m_effRangeInt; }
   // range and steps in double integral (7)
   const double  getBkgIntScale() const { return m_bkgIntScale; }
-  const Range  *getBkgRangeInt() const { return &m_bkgRangeInt; }
+  const Range<double>  *getBkgRangeInt() const { return &m_bkgRangeInt; }
   // Test range for the likelihood ratio calculation (4)
-  const Range  *getHypTest() const     { return &m_hypTest; }
+  const Range<double>  *getHypTest() const     { return &m_hypTest; }
   //
   const bool    isValidInt() const   { return m_validInt; }
   const unsigned int getNInt() const     { return m_nInt; }
@@ -334,35 +332,22 @@ private:
   double m_sTrue;
   bool   m_coverage;
   // Measurement
-  Measurement m_measurement;
+  MeasPoisEB m_measurement;
   double m_normEff;
   double m_normBkg;
-  double m_normInt; // == 
-  // TO BE REPLACED BY THE ABOVE Measurement CALSS
-  // Number of observed events
-  //  int    m_nObserved;
-  // Efficiency, gaussian
-  //  double  m_effMeas;
-  //  double  m_effSigma;
-  //  bool    m_effNoDist;
-  //  DISTYPE m_effDist;
-  // Background, gaussian
-  //  double  m_bkgMeas;
-  //  double  m_bkgSigma;
-  //  bool    m_bkgNoDist;
-  //  DISTYPE m_bkgDist;
+  double m_normInt; //
   // correlation between eff and bkg [-1.0..1.0]
   double  m_beCorr;
   ////////////////////////////////////////////////////
   //
   // range and steps in double integral (7), in principle infinite
-  Range  m_effRangeInt;
+  Range<double>  m_effRangeInt;
   double m_effIntScale;
   // range and steps in double integral (7)
-  Range  m_bkgRangeInt;
+  Range<double>  m_bkgRangeInt;
   double m_bkgIntScale;
   // Test range for the likelihood ratio calculation (4)
-  Range  m_hypTest;
+  Range<double>  m_hypTest;
   //
   // Kernel of double integral (7)
   //

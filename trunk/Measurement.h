@@ -10,7 +10,7 @@
 #include <string>
 #include <list>
 #include <vector>
-#include "ObsNew.h"
+#include "Observable.h"
 
 //
 // Note virtual functions:
@@ -55,13 +55,13 @@ class Measurement {
     std::cout << "----------------------------------------------\n";
   }
 
-  void copyNuisanceList(std::list< OBS::Base * > & newList ) const {
+  void copyNuisance(std::list< OBS::Base * > & newList ) const {
     newList.clear();
     if (m_nuisancePars.size()>0) {
-      for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
+      for (std::list< OBS::Base * >::const_iterator it = m_nuisancePars.begin();
 	   it !=  m_nuisancePars.end();
 	   ++it) {
-	(*it)->rnd(); // save copies
+	newList.push_back((*it)->clone());
       }
     }
   }
@@ -70,9 +70,9 @@ class Measurement {
   const T getObsVal() const                 { return (m_observable ? m_observable->getObservedValue():0); }
   const double getObsPdfMean() const        { return (m_observable ? m_observable->getPdfMean():0); }
   const double getObsPdfSigma() const       { return (m_observable ? m_observable->getPdfSigma():0); }
-  const PDFN::DISTYPE getObsPdfDist() const { return (m_observable ? m_observable->getPdfDist():0); }
+  const PDF::DISTYPE getObsPdfDist() const  { return (m_observable ? m_observable->getPdfDist():0); }
+  const OBS::BaseType<T> *getObservable() const   { return m_observable; }
   //
-  OBS::BaseType<T> *getObservable() const   { return m_observable; }
   const std::string & getName()                      const { return m_name;}
   const std::string & getDescription()               const { return m_description;}
   const std::list< OBS::Base * > & getNuisanceList() const { return m_nuisancePars; }
@@ -108,17 +108,17 @@ class Measurement {
   }
   //
  protected:
-  void copy(const Measurement & other) {
+  void copy(const Measurement<T> & other) {
     if (this != &other) {
       m_name        = other.getName();
       m_description = other.getDescription();
       m_trueSignal  = other.getTrueSignal();
       if (m_observable) delete m_observable;
-      m_observable  = other.clone(); // make a clone - note PDF object is NOT cloned... pointer retained (speed/mem issues)
-      other.copyNuisanceList(m_nuisancePars);// idem
+      m_observable  = (other.getObservable())->clone(); // make a clone - note PDF object is NOT cloned... pointer retained (speed/mem issues)
+      other.copyNuisance(m_nuisancePars);// idem
     }
   }
-  OBS::Base *makeNuisance(OBS::Base *np, PDFN::DISTYPE dist) {
+  OBS::Base *makeNuisance(OBS::Base *np, PDF::DISTYPE dist) {
     if (np==0) {
       np = OBS::makeObservable(dist);
       addNuisance(np);
@@ -143,8 +143,10 @@ class MeasPois : public Measurement<int> {
   MeasPois(OBS::ObservablePois * obs) : Measurement<int>(obs->getName().c_str(),obs->getDescription().c_str()) {
     m_observable = obs->clone();
   }
+  MeasPois(const MeasPois & other):Measurement<int>() { copy(other);}
   virtual ~MeasPois() {}
   //
+  void copy(const MeasPois & other) { Measurement<int>::copy(other);}
   void setObservable(OBS::ObservablePois * obs) { if (m_observable) delete m_observable; m_observable = (obs ? obs->clone():0); }
 
   virtual const int    getM(double s) { return 0;}
@@ -157,8 +159,22 @@ class MeasPoisEB : public MeasPois {
  public:
   MeasPoisEB() : MeasPois() { m_eff=0; m_bkg=0; }
   MeasPoisEB(const char *name, const char *desc=0) : MeasPois(name,desc) { m_eff=0; m_bkg=0; }
+  MeasPoisEB(const MeasPoisEB & other):MeasPois() {copy(other);}
   virtual ~MeasPoisEB() { }
   //
+  void copy(const MeasPoisEB & other) {
+    if (this != &other) {
+      MeasPois::copy(other);
+      const OBS::BaseType<double> *eff, *bkg;
+      m_eff=0;
+      m_bkg=0;
+      eff = other.getEff();
+      if (eff) m_eff = eff->clone();
+      bkg = other.getBkg();
+      if (bkg) m_bkg = bkg->clone();
+    }
+  }
+
   void setEffObs(double eff) {
     if (m_eff) {
       m_eff->setObservedValue(eff);
@@ -170,56 +186,63 @@ class MeasPoisEB : public MeasPois {
     }
   }
 
-  void setEffPdf(double eff, double sigma, PDFN::DISTYPE dist) {
-    m_eff = static_cast< OBS::BaseType<double> *>(makeNuisance(m_eff,dist));
+  void setEffPdf(double eff, double sigma, PDF::DISTYPE dist) {
+    if (m_eff==0) m_eff = static_cast< OBS::BaseType<double> *>(makeNuisance(m_eff,dist));
     m_eff->setPdfMean(eff);
     m_eff->setPdfSigma(sigma);
   }
 
-  void setBkgPdf(double bkg, double sigma, PDFN::DISTYPE dist) {
-    m_bkg = static_cast< OBS::BaseType<double> *>(makeNuisance(m_bkg,dist));
+  void setBkgPdf(double bkg, double sigma, PDF::DISTYPE dist) {
+    if (m_bkg==0) m_bkg = static_cast< OBS::BaseType<double> *>(makeNuisance(m_bkg,dist));
     m_bkg->setPdfMean(bkg);
     m_bkg->setPdfSigma(sigma);
   }
 
-  const double getEffObs() { return (m_eff ? m_eff->getObservedValue():0); }
-  const double getBkgObs() { return (m_bkg ? m_bkg->getObservedValue():0); }
+  void setEffPdfMean(double m)  { if (m_eff) m_eff->setPdfMean(m); }
+  void setEffPdfSigma(double m) { if (m_eff) m_eff->setPdfSigma(m); }
 
-  OBS::BaseType<double> *getEffPdf() {
+  void setBkgPdfMean(double m)  { if (m_bkg) m_bkg->setPdfMean(m); }
+  void setBkgPdfSigma(double m) { if (m_bkg) m_bkg->setPdfSigma(m); }
+
+  const double getEffObs() const { return (m_eff ? m_eff->getObservedValue():0); }
+  const double getBkgObs() const { return (m_bkg ? m_bkg->getObservedValue():0); }
+
+  const OBS::BaseType<double> *getEff() const {
     return m_eff;
   }
-  const double getEffPdfMean() {
+  const double getEffPdfMean() const {
     return (m_eff ? m_eff->getPdfMean():0);
   }
-  const double getEffPdfSigma() {
+  const double getEffPdfSigma() const {
     return (m_eff ? m_eff->getPdfSigma():0);
   }
-  const PDFN::DISTYPE getEffPdfDist() {
-    return (m_eff ? m_eff->getPdfDist():PDFN::DIST_UNDEF);
+  const PDF::DISTYPE getEffPdfDist() const {
+    return (m_eff ? m_eff->getPdfDist():PDF::DIST_UNDEF);
   }
 
-  OBS::BaseType<double> *getBkgPdf() {
+  const OBS::BaseType<double> *getBkg() const {
     return m_bkg;
   }
-  const double getBkgPdfMean() {
+  const double getBkgPdfMean() const {
     return (m_bkg ? m_bkg->getPdfMean():0);
   }
-  const double getBkgPdfSigma() {
+  const double getBkgPdfSigma() const {
     return (m_bkg ? m_bkg->getPdfSigma():0);
   }
-  const PDFN::DISTYPE getBkgPdfDist() {
-    return (m_bkg ? m_bkg->getPdfDist():PDFN::DIST_UNDEF);
+  const PDF::DISTYPE getBkgPdfDist() const {
+    return (m_bkg ? m_bkg->getPdfDist():PDF::DIST_UNDEF);
   }
 
-  virtual const int    getM(double s) {
+  virtual const int    getM(double s) const {
     return static_cast<int>(m_eff->getObservedValue()*s + m_bkg->getObservedValue());
   }
 
-  virtual const double getSignal() {
+  virtual const double getSignal() const {
     double dn = m_observable->getObservedValue() - m_bkg->getObservedValue();
     double e = m_eff->getObservedValue(); // >0
     return (e>0 ? dn/e : 0);
   }
+
 
  private:
   OBS::BaseType<double> *m_eff; // pointers to nuisance params in list
