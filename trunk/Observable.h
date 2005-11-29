@@ -5,7 +5,14 @@
 #include "Pdf.h"
 #include "Range.h"
 
+//class Range<int>;
+//class Range<double>;
+// template class Range<int>;
+// template class Range<float>;
+// template class Range<double>;
 //
+Range<int> gRint;
+
 // NOTE: pdf is given as a pointer and can be manipulated by the object
 //
 namespace OBS {
@@ -33,7 +40,7 @@ namespace OBS {
       return *this;
     }
     //
-    virtual void setObservedRnd() {}
+    virtual void setObservedRnd() { std::cerr << "ERROR: Calling Base::setObservedRnd()" << std::endl;}
     void setPdf(PDF::Base *pdf)   { m_pdf = pdf; m_dist = ((pdf==0) ? PDF::DIST_UNDEF:pdf->getDist());}
     void setDist(const PDF::DISTYPE dist) { if (m_pdf==0) m_dist = dist; }
     void setPdfMean(double m)  { m_mean = m; }
@@ -104,7 +111,7 @@ namespace OBS {
     BaseType(const BaseType<T> & other):Base() { copy(other);}
     virtual ~BaseType() {}
     //
-    virtual T rnd() { std::cout << "ERROR::Observable - EMPTY rnd() : " << m_valid << std::endl; return 0; }
+    virtual T rnd() { std::cout << "ERROR::Observable - EMPTY rnd() : " << m_rndGen << std::endl; return 0; }
     //
     BaseType<T> const & operator=(BaseType<T> const & rh) {
       copy(rh);
@@ -212,7 +219,7 @@ namespace OBS {
       return *this;
     }
     //
-    inline double rnd() { return (m_valid ? m_rndGen->gauss(m_mean,m_sigma):0); }
+    double rnd() { return (m_valid ? m_rndGen->gauss(m_mean,m_sigma):0); }
 
     ObservableGauss *clone() const {
       ObservableGauss *obj = new ObservableGauss(*this);
@@ -237,7 +244,7 @@ namespace OBS {
     //
     void setPdfMean(double m)  { m_mean = m; m_sigma = (m>0 ? sqrt(m):0.0); }
     void setPdfSigma(double m) { m_mean = m*m; m_sigma=m; }
-    inline int rnd() {return (m_valid ? m_rndGen->poisson(m_mean):0);}
+    int rnd() {return (m_valid ? m_rndGen->poisson(m_mean):0);}
 
     ObservablePois *clone() const {
       ObservablePois *obj = new ObservablePois(*this);
@@ -245,9 +252,42 @@ namespace OBS {
     }
   };
 
-#ifndef OBSERVABLE_CXX
-  extern Base *makeObservable(PDF::DISTYPE dist);
-#endif
+  inline Base *makeObservable(PDF::DISTYPE dist) {
+    Base *obs=0;
+    switch (dist) {
+    case PDF::DIST_UNDEF:
+      break;
+    case PDF::DIST_NONE:
+      break;
+    case PDF::DIST_POIS:
+      obs=new ObservablePois();
+      obs->setPdf(&PDF::gPoisson);
+      break;
+    case PDF::DIST_GAUS:
+      obs=new ObservableGauss();
+      obs->setPdf(&PDF::gGauss);
+      break;
+    case PDF::DIST_FLAT:
+      //      obs=new ObservableFlat();
+      std::cout << "WARNING: Not yet implemented - ObservableFlat()" << std::endl;
+      break;
+    case PDF::DIST_LOGN:
+      //      obs=new ObservableLogN();
+      std::cout << "WARNING: Not yet implemented - ObservableLogN()" << std::endl;
+      break;
+    default:
+      std::cout << "WARNING: Unknown distribution = " << distTypeStr(dist) << std::endl;
+      break;
+    }
+    if (obs) {
+      obs->setRndGen(&RND::gRandom);
+      obs->validate();
+    }
+    return obs;
+  }
+// #ifndef OBSERVABLE_CXX
+//   extern Base *makeObservable(PDF::DISTYPE dist);
+// #endif
 };
 
 
