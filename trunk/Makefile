@@ -1,6 +1,7 @@
 ROOTCFLAGS = $(shell root-config --cflags)
 ROOTLIBS   = $(shell root-config --libs)
-LDOBJS     =  Pdf.o Random.o Coverage.o Pole.o Combination.o Combine.o Measurement.o Power.o
+LDOBJS     =  Pdf.o Random.o Coverage.o Pole.o Combination.o Combine.o Observable.o Power.o
+LDSMOBJS    =  Pdf.o Random.o
 LDFLAGS    = -g -fPIC -shared
 ###CFLAGS     = -O
 # Use -g to include debug info
@@ -10,12 +11,18 @@ SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx estbelt.cxx poleb
 INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h Measurement.h Power.h
 SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Pdf.cxx Combination.cxx Measurement.cxx Power.cxx
 LDFILE	     = libPole++.so.1
+LDSMFILE     = libPoleSM++.so
 LIBS         = -L./ -lPole++
+LIBSSM       = -L./ -lPoleSM++
 
 all:		$(LDFILE) polelim polebelt polecov exptest plotexp estbelt poleconst polecomb polepow
+small:          $(LDSMFILE)
 
 $(LDFILE):	$(LDOBJS)
 		g++ $(LDFLAGS) $(LDOBJS) -o $(LDFILE)
+
+$(LDSMFILE):	$(LDSMOBJS)
+		g++ $(LDFLAGS) $(LDSMOBJS) -o $(LDSMFILE)
 
 polepow:	polepow.o
 		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
@@ -78,7 +85,7 @@ pdftstold.o:	pdftstold.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
 meastst:	meastst.o
-		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
+		g++ $(CFLAGS) -Wall $< $(LIBSSM)  -o $@
 meastst.o:	meastst.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
