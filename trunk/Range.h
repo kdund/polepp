@@ -9,7 +9,7 @@ template <typename T>
 class Range {
 public:
   Range(T vmin, T vmax, T vstep, int n=0) { setRange(vmin,vmax,vstep,n); }
-  Range();
+  Range() {}
   Range(const Range<T> & other) { copy(other); }
   ~Range() {}
   //
@@ -22,26 +22,26 @@ public:
     }
   }
   void setRange(T vmin, T vmax, T vstep, int n=0) {
-    if (high<=low) {
-      m_min = low;
-      m_max = high;
+    if (vmax<=vmin) {
+      m_min = vmin;
+      m_max = vmax;
       m_step = 0;
       m_n = 1;
       return;
     }
     //
-    bool defN=(step<=0);
-    m_min  = low;
-    m_max  = high;
+    bool defN=(vstep<=0);
+    m_min  = vmin;
+    m_max  = vmax;
     if (defN && (n<2)) n=2;
     //
-    T d = high-low;
+    T d = vmax-vmin;
     if (defN) { // N is defined
       m_step = d/static_cast<T>(n-1);
       m_n = n;
     } else { // step is defined
+      m_step = vstep;
       m_n = 1+static_cast<int>(d/m_step);
-      m_step = step;
     }
   }
   //
@@ -62,5 +62,9 @@ private:
   T m_step;
   int    m_n;
 };
+
+// template class Range<int>;
+// template class Range<float>;
+// template class Range<double>;
 
 #endif

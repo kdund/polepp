@@ -14,7 +14,7 @@
 
 //
 // Note virtual functions:
-//  getM(s) : m = f(s,nuisance) ; i.e the relation between measured value, signal and nuisance params
+//  getM(s) : m = f(s,nuisance) ; i.e the relation between measured value, signal and nuisance params - always double
 //  getSignal(m,nuisance) ...
 //
 template <typename T>
@@ -36,7 +36,7 @@ class Measurement {
   }
 
   void setTrueSignal(double s)               { m_trueSignal = s; }
-  void setObservable(OBS::BaseType<T> * obs) { if (m_observable) delete m_observable; m_observable = (obs ? obs->clone():0); }
+  void setObservable(const OBS::BaseType<T> * obs) { if (m_observable) delete m_observable; m_observable = (obs ? obs->clone():0);}
   void setName(const char *name)             { m_name = name; }
   void setDescription(const char *descr)     { m_description = descr; }
   //
@@ -79,11 +79,11 @@ class Measurement {
 
   const double rndObs() { OBS::BaseType<T> *p = static_cast< OBS::BaseType<T> * >(m_observable); return (*p)(); }
   //
-  virtual const T getM(double s)=0;
-  virtual const double getSignal()=0;
-  virtual const double getSignalUnc()=0; 
+  virtual const double getM(double s) const =0;
+  virtual const double getSignal() const =0;
+  virtual const double getSignalUnc() const =0; 
 
-  bool generateObservation() { // generates a random pseudoexperiment and stores this in the observed parts of the observables
+  void generateObservation() { // generates a random pseudoexperiment and stores this in the observed parts of the observables
     //
     // First set observed nuisance to random values
     //
@@ -96,7 +96,7 @@ class Measurement {
     //
     // get the new average to be used
     //
-    double mean = getM(m_trueSignal);
+    double mean = this->getM(m_trueSignal);
     m_observable->setPdfMean(mean);
     //
     // ...and then the observable
@@ -104,7 +104,6 @@ class Measurement {
     OBS::BaseType<T> *obs = static_cast< OBS::BaseType<T> * >(m_observable);
     obs->setObservedRnd();
     //
-    return true;
   }
   //
  protected:
@@ -147,11 +146,11 @@ class MeasPois : public Measurement<int> {
   virtual ~MeasPois() {}
   //
   void copy(const MeasPois & other) { Measurement<int>::copy(other);}
-  void setObservable(OBS::ObservablePois * obs) { if (m_observable) delete m_observable; m_observable = (obs ? obs->clone():0); }
+  void setObservable(const OBS::ObservablePois * obs) { if (m_observable) delete m_observable; m_observable = (obs ? obs->clone():0);}
 
-  virtual const int    getM(double s) { return 0;}
-  virtual const double getSignal()    { return 0;}
-  virtual const double getSignalUnc() { return 0;}
+  const double getM(double s) const { return 0;}
+  const double getSignal()    const { return 0;}
+  const double getSignalUnc() const { return 0;}
 
 };
 
@@ -233,8 +232,8 @@ class MeasPoisEB : public MeasPois {
     return (m_bkg ? m_bkg->getPdfDist():PDF::DIST_UNDEF);
   }
 
-  virtual const int    getM(double s) const {
-    return static_cast<int>(m_eff->getObservedValue()*s + m_bkg->getObservedValue());
+  const double getM(double s) const {
+    return m_eff->getObservedValue()*s + m_bkg->getObservedValue();
   }
 
   virtual const double getSignal() const {
