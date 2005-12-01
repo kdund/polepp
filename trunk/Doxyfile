@@ -52,11 +52,12 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 INPUT                  = . release.notes
 FILE_PATTERNS          = *.h *.cxx *.hpp *.cpp
-RECURSIVE              = YES
+RECURSIVE              = NO
 EXCLUDE                = Observable.cxx \
-			 Observable.h \
 			 Tabulated.cxx \
 			 Tabulated.h \
+			 PseudoExperiment.cxx \
+			 PseudoExperiment.h \
 			 obstest.cxx \
 			 pdftst.cxx
 EXCLUDE_PATTERNS       = 
