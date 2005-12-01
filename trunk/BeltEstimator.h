@@ -108,7 +108,7 @@ public:
     //    return (r<0.0 ? 0.0:r*e);
     return 0.0;
   }
-  static double getSigLow(int n, DISTYPE de, double e, double se, DISTYPE db, double b, double sb, double norm=1.0) {
+  static double getSigLow(int n, PDF::DISTYPE de, double e, double se, PDF::DISTYPE db, double b, double sb, double norm=1.0) {
     double rval = getSigLow(n,e,se,b,sb,norm);
     return rval;
   }
@@ -121,21 +121,21 @@ public:
   //
   // New upper limit estimator
   //
-  static double getSigUp(int n, DISTYPE de, double e, double se, DISTYPE db, double b, double sb, double norm=1.0) {
+  static double getSigUp(int n, PDF::DISTYPE de, double e, double se, PDF::DISTYPE db, double b, double sb, double norm=1.0) {
     double a0,a1,a2;
     double t,ul=0;
     double deltaN = double(n)-b;
     const double feLim=1.5;
     //
     switch (de) {
-    case DIST_LOGN:
+    case PDF::DIST_LOGN:
 //       a0 = 2.0;
 //       a1 = 0.5;
 //       a2 = exp(-0.7*double(n)+0.7);
 //       t = getT(n,e,se,b,sb,norm);
 //       ul = a2*t*t+a1*t+a0;
 //       break;
-    case DIST_GAUS:
+    case PDF::DIST_GAUS:
     default:
       double fe = (se>0.0 ? e/se:10.0);
       if (fe>8.0) {
@@ -147,7 +147,7 @@ public:
 	a1 = 2.0;
 	a2 = 0.7;
       }
-      if ((de==DIST_GAUS) && (fe<feLim) && (deltaN<0.5)) {
+      if ((de==PDF::DIST_GAUS) && (fe<feLim) && (deltaN<0.5)) {
 	t = getT(n,feLim*se,se,b,sb,norm); // for e/se<1.5, the upper limit is ~ constant for all t (which are large)
       } else {
 	t = getT(n,e,se,b,sb,norm);
@@ -172,7 +172,7 @@ public:
 //   static int    getBeltMin(int n, double e, double se, double b, double sb, double norm=1.0) {
 //     return int(0.5+fUp(getSigUp(n,e,se,b,sb,norm),b));
 //   }
-  static int    getBeltMin(int n, DISTYPE de, double e, double se, DISTYPE db, double b, double sb, double norm=1.0) {
+  static int    getBeltMin(int n, PDF::DISTYPE de, double e, double se, PDF::DISTYPE db, double b, double sb, double norm=1.0) {
     // Belt estimations vary with distributions
     // Log-normal limits are more narrow -> belt rises more steeply -> larger nBelt is required
     //
@@ -182,7 +182,7 @@ public:
     bool nZero = (dN<0.5);
     double t = getT(n,e,se,b,sb,norm)*deCorr;
     double a0,a1,a2;
-    if (de==DIST_LOGN) {
+    if (de==PDF::DIST_LOGN) {
       if (nZero) {
 	a2 = 0.7;
 	a1 = 3.0;

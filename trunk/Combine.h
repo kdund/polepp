@@ -151,14 +151,14 @@ class Combine {
   bool isEffCorr(const Pole *pole, std::vector<const Pole *> poleList) { return isCorrelated(pole,poleList,true); }
   bool isBkgCorr(const Pole *pole, std::vector<const Pole *> poleList) { return isCorrelated(pole,poleList,false); }
 
-  const double setNormProb() {std::cout << "setNormProb: Not yet implemented!" << std::endl;};
+  const double setNormProb() {std::cout << "setNormProb: Not yet implemented!" << std::endl; return 0.0;};
   const double calcProb(std::vector<int> nvec, double s) const;
   const double setNormProbCDF();
   const double calcProbCDF(std::vector<int> nvec, double s) const;
   
-  const bool corrOK(DISTYPE d1, DISTYPE d2) const {
-    bool p1ok = ((d1 == DIST_GAUS) || (d1 == DIST_GAUSCORR));
-    bool p2ok = ((d2 == DIST_GAUS) || (d2 == DIST_GAUSCORR));
+  const bool corrOK(PDF::DISTYPE d1, PDF::DISTYPE d2) const {
+    bool p1ok = ((d1 == PDF::DIST_GAUS) || (d1 == PDF::DIST_GAUS2D));
+    bool p2ok = ((d2 == PDF::DIST_GAUS) || (d2 == PDF::DIST_GAUS2D));
     return (p1ok && p2ok);
   }
   //

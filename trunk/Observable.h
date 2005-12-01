@@ -11,7 +11,7 @@
 // template class Range<float>;
 // template class Range<double>;
 //
-Range<int> gRint;
+//Range<int> gRint;
 
 // NOTE: pdf is given as a pointer and can be manipulated by the object
 //
@@ -41,8 +41,8 @@ namespace OBS {
     }
     //
     virtual void setObservedRnd() { std::cerr << "ERROR: Calling Base::setObservedRnd()" << std::endl;}
-    void setPdf(PDF::Base *pdf)   { m_pdf = pdf; m_dist = ((pdf==0) ? PDF::DIST_UNDEF:pdf->getDist());}
-    void setDist(const PDF::DISTYPE dist) { if (m_pdf==0) m_dist = dist; }
+    void setPdf(PDF::Base *pdf)   { m_pdf = pdf; m_dist = ((pdf==0) ? PDF::DIST_NONE:pdf->getDist());}
+    void setPdfDist(const PDF::DISTYPE dist) { if (m_pdf==0) m_dist = dist; }
     void setPdfMean(double m)  { m_mean = m; }
     void setPdfSigma(double m) { m_sigma = m; } //if (m_pdf) m_pdf->setSigma(m); }
     void setRndGen(RND::Random *rndgen)               { m_rndGen = rndgen;}
@@ -256,8 +256,9 @@ namespace OBS {
     Base *obs=0;
     switch (dist) {
     case PDF::DIST_UNDEF:
-      break;
     case PDF::DIST_NONE:
+      obs=new Observable<double>();
+      obs->setPdf(0);
       break;
     case PDF::DIST_POIS:
       obs=new ObservablePois();

@@ -218,7 +218,7 @@ void Combine::makeCorrInt() {
   //
   // Now, calculate the weight for each combination of bkg and eff.
   //
-  double de,eff;
+  ////  double de,eff;
   double pd;
   //
   double effPdf, bkgPdf;
@@ -256,11 +256,11 @@ void Combine::makeCorrInt() {
     neff = pole1->getEffRangeInt()->n();
     //    m_weightInt.resize(neff);
   } else {
-    edetc = PDF::gGauss.getDetC(pole1->getEffSigma(),pole2->getEffSigma(),ecorr);
+    edetc = PDF::gGauss2D.getDetC(pole1->getEffSigma(),pole2->getEffSigma(),ecorr);
     esdetc = sqrt(edetc);
-    eveffc = PDF::gGauss.getVeffCorr(edetc,pole1->getEffSigma(),pole2->getEffSigma(),ecorr);
-    eseff1 = PDF::gGauss.getVeff(edetc,pole1->getEffSigma());
-    eseff2 = PDF::gGauss.getVeff(edetc,pole2->getEffSigma());
+    eveffc = PDF::gGauss2D.getVeffCorr(edetc,pole1->getEffSigma(),pole2->getEffSigma(),ecorr);
+    eseff1 = PDF::gGauss2D.getVeff(edetc,pole1->getEffSigma());
+    eseff2 = PDF::gGauss2D.getVeff(edetc,pole2->getEffSigma());
     std::cout << edetc << " : " << edetc << " : " << eveffc << " : " << eseff1 << " : " << eseff2 << std::endl;
   }
   //
@@ -285,11 +285,11 @@ void Combine::makeCorrInt() {
   if (bkgIsCorr) {
     nbkg = pole1->getBkgRangeInt()->n();
   } else {
-    bdetc = PDF::gGauss.getDetC(pole1->getBkgSigma(),pole2->getBkgSigma(),bcorr);
+    bdetc = PDF::gGauss2D.getDetC(pole1->getBkgSigma(),pole2->getBkgSigma(),bcorr);
     bsdetc = sqrt(bdetc);
-    bveffc = PDF::gGauss.getVeffCorr(bdetc,pole1->getBkgSigma(),pole2->getBkgSigma(),bcorr);
-    bseff1 = PDF::gGauss.getVeff(bdetc,pole1->getBkgSigma());
-    bseff2 = PDF::gGauss.getVeff(bdetc,pole2->getBkgSigma());
+    bveffc = PDF::gGauss2D.getVeffCorr(bdetc,pole1->getBkgSigma(),pole2->getBkgSigma(),bcorr);
+    bseff1 = PDF::gGauss2D.getVeff(bdetc,pole1->getBkgSigma());
+    bseff2 = PDF::gGauss2D.getVeff(bdetc,pole2->getBkgSigma());
     std::cout << bdetc << " : " << bdetc << " : " << bveffc << " : " << bseff1 << " : " << bseff2 << std::endl;
   }
     //
@@ -308,7 +308,7 @@ void Combine::makeCorrInt() {
     if (effIsCorr) {
       effPdf = PDF::gGauss.getVal(eff1,effMeas1,effSigma1)*de1;
     } else {
-      effPdf = PDF::gGauss.getVal2D(eff1,effMeas1,eff2,effMeas2,esdetc,eseff1,eseff2,eveffc)*de1*de2;
+      effPdf = PDF::gGauss2D.getVal2D(eff1,effMeas1,eff2,effMeas2,esdetc,eseff1,eseff2,eveffc)*de1*de2;
       effPdf = effPdf/((eff1+de1)*(eff2+de2)); //PRIOR
     }
 
@@ -339,7 +339,7 @@ void Combine::makeCorrInt() {
       if (bkgIsCorr) {
 	bkgPdf = PDF::gGauss.getVal(bkg1,bkgMeas1,bkgSigma1)*db1; // fully correlated
       } else {
-	bkgPdf  = PDF::gGauss.getVal2D(bkg1,bkgMeas1,bkg2,bkgMeas2,bsdetc,bseff1,bseff2,bveffc)*db1*db2;
+	bkgPdf  = PDF::gGauss2D.getVal2D(bkg1,bkgMeas1,bkg2,bkgMeas2,bsdetc,bseff1,bseff2,bveffc)*db1*db2;
 	bkgPdf = bkgPdf/((bkg1+db1)*(bkg2+db2)); //PRIOR
       }
       //      std::cout << "b1 = " << bkg1 << "  b2 = " << bkg2 << std::endl;
@@ -416,7 +416,7 @@ void Combine::makeCorrIntCDF() {
   // Now, calculate the weight for each combination of bkg and eff.
   //
   int neffC;
-  double de,eff;
+  ////  double de,eff;
   double pd;
   //
   double effPdf, bkgPdf, effPdfC;
@@ -424,14 +424,14 @@ void Combine::makeCorrIntCDF() {
   double db1,db2;
   double bkg1,bkg2;
   double eff1,eff2, effC;
-  double bkgMeas1,bkgMeas2,bkgMeasC;
+  double bkgMeas1,bkgMeas2; //,bkgMeasC;
   double effMeas1,effMeas2,effMeasC;
   double effSigma1,effSigma2,effSigmaC;
   double bkgSigma1,bkgSigma2;
   const Range<double> *erng1,*erng2,*erngC;
   const Range<double> *brng1,*brng2;
-  double ecorr,bcorr;
-  bool effIsCorr, bkgIsCorr;
+  //  double ecorr,bcorr;
+  //  bool effIsCorr, bkgIsCorr;
   double norm;
   //
   pole1 = m_poleList[0];
@@ -1172,7 +1172,7 @@ void Combine::findBestMu() {
 double Combine::calcLimit(double s) {
   double normProb=0;
   double p;
-  double pmax,pmin,pave;
+  double pmax,pmin; //,pave;
   int natmax,natmin;
   pmax=-1000;
   pmin=1.0e28;

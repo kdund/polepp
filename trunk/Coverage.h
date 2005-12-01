@@ -30,8 +30,8 @@ public:
   //
   // Sets the distributions for efficiency and background
   // CHECKPARAMS!!!
-  void setEffDist(double mean,double sigma, DISTYPE dist=DIST_GAUS) { m_effMean=mean; m_effSigma=sigma; m_effDist=dist;}
-  void setBkgDist(double mean,double sigma, DISTYPE dist=DIST_GAUS) { m_bkgMean=mean; m_bkgSigma=sigma; m_bkgDist=dist;}  //
+  void setEffDist(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) { m_effMean=mean; m_effSigma=sigma; m_effDist=dist;}
+  void setBkgDist(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) { m_bkgMean=mean; m_bkgSigma=sigma; m_bkgDist=dist;}  //
   void setEffBkgCorr(double coef);
   bool checkEffBkgDists();
   //
@@ -106,11 +106,11 @@ private:
   // Efficiency PDF
   double m_effMean;
   double m_effSigma;
-  DISTYPE m_effDist;
+  PDF::DISTYPE m_effDist;
   // Background PDF
   double m_bkgMean;
   double m_bkgSigma;
-  DISTYPE m_bkgDist;
+  PDF::DISTYPE m_bkgDist;
   // Correlation between bkg and eff (...pole)
   double m_beCorr;    // = r = correlation coeff (-1..1)
   double m_beCorrInv; // = sqrt(1-r*r);

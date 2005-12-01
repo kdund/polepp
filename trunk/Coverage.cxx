@@ -84,22 +84,22 @@ void Coverage::setEffBkgCorr(double coef) {
 
 bool Coverage::checkEffBkgDists() {
   bool change=false;
-  // If ONLY one is DIST_GAUSCORR, make bkgDist == effDist
-  if ( ((m_effDist == DIST_GAUSCORR) && (m_bkgDist != DIST_GAUSCORR)) ||
-       ((m_effDist != DIST_GAUSCORR) && (m_bkgDist == DIST_GAUSCORR)) ) {
+  // If ONLY one is PDF::DIST_GAUS2D, make bkgDist == effDist
+  if ( ((m_effDist == PDF::DIST_GAUS2D) && (m_bkgDist != PDF::DIST_GAUS2D)) ||
+       ((m_effDist != PDF::DIST_GAUS2D) && (m_bkgDist == PDF::DIST_GAUS2D)) ) {
     m_bkgDist = m_effDist;
     change = true;
   }
-  if (m_effDist != DIST_GAUSCORR) {
+  if (m_effDist != PDF::DIST_GAUS2D) {
     m_beCorr = 0;
     change = true;
   }
   //
-  if (m_effDist==DIST_NONE) {
+  if (m_effDist==PDF::DIST_NONE) {
     m_effSigma = 0.0;
     change = true;
   }
-  if (m_bkgDist==DIST_NONE) {
+  if (m_bkgDist==PDF::DIST_NONE) {
     m_bkgSigma = 0.0;
     change = true;
   }
@@ -127,10 +127,10 @@ void Coverage::generateExperiment() {
   bool notOk = true;
   //
   switch (m_effDist) {
-  case DIST_NONE:
+  case PDF::DIST_NONE:
     m_measEff = m_effMean;
     break;
-  case DIST_GAUSCORR:
+  case PDF::DIST_GAUS2D:
     notOk = true;
     while (notOk) {
       double z1 = m_rnd.gauss(0.0,1.0);
@@ -140,13 +140,13 @@ void Coverage::generateExperiment() {
       notOk = ((m_measEff<0.0)||(m_measBkg<0.0));
     }
     break;
-  case DIST_LOGN:
+  case PDF::DIST_LOGN:
     m_measEff = m_rnd.logNormal(m_effMean,m_effSigma);
     break;
-  case DIST_FLAT:
+  case PDF::DIST_FLAT:
     m_measEff = m_rnd.flat(m_effMean, m_effSigma);
     break;
-  case DIST_GAUS:
+  case PDF::DIST_GAUS:
     notOk = true;
     while (notOk) {
       m_measEff    = m_rnd.gauss(m_effMean,m_effSigma); // measured efficiency
@@ -159,22 +159,22 @@ void Coverage::generateExperiment() {
   }
   //
   switch (m_bkgDist) {
-  case DIST_NONE:
+  case PDF::DIST_NONE:
     m_measBkg = m_bkgMean;
     break;
-  case DIST_LOGN:
+  case PDF::DIST_LOGN:
     m_measBkg = m_rnd.logNormal(m_bkgMean,m_bkgSigma);
     break;
-  case DIST_FLAT:
+  case PDF::DIST_FLAT:
     m_measBkg = m_rnd.flat(m_bkgMean, m_bkgSigma);
     break;
-  case DIST_GAUS:
+  case PDF::DIST_GAUS:
     notOk = true;
     while (notOk) {
       m_measBkg    = m_rnd.gauss(m_bkgMean,m_bkgSigma); // measured background
       notOk = (m_measBkg<0.0);
     }
-  case DIST_GAUSCORR: // already taken care of above
+  case PDF::DIST_GAUS2D: // already taken care of above
     break;
   default: // ERROR STATE
     m_measBkg = m_bkgMean;
@@ -299,12 +299,12 @@ void Coverage::pushMeas(bool ok) {
   m_effStat.push_back(m_measEff);
   m_bkgStat.push_back(m_measBkg);
   m_nobsStat.push_back(m_measNobs);
-  if ((m_pole->getEffSigma()>0) && (m_pole->getEffDist() != DIST_NONE)) {
+  if ((m_pole->getEffSigma()>0) && (m_pole->getEffDist() != PDF::DIST_NONE)) {
     m_effFrac.push_back(m_measEff/m_pole->getEffSigma());
   } else {
     m_effFrac.push_back(-1.0);
   }
-  if ((m_pole->getBkgSigma()>0) && (m_pole->getBkgDist() != DIST_NONE)) {
+  if ((m_pole->getBkgSigma()>0) && (m_pole->getBkgDist() != PDF::DIST_NONE)) {
     m_bkgFrac.push_back(m_measBkg/m_pole->getBkgSigma());
   } else {
     m_bkgFrac.push_back(-1.0);
@@ -363,10 +363,10 @@ void Coverage::calcStatistics() {
     calcStats(m_hypMax,m_aveHypMax, m_varHypMax);
     //
     m_corrEffBkg = calcStatsCorr(m_effStat,m_bkgStat);
-    if ((m_effDist!=DIST_NONE) && (m_varEff>0)) {
+    if ((m_effDist!=PDF::DIST_NONE) && (m_varEff>0)) {
       m_corrEffBkg = m_corrEffBkg / sqrt(m_varEff);
     }
-    if ((m_bkgDist!=DIST_NONE) && (m_varBkg>0)) {
+    if ((m_bkgDist!=PDF::DIST_NONE) && (m_varBkg>0)) {
       m_corrEffBkg = m_corrEffBkg / sqrt(m_varBkg);
     }
     //
@@ -472,7 +472,7 @@ void Coverage::dumpExperiments(std::string name, bool limits) {
   *os << "# bkg           = " << m_bkgTrue.min() << std::endl;
   *os << "# bkg sigma     = " << m_bkgSigma << std::endl;
   *os << "# bkg dist      = " << distTypeStr(m_bkgDist) << std::endl;
-  *os << "# lhRatio       = " << (m_pole->usesNLR() ? "nlr":"pole") << std::endl;
+  *os << "# lhRatio       = " << (m_pole->usesMBT() ? "MBT":"FHC2") << std::endl;
   *os << "# corr.         = " << m_beCorr << std::endl;
   *os << "# coverage      = " << m_coverage << std::endl;
   *os << "# coverage unc. = " << m_errCoverage << std::endl;
@@ -599,15 +599,15 @@ void Coverage::printSetup() {
   std::cout << " Efficiency max     : " << m_effTrue.max() << std::endl;
   std::cout << " Efficiency step    : " << m_effTrue.step() << std::endl;
   std::cout << " Efficiency sigma   : " << m_effSigma << std::endl;
-  std::cout << " Efficiency dist    : " << distTypeStr(m_effDist) << std::endl;
+  std::cout << " Efficiency dist    : " << PDF::distTypeStr(m_effDist) << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Background min     : " << m_bkgTrue.min() << std::endl;
   std::cout << " Background max     : " << m_bkgTrue.max() << std::endl;
   std::cout << " Background step    : " << m_bkgTrue.step() << std::endl;
   std::cout << " Background sigma   : " << m_bkgSigma << std::endl;
-  std::cout << " Background dist    : " << distTypeStr(m_bkgDist) << std::endl;
+  std::cout << " Background dist    : " << PDF::distTypeStr(m_bkgDist) << std::endl;
   std::cout << "----------------------------------------------\n";
-  std::cout << " Correlated bkg,eff : " << yesNo((m_bkgDist==DIST_GAUSCORR)) << std::endl;
+  std::cout << " Correlated bkg,eff : " << yesNo((m_bkgDist==PDF::DIST_GAUS2D)) << std::endl;
   std::cout << " Correlation coef.  : " << m_beCorr << std::endl;
   std::cout << "==============================================\n";
   //
