@@ -4,8 +4,11 @@
 namespace PDF {
 
   Poisson  gPoisson;
-  PoisTab  gPoisTab;
+  PoisTab  gPoisTab(&gPoisson);
   Gauss    gGauss;
-  GaussTab gGaussTab;
+  GaussTab gGaussTab(&gGauss);
 
+  Gauss2D   gGauss2D;
+  LogNormal gLogNormal;
 };
+

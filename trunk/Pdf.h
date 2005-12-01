@@ -11,13 +11,13 @@
  */
 namespace PDF {
   enum DISTYPE {
-    DIST_UNDEF,    /*!< No distrubution defined*/
-    DIST_NONE,     /*!< No distrubution */
+    DIST_NONE=0,   /*!< No distrubution */
     DIST_POIS,     /*!< Poisson */
     DIST_GAUS,     /*!< Gaussian */
     DIST_FLAT,     /*!< Flat */
     DIST_LOGN,     /*!< Log-Normal */
-    DIST_GAUS2D    /*!< Correlated gauss (eff,bkg) */
+    DIST_GAUS2D,   /*!< Correlated gauss (eff,bkg) */
+    DIST_UNDEF=999 /*!< No distrubution defined*/
   };
   /*!
     Returns a string corresponding to the given DISTYPE.
@@ -114,10 +114,9 @@ namespace PDF {
     inline const double getVal(double x, double mean, double sigma) const;
   };
 
-  class Gauss2D : public Gauss {
+  class Gauss2D : protected Gauss {
   public:
     Gauss2D():Gauss() { m_name="Gauss2D"; m_dist=DIST_GAUS2D; }
-		  Gauss2D(double mean, double sigma):Gauss(mean,sigma) { m_name="Gauss2D"; m_dist=DIST_GAUS2D; }
     Gauss2D(const Gauss2D & other):Gauss(other) {}
     virtual ~Gauss2D() {};
     //
@@ -128,23 +127,30 @@ namespace PDF {
     inline const double getVeffCorr(double detC, double s1, double s2, double corr) const { return ((corr*s1*s2)/detC);}
   };
 
-  class LogNormal : public Gauss {
+  class LogNormal : protected Gauss {
   public:
     LogNormal():Gauss(1.0,1.0)                             { m_name="LogNormal"; m_dist=DIST_LOGN; }
     LogNormal(double mean, double sigma):Gauss(mean,sigma) { m_name="LogNormal"; m_dist=DIST_LOGN; }
     LogNormal(const LogNormal & other):Gauss(other) {}
     virtual ~LogNormal() {};
     //
-    void setMean( double m)  { m_mean = m;  m_logMean = getLogMean(m,m_sigma); m_logSigma = getLogSigma(m,m_sigma); }
-    void setSigma( double m) { m_sigma = m; m_logMean = getLogMean(m_mean,m);  m_logSigma = getLogSigma(m_mean,m); }
+    void setMean( double m)  { m_mean = m;  m_logMean = calcLogMean(m,m_sigma); m_logSigma = calcLogSigma(m,m_sigma); }
+    void setSigma( double m) { m_sigma = m; m_logMean = calcLogMean(m_mean,m);  m_logSigma = calcLogSigma(m_mean,m); }
     //
-    inline const double getLogMean(double mean,double sigma) const  { return log(mean*mean/sqrt(sigma*sigma + mean*mean)); }
-    inline const double getLogSigma(double mean,double sigma) const { return sqrt(log((sigma*sigma/(mean*mean))+1)); }
+    inline const double calcLogMean(double mean,double sigma)  const { return log(mean*mean/sqrt(sigma*sigma + mean*mean)); }
+    inline const double calcLogSigma(double mean,double sigma) const { return sqrt(log((sigma*sigma/(mean*mean))+1)); }
+    inline const double getLogMean()  const { return m_logMean; }
+    inline const double getLogSigma() const { return m_logSigma; }
+
 
     inline const double F(double x) const {return (x>0.0 ? Gauss::getVal(log(x),m_logMean,m_logSigma)/x:0.0);}
     inline const double getVal(double x, double m, double s) const {
       if (x<=0) return 0.0;
-      return Gauss::getVal(log(x),getLogMean(m,s), getLogSigma(m,s))/x;
+      return Gauss::getVal(log(x),calcLogMean(m,s), calcLogSigma(m,s))/x;
+    }
+    inline const double getValLogN(double x, double m, double s) const {
+      if (x<=0) return 0.0;
+      return Gauss::getVal(log(x),m, s)/x;
     }
   protected:
     double m_logMean;
@@ -258,10 +264,10 @@ namespace PDF {
     }
 
     virtual const double getVal(T x, double m, double s) const {
-      if ((m_table!=0) ||
-	  (x>=m_xmin) || (x<=m_xmax) ||
-	  (m>=m_mmin) || (m<=m_mmax) ||
-	  (s>=m_smin) || (s<=m_smax) ) {
+      if ((m_table!=0) &&
+	  (x>=m_xmin) && (x<=m_xmax) &&
+	  (m>=m_mmin) && (m<=m_mmax) &&
+	  (s>=m_smin) && (s<=m_smax) ) {
 	int sind, mind, xind, ind;
 	sind = int(m_ds>0 ? (s-m_smin)/m_ds : 0);
 	mind = int(m_dm>0 ? (m-m_mmin)/m_dm : 0);
@@ -271,6 +277,10 @@ namespace PDF {
 	  return m_table[ind];
       }
       //
+      if (m_pdf==0) {
+	std::cerr << "ERROR in PDF::Tabulated - no pdf defined!" << std::endl;
+	return 0;
+      }
       return m_pdf->getVal(x,m,s);
     }
 
@@ -336,9 +346,9 @@ namespace PDF {
     void setSigma(double sigma) { m_pdf->setSigma(sigma); m_sigma = sigma; m_mean  = m_pdf->getMean(); }
 
     virtual const double getVal(int x, double m) const {
-      if ((m_table!=0) ||
-	  (x>=m_xmin) || (x<=m_xmax) ||
-	  (m>=m_mmin) || (m<=m_mmax)) {
+      if ((m_table!=0) &&
+	  (x>=m_xmin) && (x<=m_xmax) &&
+	  (m>=m_mmin) && (m<=m_mmax)) {
 	int  mind, xind, ind;
 	mind = int(m_dm>0 ? (m-m_mmin)/m_dm : 0);
 	xind = int(m_dx>0 ? (x-m_xmin)/m_dx : 0);
@@ -348,7 +358,10 @@ namespace PDF {
 	  return m_table[ind];
       }
       //
-      if (m_pdf==0) return 0;
+      if (m_pdf==0) {
+	std::cerr << "ERROR in PDF::PoisTab - no pdf defined!" << std::endl;
+	return 0;
+      }
       return m_pdf->getVal(x,m,0); // Poisson ignores sigma
     }
     //
@@ -507,6 +520,9 @@ namespace PDF {
   extern PoisTab  gPoisTab;
   extern Gauss    gGauss;
   extern GaussTab gGaussTab;
+
+  extern Gauss2D   gGauss2D;
+  extern LogNormal gLogNormal;
 #endif
 };
 
