@@ -1,12 +1,44 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <signal.h>
 #include <tclap/CmdLine.h> // Command line parser
 #include "Pole.h"
 #include "Power.h"
 
 Power gPower;
+
 using namespace TCLAP;
+
+void time_stamp(std::string & stamp) {
+  time_t epoch;
+  time(&epoch);
+  struct tm *time;
+  char tst[32];
+  time = localtime(&epoch); // time_t == long int
+  strftime(tst,32,"%d/%m/%Y %H:%M:%S",time);
+  stamp = tst;
+}
+
+void my_sighandler(int a) {
+  std::string timestamp;
+  time_stamp(timestamp);
+  //
+  if (a==SIGUSR1) {
+    gPower.calcPower();
+    std::string header("STATUS ( ");
+    header += timestamp;
+    header += " ) : ";
+    gPower.outputResult(header.c_str());
+  } else {
+    std::cout << "WARNING (" << timestamp << " ) Job aborting (signal = " << a
+	      << " ). Will output data from unfinnished loop.\n" << std::endl;
+    gPower.calcPower();
+    gPower.outputResult(0); // always output
+    exit(-1);
+  }
+}
+
 void processArgs(Pole *pole, int argc, char *argv[]) {
   //
   try {
@@ -16,6 +48,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     // Arg3 = version number given when --version is used
     CmdLine cmd("Try again, friend.", ' ', "0.99");
 
+    ValueArg<double> minProb( "","minp",       "minimum probability",false,-1.0,"float");
     ValueArg<int>    nLoops(    "","nloops",  "number of loops",    false,100,"int");
 
     ValueArg<int>    nObs(      "","nobs",     "number observed events",false,1,"int");
@@ -25,13 +58,13 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> s1max(     "","s1max",   "s1_max",false,1.0,"float");
     ValueArg<double> s1step(     "","s1step",   "s1_step",false,0.1,"float");
 
-    SwitchArg        doNLR("N","nlr", "Use NLR",false);
+
     SwitchArg        useTabulated("T","tab","Use tabulated poisson",false);
     //
     ValueArg<double> effSigma(  "", "esigma","sigma of efficiency",false,0.2,"float");
     ValueArg<double> effMeas(   "", "emeas",  "measured efficiency",false,1.0,"float");
     ValueArg<int>    effDist(   "","effdist",  "Efficiency distribution",false,1,"int");
-
+    ValueArg<int>    method(    "m","method",     "method (1 - FHC2 (def), 2 - MBT)",false,1,"int");
     //
     ValueArg<double> bkgSigma(  "", "bsigma","sigma of background",false,0.0,"float");
     ValueArg<double> bkgMeas(   "", "bmeas",   "measured background",false,0.0,"float");
@@ -56,7 +89,8 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     //
     cmd.add(doVerbPole);
     cmd.add(doVerbPow);
-    cmd.add(doNLR);
+    cmd.add(minProb);
+    cmd.add(method);
     cmd.add(useTabulated);
     //
     cmd.add(hypTestMin);
@@ -95,7 +129,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     //
     pole->setPoisson(&PDF::gPoisson);
     pole->setGauss(&PDF::gGauss);
-    pole->setNLR(doNLR.getValue());
+    pole->setMethod(method.getValue());
     pole->setCL(confLevel.getValue());
     pole->setNObserved(nObs.getValue());
     //
@@ -121,6 +155,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     }
     pole->initIntArrays();
     pole->initBeltArrays();
+    pole->setMinMuProb(minProb.getValue());
     //
     pole->setVerbose(doVerbPole.getValue());
     //
@@ -140,6 +175,21 @@ int main(int argc, char *argv[]) {
 
   Pole pole;
   //
+  // Trap LSF specific signals
+  //                                value  bkill  memlimit  runlimit  cpulimit  filelimit  job_starter
+  //                               ====================================================================
+  signal(SIGINT, my_sighandler); //   2      2nd      1st       -         -         -        failure
+  // SIGKILL not trapable        //   9      3rd      3rd       -         -         -           -
+  signal(SIGUSR2,my_sighandler); //  12       -        -     reached      -         -           -
+  signal(SIGTERM,my_sighandler); //  15      1st      2nd       -         -         -           -
+  signal(SIGXCPU,my_sighandler); //  24       -        -        -      reached      -           -
+  signal(SIGXFSZ,my_sighandler); //  25       -        -        -         -      reached        -
+  //                               ====================================================================
+  // General signals
+  signal(SIGSEGV,my_sighandler); // Segmentation fault
+  signal(SIGUSR1,my_sighandler);
+  signal(SIGIO,  my_sighandler); // Directory access error
+
   processArgs(&pole, argc, argv);
   //
   //  if (pole.checkParams()) {
@@ -149,7 +199,7 @@ int main(int argc, char *argv[]) {
   gPower.doLoop();
 
 //   pole.initAnalysis();
-//   if (!pole.usesNLR()) {
+//   if (pole.usesFHC2()) {
 //     pole.findAllBestMu();
 //   }
 //   pole.findPower();

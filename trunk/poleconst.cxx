@@ -19,7 +19,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> confLevel( "","cl",       "confidence level",false,0.9,"float");
     ValueArg<double> sTrue(     "","strue",   "s_true, only used if -C is active",false,1.0,"float");
     SwitchArg        coverage(  "C","coverage", "For coverage studies",false);
-    SwitchArg        doNLR("N","nlr", "Use NLR",false);
+    ValueArg<int>    method(    "m","method",     "method (0 - FHC2 (def), 1 - MBT)",false,0,"int");
     SwitchArg        useTabulated("T","tab","Use tabulated poisson",false);
     //
     ValueArg<double> effSigma(  "", "esigma","sigma of efficiency",false,0.2,"float");
@@ -34,7 +34,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> beCorr(    "","corr",    "corr(bkg,eff)",false,0.0,"float");
    //
     ValueArg<double> dMus(      "","dmus",    "step size in findBestMu",false,0.002,"float");
-    ValueArg<int>    belt(   "","belt", "maximum n for findBestMu" ,false,50,"int");
+    ValueArg<int>    belt(      "","nbelt", "maximum n for findBestMu" ,false,50,"int");
     //
     ValueArg<double> hypTestMin( "","hmin",   "hypothesis test min" ,false,0.0,"float");
     ValueArg<double> hypTestMax( "","hmax",   "hypothesis test max" ,false,35.0,"float");
@@ -49,7 +49,7 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     ValueArg<int>    doVerbose(   "V","verbose", "verbose pole",    false,0,"int");
     //
     cmd.add(doVerbose);
-    cmd.add(doNLR);
+    cmd.add(method);
     cmd.add(useTabulated);
     //
     cmd.add(hypTestMin);
@@ -82,7 +82,9 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     //
     cmd.parse(argc,argv);
     //
-    pole->setNLR(doNLR.getValue());
+    pole->setPoisson(&PDF::gPoisson);
+    pole->setGauss(&PDF::gGauss);
+    pole->setMethod(method.getValue());
     pole->setCL(confLevel.getValue());
     pole->setNObserved(nObs.getValue());
     //
@@ -102,8 +104,8 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     pole->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
     //
     if (useTabulated.getValue()) {
-      pole->initPoisson(50000,60,50);
-      //      pole->initGauss(50000,10.0);
+      PDF::gPoisson.init(100000,200,100);
+      PDF::gGauss.init(0,10.0);
     }
     pole->initIntArrays();
     pole->initBeltArrays();
@@ -128,7 +130,7 @@ int main(int argc, char *argv[]) {
     pole.initIntArrays();
     pole.initBeltArrays();
     pole.initIntegral();
-    if (!pole.usesNLR()) {
+    if (pole.usesFHC2()) {
       pole.findAllBestMu(); // loops
     }
     pole.findConstruct();

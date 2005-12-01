@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
   //
   poleCorr.setMeasurement(CDFcorr); // CDF TEMP: correlated bit
   //
-  for (unsigned int i=0; i<2; i++) {
+  for (unsigned int i=0; i<1; i++) {
     //    pmSig.generateMeasurement(m[i]);
     poleArr[i].setMeasurement(m[i]);
     poleList.push_back(&poleArr[i]);
@@ -107,20 +107,21 @@ int main(int argc, char *argv[]) {
     pole->setPoisson(&PDF::gPoisson);
     pole->setGauss(&PDF::gGauss);
     pole->setCL(0.95);
-    pole->setDmus(0.05);
-    pole->setBelt(10);
+    pole->setMinMuProb();
+    pole->setDmus(0.01);
+    pole->setBelt(20);
     pole->setEffInt(5.0,20); // integrate +-5 sigma around eff and bkg
     pole->setBkgInt(5.0,20); // integrate +-5 sigma around eff and bkg
-    pole->setTestHyp(0.0,3.0,0.01); // should be called AFTER the integration construct has been initiated (needs the norm)
+    pole->setTestHyp(0.0,35.0,0.01); // should be called AFTER the integration construct has been initiated (needs the norm)
     pole->initAnalysis();
 
-    pole->setNLR(false);
+    pole->setMethod(RL_FHC2);
     pole->printSetup();
     if (i<poleList.size()) combine.add(pole); // TEMP
   }
   //
-  if (true) {
     combine.setSmax(5.0);
+  if (false) {
     combine.setPoleCorr(&poleCorr);
     combine.initCorrelations();
     //    combine.corrEff(poleList[0],poleList[1],0.0);
