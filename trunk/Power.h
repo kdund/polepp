@@ -38,7 +38,7 @@ class Power {
 
   void doLoop();
 
-  void outputResult();
+  void outputResult(const char *hd=0);
   //
  private:
   Pole   *m_pole;

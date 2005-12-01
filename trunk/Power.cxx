@@ -37,7 +37,7 @@ bool Power::calculate(double strue) {
 //   }
   //  m_pole->setTestHyp();
   //  m_pole->initAnalysis();
-  if (!m_pole->usesNLR()) {
+  if (m_pole->usesFHC2()) {
     if (m_verbose>1) std::cout << "Finding all best mu" << std::endl;
     m_pole->findAllBestMu();
   }
@@ -45,8 +45,8 @@ bool Power::calculate(double strue) {
   //  std::cout << "Hyp test range min/max: " << hyprng->min() << " : " << hyprng->max() << std::endl;
   //  std::cout << "H0 = " << m_sHyp << " , H1 = " << strue << std::endl;
   if (m_verbose>1) std::cout << "Calculating belt" << std::endl;
-  m_probHyp  = m_pole->calcBelt(m_sHyp,m_n1hyp, m_n2hyp,false,-1.0);
-  m_probTrue = m_pole->calcBelt(strue,m_n1true,m_n2true,false,-1.0); // muProb is now for H1 (true)
+  m_probHyp  = m_pole->calcBelt(m_sHyp,m_n1hyp, m_n2hyp,false);//,-1.0);
+  m_probTrue = m_pole->calcBelt(strue,m_n1true,m_n2true,false);//,-1.0); // muProb is now for H1 (true)
 //   std::cout << std::endl;
 //   std::cout << "Nobs = " << m_pole->getNObserved() << std::endl;
 //   std::cout << "H0: s = " << m_sHyp  << " , [n1,n2] = " << m_n1hyp  << " , " << m_n2hyp  << std::endl;
@@ -74,10 +74,15 @@ void Power::updatePower() {
   m_sumP += ph1;
 }
 
-void Power::outputResult() {
-  std::cout << "POWER:\t" << m_sHyp << "\t" << m_pole->getSTrue() << "\t" << m_power << "\t" << m_powerUnc << "\t" << m_sumP
-    //	    << "\t" << m_sumPOutside << "\t" << m_sumP
-    //	    << "\t" << m_nOutside << "\t" << m_nTotal
+void Power::outputResult(const char *hd) {
+  std::string header;
+  if (hd!=0) { // status (intermediate result)
+    header = hd;
+  } else {       // final result
+    header = "POWER:";
+  }
+  std::cout << header << "\t" << m_sHyp << "\t" << m_pole->getSTrue() << "\t" << m_power << "\t" << m_powerUnc << "\t" << m_sumP
+    	    << "\t" << m_nTotal << "\t" << m_nLoops
 	    << std::endl;
 }
 
