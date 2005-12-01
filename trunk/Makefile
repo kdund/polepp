@@ -1,16 +1,17 @@
 ROOTCFLAGS = $(shell root-config --cflags)
 ROOTLIBS   = $(shell root-config --libs)
-LDOBJS     =  Pdf.o Random.o Coverage.o Pole.o Combination.o Combine.o Observable.o Power.o
+LDOBJS     =  Pdf.o Random.o Coverage.o Pole.o Combination.o Combine.o
+#### Power.o
 LDSMOBJS    =  Pdf.o Random.o
 LDFLAGS    = -g -fPIC -shared
 ###CFLAGS     = -O
 # Use -g to include debug info
 # Use -pg for profiling info
-CFLAGS     = -g -O
+CFLAGS     = -g
 SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx poleconst.cxx polepow.cxx
 INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h Measurement.h Power.h
 SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Pdf.cxx Combination.cxx Measurement.cxx Power.cxx
-LDFILE	     = libPole++.so.1
+LDFILE	     = libPole++.so
 LDSMFILE     = libPoleSM++.so
 LIBS         = -L./ -lPole++
 LIBSSM       = -L./ -lPoleSM++
@@ -23,6 +24,11 @@ $(LDFILE):	$(LDOBJS)
 
 $(LDSMFILE):	$(LDSMOBJS)
 		g++ $(LDFLAGS) $(LDSMOBJS) -o $(LDSMFILE)
+
+argsPole.o:	argsPole.cxx
+		g++ $(CFLAGS) -Wall -c $<
+argsCoverage.o:	argsCoverage.cxx
+		g++ $(CFLAGS) -Wall -c $<
 
 polepow:	polepow.o
 		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
@@ -44,18 +50,18 @@ poleconst:	poleconst.o
 poleconst.o:	poleconst.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
-polelim:	polelim.o
-		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
+polelim:	polelim.o argsPole.o
+		g++ $(CFLAGS) -Wall $^ $(LIBS)  -o $@
 polelim.o:	polelim.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
-polebelt:	polebelt.o
-		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
+polebelt:	polebelt.o argsPole.o
+		g++ $(CFLAGS) -Wall $^ $(LIBS)  -o $@
 polebelt.o:	polebelt.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
-polecov:	polecov.o
-		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
+polecov:	polecov.o argsCoverage.o
+		g++ $(CFLAGS) -Wall $^ $(LIBS)  -o $@
 polecov.o:	polecov.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
@@ -69,13 +75,13 @@ plotexp:	plotexp.o
 plotexp.o:	plotexp.cxx
 		g++ $(CFLAGS) $(ROOTCFLAGS) -Wall -c $<
 
-obstest:	obstest.o Observable.o
+obstest:	obstest.o
 		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
 obstest.o:	obstest.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
 pdftst:		pdftst.o PdfNew.o
-		g++ $(CFLAGS) -Wall $< PdfNew.o $(LIBS)  -o $@
+		g++ $(CFLAGS) -Wall $^ $(LIBS)  -o $@
 pdftst.o:	pdftst.cxx PdfNew.h
 		g++ $(CFLAGS) -Wall -c $<
 
@@ -101,10 +107,6 @@ Random.o:	Random.cxx Random.h
 Pdf.o:		Pdf.cxx Pdf.h
 		g++ $(CFLAGS) -Wall -c $<
 Combination.o:	Combination.cxx Combination.h
-		g++ $(CFLAGS) -Wall -c $<
-Observable.o:	Observable.cxx Observable.h Random.h
-		g++ $(CFLAGS) -Wall -c $<
-Measurement.o:	Measurement.cxx Measurement.h
 		g++ $(CFLAGS) -Wall -c $<
 Power.o:	Power.cxx Power.h
 		g++ $(CFLAGS) -Wall -c $<
