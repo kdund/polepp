@@ -37,6 +37,7 @@ class Measurement {
 
   void setTrueSignal(double s)               { m_trueSignal = s; }
   void setObservable(const OBS::BaseType<T> * obs) { if (m_observable) delete m_observable; m_observable = (obs ? obs->clone():0);}
+  void setObsVal(T val)                      { if (m_observable) m_observable->setObservedValue(val); }
   void setName(const char *name)             { m_name = name; }
   void setDescription(const char *descr)     { m_description = descr; }
   //
@@ -117,9 +118,12 @@ class Measurement {
       other.copyNuisance(m_nuisancePars);// idem
     }
   }
-  OBS::Base *makeNuisance(OBS::Base *np, PDF::DISTYPE dist) {
+
+  OBS::Base *makeNuisance(PDF::DISTYPE dist) {
+    OBS::Base *np = OBS::makeObservable(dist);
     if (np==0) {
-      np = OBS::makeObservable(dist);
+      std::cerr << "ERROR: Failed creating a nuisance parameter!" << std::endl;
+    } else {
       addNuisance(np);
     }
     return np;
@@ -147,6 +151,16 @@ class MeasPois : public Measurement<int> {
   //
   void copy(const MeasPois & other) { Measurement<int>::copy(other);}
   void setObservable(const OBS::ObservablePois * obs) { if (m_observable) delete m_observable; m_observable = (obs ? obs->clone():0);}
+
+  void setNObserved(int n) {
+    if (m_observable==0) {
+      m_observable = static_cast< OBS::BaseType<int> *>(OBS::makeObservable(PDF::DIST_POIS));
+      m_observable->setPdfMean(n);
+    }
+    m_observable->setObservedValue(n);
+  }
+
+  const int    getNObserved() const { return getObsVal(); }
 
   const double getM(double s) const { return 0;}
   const double getSignal()    const { return 0;}
@@ -179,20 +193,45 @@ class MeasPoisEB : public MeasPois {
       m_eff->setObservedValue(eff);
     }
   }
+
+  void setEffObs() {
+    if (m_eff) {
+      m_eff->setObservedValue(m_eff->getPdfMean());
+    }
+  }
+
   void setBkgObs(double bkg) {
     if (m_bkg) {
       m_bkg->setObservedValue(bkg);
     }
   }
 
+  void setBkgObs() {
+    if (m_bkg) {
+      m_bkg->setObservedValue(m_bkg->getPdfMean());
+    }
+  }
+
   void setEffPdf(double eff, double sigma, PDF::DISTYPE dist) {
-    if (m_eff==0) m_eff = static_cast< OBS::BaseType<double> *>(makeNuisance(m_eff,dist));
+    if (m_eff!=0) {
+      if (m_eff->getPdfDist()!=dist) {
+	delete m_eff;
+	m_eff=0;
+      }
+    }
+    if (m_eff==0) m_eff = static_cast< OBS::BaseType<double> *>(makeNuisance(dist));
     m_eff->setPdfMean(eff);
     m_eff->setPdfSigma(sigma);
   }
 
   void setBkgPdf(double bkg, double sigma, PDF::DISTYPE dist) {
-    if (m_bkg==0) m_bkg = static_cast< OBS::BaseType<double> *>(makeNuisance(m_bkg,dist));
+    if (m_bkg!=0) {
+      if (m_bkg->getPdfDist()!=dist) {
+	delete m_bkg;
+	m_bkg=0;
+      }
+    }
+    if (m_bkg==0) m_bkg = static_cast< OBS::BaseType<double> *>(makeNuisance(dist));
     m_bkg->setPdfMean(bkg);
     m_bkg->setPdfSigma(sigma);
   }
@@ -202,6 +241,10 @@ class MeasPoisEB : public MeasPois {
 
   void setBkgPdfMean(double m)  { if (m_bkg) m_bkg->setPdfMean(m); }
   void setBkgPdfSigma(double m) { if (m_bkg) m_bkg->setPdfSigma(m); }
+
+  void setBEcorr(double c) {} // TODO: Need to implement
+  //
+  const double getBEcorr() const { return 0.0; } // TODO
 
   const double getEffObs() const { return (m_eff ? m_eff->getObservedValue():0); }
   const double getBkgObs() const { return (m_bkg ? m_bkg->getObservedValue():0); }
