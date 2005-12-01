@@ -121,7 +121,7 @@
  *  Finding \f$s_{best}\f$
  *  - setDmus() : Sets the precision in findBestMu().\n
  *    Default = 0.01 and it should normally be fine.
- *  - setNLR() : If true, use an alternate method (Gary Hill)
+ *  - setMethod() : sets the Likelihood ratio method (MBT or FHC2)
  *
  *  Hypothesis testing
  *  - setTestHyp() : test range for s+b\n
@@ -159,26 +159,46 @@
  */
 //  e^{\frac{-(b-b')^2}{2\sigma_b^2}}\;\;
 //  e^{\frac{- (1 -\epsilon')^2}{2\sigma_{\epsilon}^2}}
+
+enum RLMETHOD {
+  RL_NONE=0,
+  RL_FHC2,
+  RL_MBT
+};
+
 class Pole {
 public:
   Pole();
   ~Pole();
   // Main parameters
-  void setCL(double cl)    { m_cl = cl; }
+  void setCL(double cl)    { m_cl = cl; if ((cl>1.0)||(cl<0.0)) m_cl=0.9;}
+
+  void setMethod( RLMETHOD m ) { m_method = m; }
+  void setMethod( int m ) { m_method = RLMETHOD(m); }
 
   //! Set measurement
   void setMeasurement( const MeasPoisEB & m ) { m_measurement.copy(m); }
   //
   void setNObserved(int nobs) {m_measurement.setNObserved(nobs); }
   //! distribution info on eff and bkg
-  void setEffMeas(double mean,double sigma, DISTYPE dist=DIST_GAUS) { m_measurement.setEff(mean,sigma,dist); m_validInt = false; m_validBestMu = false;}
-  void setBkgMeas(double mean,double sigma, DISTYPE dist=DIST_GAUS) { m_measurement.setBkg(mean,sigma,dist); m_validInt = false; m_validBestMu = false;}
+  void setEffMeas(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
+    m_measurement.setEffPdf(mean,sigma,dist);
+    m_measurement.setEffObs();
+    m_validInt = false;
+    m_validBestMu = false;
+  }
+  void setBkgMeas(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
+    m_measurement.setBkgPdf(mean,sigma,dist);
+    m_measurement.setBkgObs();
+    m_validInt = false;
+    m_validBestMu = false;
+  }
   void setEffBkgCorr(double corr)                                   { m_measurement.setBEcorr(corr); }
   ////////////////////////////////
   //
   bool checkEffBkgDists();
-  bool isFullyCorrelated() { return m_measurement.isFullyCorrelated(); } // { return (((fabs(fabs(m_beCorr)-1.0)) < 1e-16)); }
-  bool isNotCorrelated()   { return m_measurement.isNotCorrelated(); }   // { return (fabs(m_beCorr) < 1e-16); }
+  bool isFullyCorrelated() { return false; } //m_measurement.isFullyCorrelated(); } // { return (((fabs(fabs(m_beCorr)-1.0)) < 1e-16)); }
+  bool isNotCorrelated()   { return true;  } // m_measurement.isNotCorrelated(); }   // { return (fabs(m_beCorr) < 1e-16); }
  
   // POLE construction 
   void setEffInt(double scale=-1.0, int n=0);
@@ -193,7 +213,17 @@ public:
   void setBelt(int v)    { m_nBeltMaxUsed = 0; m_nBeltMinUsed = v; m_nBelt = v; m_suggestBelt = (v<1); }
   int  suggestBelt();                // will suggest a m_nBelt based on no. observed
   void setDmus(double dmus) { m_dmus = (dmus > 0.0 ? dmus:m_stepMin); }
+  void setNmusMax(int n) { m_nmusMax = n; }
 
+  // set minimum probability considered - TODO: need to check this against precision in hypothesis testing
+  void setMinMuProb(double m=-1) {
+    if (m<0.0) {
+      double e=floor(log10(1-m_cl))-2.0;
+      m_minMuProb = pow(10.0,e);
+    } else {
+      m_minMuProb = m;
+    }
+  }
   // POLE test hypothesis range
   void setTestHyp(double step=-1.0); // set test range based on the input measurement
   void setTestHyp(double low, double high, double step); // test mu=s+b for likelihood ratio
@@ -203,16 +233,14 @@ public:
   void setTrueSignal(double s) { m_sTrue = s; } // true signal
   void setCoverage(bool flag) {m_coverage = flag;} // true if coverage run
 
-  // Ordering scheme - if true it will use an optional likelihood ratio (Gary Hill)
-  void setNLR(bool flag) { m_useNLR=flag;}
-  bool usesNLR() {return m_useNLR;}
-
   // Debug
   void setVerbose(int v=0) { m_verbose=v; }
 
   // Tabulated PDF's
-  void setPoisson(const PDF::Poisson *pdf) {m_poisson=pdf;}
-  void setGauss(const PDF::Gauss *pdf) {m_gauss=pdf;}
+  void setPoisson(  const PDF::PoisTab *pdf) {m_poisson=pdf;}
+  void setGauss(    const PDF::Gauss   *pdf) {m_gauss=pdf;}
+  void setGauss2D(  const PDF::Gauss2D *pdf) {m_gauss2d=pdf;}
+  void setLogNormal(const PDF::LogNormal   *pdf) {m_logNorm=pdf;}
   ///////////////////////////////
   //
   void initIntArrays();   // will initialise integral arrays (if needed)
@@ -225,11 +253,11 @@ public:
   void findBestMu(int n); // finds the best fit (mu=s+b) for a given n. Fills m_bestMu[n] and m_bestMuProb[n].
   void findAllBestMu();   // dito for all n (loop n=0; n<m_nMuUsed)
   void calcConstruct(double s, bool verb);
-  double calcBelt(double s, int & n1, int & n2,bool verb,double muMinProb=1e-5); // calculate (4) and find confidence belt
+  double calcBelt(double s, int & n1, int & n2,bool verb);//,double muMinProb=1e-5); // calculate (4) and find confidence belt
   double calcLimit(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
   double calcLimitOLD(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
   void   calcLh(double s); // fills the likelihood array
-  double calcLhRatio(double s, int & nb1, int & nb2, double minMuProb=1e-5); // fills the likelihood ratio array
+  double calcLhRatio(double s, int & nb1, int & nb2);//, double minMuProb=1e-6); // fills the likelihood ratio array
   bool limitsOK(); // check if calculated limit is OK using the sum of probs.
   inline const bool normOK(double p) const;
   void setNormMaxDiff(double dpmax=0.001) { m_normMaxDiff=dpmax; }
@@ -251,29 +279,33 @@ public:
   //
   // Access functions
   //
+  const bool getMethod() const { return m_method; }
+  const bool usesMBT()   const { return (m_method==RL_MBT); }
+  const bool usesFHC2()  const { return (m_method==RL_FHC2); }
+
   const int    getVerbose() const    { return m_verbose; }
   const double getStepMin() const    { return m_stepMin; }
   const double getCL() const         { return m_cl; }
   const double getSTrue() const      { return m_sTrue; }
   const bool   getCoverage() const   { return m_coverage; }
   //
-  const Measurement & getMeasurement() const { return m_measurement; }
+  const MeasPoisEB & getMeasurement() const { return m_measurement; }
   const int    getNObserved() const  { return m_measurement.getNObserved(); }
   // Efficiency
-  const double  getEffMeas()  const  { return m_measurement.getEffMeas(); }
-  const double  getEffSigma() const  { return m_measurement.getEffSigma(); }
-  const DISTYPE getEffDist()  const  { return m_measurement.getEffDist(); }
+  const double  getEffMeas()  const  { return m_measurement.getEffObs(); }
+  const double  getEffSigma() const  { return m_measurement.getEffPdfSigma(); }
+  const PDF::DISTYPE getEffDist()  const  { return m_measurement.getEffPdfDist(); }
   // Background
-  const double  getBkgMeas()  const  { return m_measurement.getBkgMeas(); }
-  const double  getBkgSigma() const  { return m_measurement.getBkgSigma(); }
-  const DISTYPE getBkgDist()  const  { return m_measurement.getBkgDist(); }
+  const double  getBkgMeas()  const  { return m_measurement.getBkgObs(); }
+  const double  getBkgSigma() const  { return m_measurement.getBkgPdfSigma(); }
+  const PDF::DISTYPE getBkgDist()  const  { return m_measurement.getBkgPdfDist(); }
   const double  getEffBkgCorr() const { return m_measurement.getBEcorr(); }
   // Indep. variable
   const double  getSVar()     const  { return BeltEstimator::getT(m_measurement.getNObserved(),
-								  m_measurement.getEffMeas(),
-								  m_measurement.getEffSigma(),
-								  m_measurement.getBkgMeas(),
-								  m_measurement.getBkgSigma(),
+								  m_measurement.getEffObs(),
+								  m_measurement.getEffPdfSigma(),
+								  m_measurement.getBkgObs(),
+								  m_measurement.getBkgPdfSigma(),
 								  m_normInt);}
   // range and steps in double integral (7), in principle infinite
   const double  getEffIntScale() const { return m_effIntScale; }
@@ -300,6 +332,7 @@ public:
   //
   const double  getLsbest(int n) const;
   const double  getDmus() const { return m_dmus; }
+  const int     getNmusMax() const { return m_nmusMax; }
   const int     getNBelt() const { return m_nBelt; }
   const int     getNBeltMinUsed() const { return m_nBeltMinUsed; }
   const int     getNBeltMaxUsed() const { return m_nBeltMaxUsed; }
@@ -308,6 +341,7 @@ public:
   const std::vector<double> & getBestMu() const { return m_bestMu; }
   const std::vector<double> & getMuProb() const { return m_muProb; }
   const std::vector<double> & getLhRatio() const { return m_lhRatio; }
+  const double getMinMuProb() const { return m_minMuProb; }
   const double getMuProb(int n) const { if ((n>m_nBeltMaxUsed)||(n<m_nBeltMinUsed)) return 0.0; return m_muProb[n];}
   //
   const double getSumProb() const    { return m_sumProb; }
@@ -318,16 +352,22 @@ public:
   const int    getNuppLim() const    { return m_nUppLim; }
 
 private:
-  void setInt(double & low, double & high, double scale, double mean, double sigma, DISTYPE dt);
+  void setInt(double & low, double & high, double scale, double mean, double sigma, PDF::DISTYPE dt);
 
-  const PDF::Poisson *m_poisson;
-  const PDF::Gauss   *m_gauss;
+  const PDF::PoisTab   *m_poisson;
+  const PDF::Gauss     *m_gauss;
+  const PDF::Gauss2D   *m_gauss2d;
+  const PDF::LogNormal *m_logNorm;
   //
   int    m_verbose;
   //
   double m_stepMin;
   // CL, confidence limit
   double m_cl;
+
+  // RL method
+  RLMETHOD m_method;
+
   // True signal - used in coverage studies
   double m_sTrue;
   bool   m_coverage;
@@ -362,6 +402,7 @@ private:
   //
   // POLE
   double  m_dmus;       // step size in search for s_best (LHR)
+  int     m_nmusMax;   // maximum N in search for s_best (will locally nodify dmus)
   int     m_nBelt;      // how many Nobs are tested to find R (likelihood ratio)
   bool    m_suggestBelt;// if true, always call suggestBelt(); set to true if setBelt(v) is called with v<1
   int     m_nBeltMinUsed; // the minimum nBelt used for the calculation
@@ -372,6 +413,7 @@ private:
   std::vector<double> m_bestMu;     // best mu=e*s+b
   std::vector<double> m_muProb;     // prob for mu
   std::vector<double> m_lhRatio;    // likelihood ratio
+  double m_minMuProb;  // minimum probability accepted
   double m_sumProb;    // sum of probs for conf.belt construction
   bool   m_foundLower; // true if lower limit is found
   bool   m_foundUpper; // true if an upper limit is found
@@ -383,17 +425,16 @@ private:
   double m_normMaxDiff; // max(norm-1.0) allowed before giving a warning
   int    m_nUppLim;  // number of points to scan the hypothesis after the first upper limit is found
   //
-  bool   m_useNLR; // Use Gary Hills likelihood ratio
 };
 
 inline const double Pole::getLsbest(int n) const {
   double rval = 0.0;
-  if (m_useNLR) {
+  if (usesMBT()) {
     double g;
-    if (n>m_measurement.getBkgMeas()) {
+    if (n>m_measurement.getBkgObs()) {
       g = static_cast<double>(n);
     } else {
-      g = m_measurement.getBkgMeas();
+      g = m_measurement.getBkgObs();
     }
     rval = m_poisson->getVal(n,g);
   } else {

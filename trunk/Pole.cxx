@@ -31,6 +31,7 @@ inline char *yesNo(bool var) {
 Pole::Pole() {
   m_verbose=0;
   m_coverage = false;
+  m_method = RL_FHC2;
   m_nUppLim = 10;
   m_normMaxDiff = 0.01;
   m_lowerLimitNorm = -1.0;
@@ -41,16 +42,25 @@ Pole::Pole() {
   //
   m_sTrue = 1;
   //
+  m_poisson = &PDF::gPoisTab;
+  m_gauss   = &PDF::gGauss;
+  m_gauss2d = &PDF::gGauss2D;
+  m_logNorm = &PDF::gLogNormal;
+  //
   // Default observation
   //
   m_measurement.setNObserved(1);
-  m_measurement.setEff(1.0,0.1,DIST_GAUS);
-  m_measurement.setBkg(0.0,0.0,DIST_NONE);
+  m_measurement.setEffPdf(1.0,0.1,PDF::DIST_GAUS);
+  m_measurement.setEffObs(); // sets the mean from PDF as the observed efficiency
+  m_measurement.setBkgPdf(0.0,0.0,PDF::DIST_NONE);
+  m_measurement.setBkgObs();
   m_measurement.setBEcorr(0.0);
   //
   m_stepMin = 0.001;
+  m_minMuProb = 1e-6;
   //
   m_dmus = 0.01;
+  m_nmusMax = 100;
   //
   m_effIntScale = 5.0;
   m_bkgIntScale = 5.0;
@@ -83,7 +93,6 @@ Pole::Pole() {
 //   m_nBeltList.push_back(38);
 //   m_nBeltList.push_back(40); //10
   //
-  m_useNLR = false;
 }
 
 Pole::~Pole() {
@@ -91,23 +100,23 @@ Pole::~Pole() {
 
 bool Pole::checkEffBkgDists() {
   bool change=false;
-  // If ONLY one is DIST_GAUSCORR, make bkgDist == effDist
-  if ( ((m_measurement.getEffDist() == DIST_GAUSCORR) && (m_measurement.getBkgDist() != DIST_GAUSCORR)) ||
-       ((m_measurement.getEffDist() != DIST_GAUSCORR) && (m_measurement.getBkgDist() == DIST_GAUSCORR)) ) {
-    m_measurement.setBkgDist(m_measurement.getEffDist());
+  // If ONLY one is PDF::DIST_GAUS2D, make bkgDist == effDist
+  if ( ((m_measurement.getEffPdfDist() == PDF::DIST_GAUS2D) && (m_measurement.getBkgPdfDist() != PDF::DIST_GAUS2D)) ||
+       ((m_measurement.getEffPdfDist() != PDF::DIST_GAUS2D) && (m_measurement.getBkgPdfDist() == PDF::DIST_GAUS2D)) ) {
+    m_measurement.setBkgPdf(m_measurement.getEffPdfMean(),m_measurement.getEffPdfSigma(),m_measurement.getEffPdfDist());
     change = true;
   }
-  if (m_measurement.getEffDist() != DIST_GAUSCORR) {
+  if (m_measurement.getEffPdfDist() != PDF::DIST_GAUS2D) {
     m_measurement.setBEcorr(0);
     change = true;
   }
   //
-  if (m_measurement.getEffDist()==DIST_NONE) {
-    m_measurement.setEffSigma(0.0);
+  if (m_measurement.getEffPdfDist()==PDF::DIST_NONE) {
+    m_measurement.setEffPdfSigma(0.0);
     change = true;
   }
-  if (m_measurement.getBkgDist()==DIST_NONE) {
-    m_measurement.setBkgSigma(0.0);
+  if (m_measurement.getBkgPdfDist()==PDF::DIST_NONE) {
+    m_measurement.setBkgPdfSigma(0.0);
     change = true;
   }
   return change;
@@ -115,37 +124,37 @@ bool Pole::checkEffBkgDists() {
 //
 // Calculates the range for integration.
 //
-void Pole::setInt(double & low, double & high, double scale, double mean, double sigma, DISTYPE dist) {
+void Pole::setInt(double & low, double & high, double scale, double mean, double sigma, PDF::DISTYPE dist) {
   //
   double dx;
   double nsigma;
   double nmean;
   //
-  if (dist==DIST_NONE) {
+  if (dist==PDF::DIST_NONE) {
     low  = mean;
     high = mean;
   } else {
     switch (dist) {
-    case DIST_GAUSCORR:
-    case DIST_GAUS:
+    case PDF::DIST_GAUS2D:
+    case PDF::DIST_GAUS:
       low  = mean - scale*sigma;
       high = mean + scale*sigma;
       break;
-    case DIST_FLAT:
+    case PDF::DIST_FLAT:
       dx=sigma*1.73205081; // == sqrt(12)*0.5; ignore scale - always use full range
       low  = mean-dx;
       high = mean+dx;
       break;
-    case DIST_LOGN:
-      nmean  = m_gauss->getLNMean(mean,sigma);
-      nsigma = m_gauss->getLNSigma(mean,sigma);
+    case PDF::DIST_LOGN:
+      nmean  = m_logNorm->calcLogMean(mean,sigma);
+      nsigma = m_logNorm->calcLogSigma(mean,sigma);
       low  = nmean - scale*nsigma;
       high = nmean + scale*nsigma;
       break;
     default: // ERROR STATE
       break;
     }
-    if (dist!=DIST_LOGN) {
+    if (dist!=PDF::DIST_LOGN) {
       if (low<0) { // lower limit below 0 - shift the range
 	high-=low;
 	low=0;
@@ -162,15 +171,15 @@ void Pole::setEffInt(double scale,int n) {
   m_validBestMu = false;
   //
   double low,high;
-  if (isFullyCorrelated() && (m_measurement.getEffDist() == DIST_GAUSCORR)) { // Fully correlated - integrate only bkg with sigma/sqrt(2)
-    low = m_measurement.getEffMeas();
-    high = m_measurement.getEffMeas();
+  if (isFullyCorrelated() && (m_measurement.getEffPdfDist() == PDF::DIST_GAUS2D)) { // Fully correlated - integrate only bkg with sigma/sqrt(2)
+    low = m_measurement.getEffObs();
+    high = m_measurement.getEffObs();
     n = 1;
   } else {
-    setInt(low,high,scale,m_measurement.getEffMeas(),m_measurement.getEffSigma(),m_measurement.getEffDist());  
+    setInt(low,high,scale,m_measurement.getEffObs(),m_measurement.getEffPdfSigma(),m_measurement.getEffPdfDist());  
   }
   //
-  m_effRangeInt.setRange(low,high,n);
+  m_effRangeInt.setRange(low,high,-1,n);
 }
 
 // void Pole::setEffInt(double scale,double step) {
@@ -178,9 +187,9 @@ void Pole::setEffInt(double scale,int n) {
 //   m_validBestMu = false;
 //   //
 //   double low,high;
-//   if (isFullyCorrelated() && (m_measurement.getEffDist() == DIST_GAUSCORR)) { // Fully correlated - integrate only bkg with sigma/sqrt(2)
-//     low = m_measurement.getEffMeas();
-//     high = m_measurement.getEffMeas();
+//   if (isFullyCorrelated() && (m_measurement.getEffPdfDist() == PDF::DIST_GAUS2D)) { // Fully correlated - integrate only bkg with sigma/sqrt(2)
+//     low = m_measurement.getEffObs();
+//     high = m_measurement.getEffObs();
 //     step = 1.0;
 //   } else {
 //     if (step<=0) step = m_effRangeInt.step(); // use previous step size
@@ -189,7 +198,7 @@ void Pole::setEffInt(double scale,int n) {
 //     } else { // set new scale
 //       m_effIntScale = scale;
 //     }
-//     setInt(low,high,step,scale,m_measurement.getEffMeas(),m_measurement.getEffSigma(),m_measurement.getEffDist());
+//     setInt(low,high,step,scale,m_measurement.getEffObs(),m_measurement.getEffPdfSigma(),m_measurement.getEffPdfDist());
 //   }
 //   //
 //   m_effRangeInt.setRange(low,high,step);
@@ -204,9 +213,9 @@ void Pole::setBkgInt(double scale,int n) {
   //
   double low,high;
   //
-  setInt(low,high,scale,m_measurement.getBkgMeas(),m_measurement.getBkgSigma(),m_measurement.getBkgDist());  
+  setInt(low,high,scale,m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma(),m_measurement.getBkgPdfDist());  
   //
-  m_bkgRangeInt.setRange(low,high,n);
+  m_bkgRangeInt.setRange(low,high,-1,n);
 }
 // void Pole::setBkgInt(double scale,double step) {
 //   m_validInt = false;
@@ -219,7 +228,7 @@ void Pole::setBkgInt(double scale,int n) {
 //   } else {
 //     m_bkgIntScale = scale;
 //   }
-//   setInt(low,high,step,scale,m_measurement.getBkgMeas(),m_measurement.getBkgSigma(),m_measurement.getBkgDist());
+//   setInt(low,high,step,scale,m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma(),m_measurement.getBkgPdfDist());
 //   //
 //   m_bkgRangeInt.setRange(low,high,step);
 // }
@@ -272,9 +281,9 @@ bool Pole::checkParams() {
   std::cout << "Checking efficiency integration - ";
   double dsLow, dsHigh;
   // remember, RangeInt for bkg and eff, LOGN, are in lnx, hence exp() is the true eff or bkg
-  dsLow  = (m_measurement.getEffMeas() - m_effRangeInt.min())/m_measurement.getEffSigma();
-  dsHigh = (m_effRangeInt.max()  - m_measurement.getEffMeas())/m_measurement.getEffSigma();
-  if ( (m_measurement.getEffDist()!=DIST_NONE) && ( ((dsLow<4.0)&&(m_effRangeInt.min()>0)) ||
+  dsLow  = (m_measurement.getEffObs() - m_effRangeInt.min())/m_measurement.getEffPdfSigma();
+  dsHigh = (m_effRangeInt.max()  - m_measurement.getEffObs())/m_measurement.getEffPdfSigma();
+  if ( (m_measurement.getEffPdfDist()!=PDF::DIST_NONE) && ( ((dsLow<4.0)&&(m_effRangeInt.min()>0)) ||
                                    (dsHigh<4.0) ) ) {
     std::cout << "Not OK" << std::endl;
     std::cout << "  Efficiency range for integration does not cover 4 sigma around the true efficiency." << std::endl;
@@ -285,9 +294,9 @@ bool Pole::checkParams() {
   }
   // check background integration
   std::cout << "Checking background integration - ";
-  dsLow  = (m_measurement.getBkgMeas() - getBkgIntMin())/m_measurement.getBkgSigma();
-  dsHigh = (getBkgIntMax()  - m_measurement.getBkgMeas())/m_measurement.getBkgSigma();
-  if ( (m_measurement.getBkgDist()!=DIST_NONE) && ( ((dsLow<4.0)&&(getBkgIntMin()>0)) ||
+  dsLow  = (m_measurement.getBkgObs() - getBkgIntMin())/m_measurement.getBkgPdfSigma();
+  dsHigh = (getBkgIntMax()  - m_measurement.getBkgObs())/m_measurement.getBkgPdfSigma();
+  if ( (m_measurement.getBkgPdfDist()!=PDF::DIST_NONE) && ( ((dsLow<4.0)&&(getBkgIntMin()>0)) ||
 			    (dsHigh<4.0) ) ) {
     std::cout << "Not OK" << std::endl;
     std::cout << "  Background range for integration does not cover 4 sigma around the true background." << std::endl;
@@ -300,14 +309,14 @@ bool Pole::checkParams() {
 }
 
 //
+// OBSOLETE - TODO: Remove
+// void Pole::initPoisson(int nlambda, int nn, double lmbmax) {
+//   //  if (m_poisson) m_poisson->init(nlambda, nn, lmbmax);
+// }
 
-void Pole::initPoisson(int nlambda, int nn, double lmbmax) {
-  //  if (m_poisson) m_poisson->init(nlambda, nn, lmbmax);
-}
-
-void Pole::initGauss(int ndata, double mumax) {
-  //  if (m_gauss) m_gauss->init(ndata, mumax);
-}
+// void Pole::initGauss(int ndata, double mumax) {
+//   //  if (m_gauss) m_gauss->init(ndata, mumax);
+// }
 
 
 // int Pole::suggestBelt() {
@@ -328,10 +337,10 @@ int Pole::suggestBelt() {
   int rval=50;
   if (m_measurement.getNObserved()>=0) {
     rval = BeltEstimator::getBeltMin(m_measurement.getNObserved(),
-				     m_measurement.getEffDist(),
-				     m_measurement.getEffMeas(), m_measurement.getEffSigma(),
-				     m_measurement.getBkgDist(),
-				     m_measurement.getBkgMeas(), m_measurement.getBkgSigma(),
+				     m_measurement.getEffPdfDist(),
+				     m_measurement.getEffObs(), m_measurement.getEffPdfSigma(),
+				     m_measurement.getBkgPdfDist(),
+				     m_measurement.getBkgObs(), m_measurement.getBkgPdfSigma(),
 				     m_normInt);
     if (rval<20) rval=20; // becomes less reliable for small n
   }
@@ -402,30 +411,30 @@ void Pole::initIntegral() {
   double sdetC=0, detC=0, seff=0, sbkg=0, vceff=0;
   double effMean,effSigma;
   double bkgMean,bkgSigma;
-  if (m_measurement.getEffDist()==DIST_LOGN) {
-    effMean  = m_gauss->getLNMean(m_measurement.getEffMeas(),m_measurement.getEffSigma());
-    effSigma = m_gauss->getLNSigma(m_measurement.getEffMeas(),m_measurement.getEffSigma());
+  if (m_measurement.getEffPdfDist()==PDF::DIST_LOGN) {
+    effMean  = m_logNorm->calcLogMean(m_measurement.getEffObs(),m_measurement.getEffPdfSigma());
+    effSigma = m_logNorm->calcLogSigma(m_measurement.getEffObs(),m_measurement.getEffPdfSigma());
   } else {
-    effMean  = m_measurement.getEffMeas();
-    effSigma = m_measurement.getEffSigma();
+    effMean  = m_measurement.getEffObs();
+    effSigma = m_measurement.getEffPdfSigma();
   }
-  if (m_measurement.getBkgDist()==DIST_LOGN) {
-    bkgMean  = m_gauss->getLNMean(m_measurement.getBkgMeas(),m_measurement.getBkgSigma());
-    bkgSigma = m_gauss->getLNSigma(m_measurement.getBkgMeas(),m_measurement.getBkgSigma());
+  if (m_measurement.getBkgPdfDist()==PDF::DIST_LOGN) {
+    bkgMean  = m_logNorm->calcLogMean(m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma());
+    bkgSigma = m_logNorm->calcLogSigma(m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma());
   } else {
-    bkgMean  = m_measurement.getBkgMeas();
-    bkgSigma = m_measurement.getBkgSigma();
+    bkgMean  = m_measurement.getBkgObs();
+    bkgSigma = m_measurement.getBkgPdfSigma();
   }
-  if (m_measurement.getEffDist()==DIST_GAUSCORR) {
+  if (m_measurement.getEffPdfDist()==PDF::DIST_GAUS2D) {
     if (isFullyCorrelated() || isNotCorrelated()) {
       full2d=false;
     } else {
       full2d=true;
-      detC = m_gauss->getDetC(m_measurement.getEffSigma(),m_measurement.getBkgSigma(),m_measurement.getBEcorr());
+      detC = m_gauss2d->getDetC(m_measurement.getEffPdfSigma(),m_measurement.getBkgPdfSigma(),m_measurement.getBEcorr());
       sdetC = sqrt(detC);
-      vceff = m_gauss->getVeffCorr(detC,m_measurement.getEffSigma(),m_measurement.getBkgSigma(),m_measurement.getBEcorr());
-      seff  = sqrt(m_gauss->getVeff(detC,m_measurement.getBkgSigma())); // effective sigma for efficiency v1eff = detC/(s2*s2)
-      sbkg  = sqrt(m_gauss->getVeff(detC,m_measurement.getEffSigma())); // dito for background            v2eff = detC/(s1*s1)
+      vceff = m_gauss2d->getVeffCorr(detC,m_measurement.getEffPdfSigma(),m_measurement.getBkgPdfSigma(),m_measurement.getBEcorr());
+      seff  = sqrt(m_gauss2d->getVeff(detC,m_measurement.getBkgPdfSigma())); // effective sigma for efficiency v1eff = detC/(s2*s2)
+      sbkg  = sqrt(m_gauss2d->getVeff(detC,m_measurement.getEffPdfSigma())); // dito for background            v2eff = detC/(s1*s1)
       if (m_verbose>2) {
 	std::cout << "DetC = " << detC << std::endl;
 	std::cout << "sDetC = " << sdetC << std::endl;
@@ -456,10 +465,10 @@ void Pole::initIntegral() {
 //     }
 //   }
   if (m_verbose>1) {
-    std::cout << "InitMatrix: eff dist (mu,s)= " << m_measurement.getEffMeas() << "\t"
-	      << m_measurement.getEffSigma() << std::endl;
-    std::cout << "InitMatrix: bkg dist (mu,s)= " << m_measurement.getBkgMeas() << "\t"
-	      << m_measurement.getBkgSigma() << std::endl;
+    std::cout << "InitMatrix: eff dist (mu,s)= " << m_measurement.getEffObs() << "\t"
+	      << m_measurement.getEffPdfSigma() << std::endl;
+    std::cout << "InitMatrix: bkg dist (mu,s)= " << m_measurement.getBkgObs() << "\t"
+	      << m_measurement.getBkgPdfSigma() << std::endl;
     std::cout << "InitMatrix: dedb           = " << dedb << std::endl;
   }
   //
@@ -471,31 +480,31 @@ void Pole::initIntegral() {
       de = 1.0;
     } else {
       de = m_effRangeInt.step();
-      switch(m_measurement.getEffDist()) {
-      case DIST_GAUS:
-	eff_prob = m_gauss->getVal(effs,m_measurement.getEffMeas(),m_measurement.getEffSigma());
-	//	std::cout << "GAUSSEFF: " << effs << " " << m_measurement.getEffMeas() << " " << m_measurement.getEffSigma() << " -> " << eff_prob << std::endl;
+      switch(m_measurement.getEffPdfDist()) {
+      case PDF::DIST_GAUS:
+	eff_prob = m_gauss->getVal(effs,m_measurement.getEffObs(),m_measurement.getEffPdfSigma());
+	//	std::cout << "GAUSSEFF: " << effs << " " << m_measurement.getEffObs() << " " << m_measurement.getEffPdfSigma() << " -> " << eff_prob << std::endl;
 	break;
-      case DIST_LOGN:
+      case PDF::DIST_LOGN:
 	effs = exp(effs);
-	eff_prob = m_gauss->getValLogN(effs,effMean,effSigma);
+	eff_prob = m_logNorm->getValLogN(effs,effMean,effSigma);
 	de = m_effRangeInt.step()*effs;
 	break;
-      case DIST_GAUSCORR:
+      case PDF::DIST_GAUS2D:
 	if (isNotCorrelated()) {
-	  eff_prob = m_gauss->getVal(effs,m_measurement.getEffMeas(),m_measurement.getEffSigma());
+	  eff_prob = m_gauss->getVal(effs,m_measurement.getEffObs(),m_measurement.getEffPdfSigma());
 	} else {
 	  eff_prob = 1.0; // will be set in the bkg loop
 	}
 	break;
-      case DIST_FLAT:
-	if (m_measurement.getEffSigma()>0) {
-	  eff_prob = 1.0/(m_measurement.getEffSigma()*3.46410161513775);
+      case PDF::DIST_FLAT:
+	if (m_measurement.getEffPdfSigma()>0) {
+	  eff_prob = 1.0/(m_measurement.getEffPdfSigma()*3.46410161513775);
 	} else {
 	  eff_prob = 1.0;
 	}
 	break;
-      case DIST_NONE:
+      case PDF::DIST_NONE:
 	eff_prob = 1.0;
 	break;
       default:
@@ -513,41 +522,41 @@ void Pole::initIntegral() {
 	db = 1.0;
       } else {
 	db = m_bkgRangeInt.step();
-	switch(m_measurement.getBkgDist()) {
-	case DIST_GAUS:
-	  bkg_prob = m_gauss->getVal(bkgs,m_measurement.getBkgMeas(),m_measurement.getBkgSigma());
+	switch(m_measurement.getBkgPdfDist()) {
+	case PDF::DIST_GAUS:
+	  bkg_prob = m_gauss->getVal(bkgs,m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma());
 	  dosumbkg = (i==0);
-	  //	  std::cout << "GAUSSBKG: " << bkgs << " " << m_measurement.getBkgMeas() << " " << m_measurement.getBkgSigma() << " -> " << bkg_prob << std::endl;
+	  //	  std::cout << "GAUSSBKG: " << bkgs << " " << m_measurement.getBkgObs() << " " << m_measurement.getBkgPdfSigma() << " -> " << bkg_prob << std::endl;
 	  break;
-	case DIST_LOGN:
+	case PDF::DIST_LOGN:
 	  bkgs = exp(bkgs);
-	  bkg_prob = m_gauss->getValLogN(bkgs,bkgMean,bkgSigma);
+	  bkg_prob = m_logNorm->getValLogN(bkgs,bkgMean,bkgSigma);
 	  db = m_bkgRangeInt.step()*bkgs;
 	  dosumbkg = (i==0);
 	  break;
-	case DIST_GAUSCORR:
+	case PDF::DIST_GAUS2D:
 	  if (isFullyCorrelated()) {
-	    bkg_prob = m_gauss->getVal(bkgs,m_measurement.getBkgMeas(),m_measurement.getBkgSigma()); // /sqrt(2.0)); // TODO:sqrt(2.0) ???
+	    bkg_prob = m_gauss->getVal(bkgs,m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma()); // /sqrt(2.0)); // TODO:sqrt(2.0) ???
 	    dosumbkg = (i==0);
 	  } else {
 	    if (isNotCorrelated()) {
-	      bkg_prob = m_gauss->getVal(bkgs,m_measurement.getBkgMeas(),m_measurement.getBkgSigma());
+	      bkg_prob = m_gauss->getVal(bkgs,m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma());
 	      dosumbkg = (i==0);
 	    } else {
-	      bkg_prob = m_gauss->getVal2D(effs,m_measurement.getEffMeas(),bkgs,m_measurement.getBkgMeas(),sdetC,seff,sbkg,vceff);
+	      bkg_prob = m_gauss2d->getVal2D(effs,m_measurement.getEffObs(),bkgs,m_measurement.getBkgObs(),sdetC,seff,sbkg,vceff);
 	      dosumbkg = true;
 	    }
 	  }
 	  break;
-	case DIST_FLAT:
-	  if (m_measurement.getBkgSigma()>0) {
-	    bkg_prob = 1.0/(m_measurement.getBkgSigma()*3.46410161513775);
+	case PDF::DIST_FLAT:
+	  if (m_measurement.getBkgPdfSigma()>0) {
+	    bkg_prob = 1.0/(m_measurement.getBkgPdfSigma()*3.46410161513775);
 	  } else {
 	    bkg_prob = 1.0;
 	  }
 	  dosumbkg = (i==0);
 	  break;
-	case DIST_NONE:
+	case PDF::DIST_NONE:
 	  bkg_prob = 1.0;
 	  dosumbkg = (i==0);
 	  break;
@@ -564,8 +573,8 @@ void Pole::initIntegral() {
       // Fill the arrays (integral)
       //
       if( (m_effRangeInt.n() == 1) && (m_bkgRangeInt.n() == 1) ) {
-	m_bkgInt[count]    = m_measurement.getBkgMeas();
-	m_effInt[count]    = m_measurement.getEffMeas();
+	m_bkgInt[count]    = m_measurement.getBkgObs();
+	m_effInt[count]    = m_measurement.getEffObs();
 	m_weightInt[count] = 1.0;
       } else {
 	m_bkgInt[count]    = bkgs;
@@ -645,43 +654,82 @@ void Pole::findBestMu(int n) {
   // finds the best fit (mu=s) for a given n. Fills m_bestMu[n]
   // and m_bestMuProb[n].
   int i;
-  double mu_test,lh_test,mu_best,mu_s_max,mu_s_min;
+  double mu_test,lh_test,mu_best,sMax,sMin;
   //,dmu_s;
   double lh_max = 0.0;
   //
   mu_best = 0;
-  if(n<m_measurement.getBkgMeas()) {
+  if(n<m_measurement.getBkgObs()) {
     m_bestMu[n] = 0; // best mu is 0
     m_bestMuProb[n] = calcProb(n,0);
   } else {
-    //    mu_s_max = double(n)-m_measurement.getBkgMeas(); // OLD version
-    mu_s_max = (double(n) - getBkgIntMin())/m_measurement.getEffMeas();
-    if(mu_s_max<0) {mu_s_max = 0.0;}
-    //    mu_s_min = (double(n) - m_bkgRangeInt.max())/m_effRangeInt.max();
-    //    mu_s_min = mu_s_max/2.0; //
-    mu_s_min = (double(n) - getBkgIntMax())/getEffIntMax();
-    if(mu_s_min<0) {mu_s_min = 0.0;}
-    mu_s_min = (mu_s_max-mu_s_min)*0.8 + mu_s_min;
+    //    sMax = double(n)-m_measurement.getBkgObs(); // OLD version
+    sMax = (double(n) - getBkgIntMin())/m_measurement.getEffObs();
+    if(sMax<0) {sMax = 0.0;}
+    //    sMin = (double(n) - m_bkgRangeInt.max())/m_effRangeInt.max();
+    //    sMin = sMax/2.0; //
+    sMin = (double(n) - getBkgIntMax())/getEffIntMax();
+    if(sMin<0) {sMin = 0.0;}
+    sMin = (sMax-sMin)*0.6 + sMin;
     //    dmu_s = 0.01; // HARDCODED:: Change!
-    int ntst = 1+int((mu_s_max-mu_s_min)/m_dmus);
+    int ntst = 1+int((sMax-sMin)/m_dmus);
+    double dmus=m_dmus;
+    if (ntst>m_nmusMax) {
+      ntst=m_nmusMax;
+      dmus=(sMax-sMin)/double(ntst-1);
+    }
     //// TEMPORARY CODE - REMOVE /////
     //    ntst = 1000;
-    //    m_dmus = (mu_s_max-mu_s_min)/double(ntst);
+    //    m_dmus = (sMax-sMin)/double(ntst);
     //////////////////////////////////
     if (m_verbose>1) std::cout << "FindBestMu range: " << " I " << getBkgIntMax() << " " << getEffIntMax() << " "
-			       << n << " " << m_measurement.getBkgMeas() << " " << ntst << " [" << mu_s_min << "," << mu_s_max << "] => ";
+			       << n << " " << m_measurement.getBkgObs() << " " << ntst << " [" << sMin << "," << sMax << "] => ";
     int imax=-10;
     for (i=0;i<ntst;i++) {
-      mu_test = mu_s_min + i*m_dmus;
+      mu_test = sMin + i*dmus;
       lh_test = calcProb(n,mu_test);
       if(lh_test > lh_max) {
 	imax = i;
 	lh_max = lh_test;
 	mu_best = mu_test;
       }
-    }  
+    }
+    bool lowEdge = (imax==0)&&(ntst>0);
+    bool upEdge  = (imax==ntst-1);
+    if (lowEdge) { // lower edge found - just to make sure, scan downwards a few points
+      int nnew = ntst/10;
+      i=1;
+      while ((i<=nnew)) {
+	mu_test = sMin - i*dmus;
+	lh_test = calcProb(n,mu_test);
+	if(lh_test > lh_max) {
+	  imax = i;
+	  lh_max = lh_test;
+	  mu_best = mu_test;
+	}
+	i++;
+      }
+      lowEdge = (i==nnew); //redfine lowEdge
+    }
+    //
+    if (upEdge) { // ditto, but upper edge
+      int nnew = ntst/10;
+      i=0;
+      while ((i<nnew)) {
+	mu_test = sMin - (i+ntst)*dmus;
+	lh_test = calcProb(n,mu_test);
+	if(lh_test > lh_max) {
+	  imax = i;
+	  lh_max = lh_test;
+	  mu_best = mu_test;
+	}
+	i++;
+      }
+      upEdge = (i==nnew-1); //redfine lowEdge
+    }
+
     if (m_verbose>1) {
-      if (((imax==0)&&(ntst>0)) || (imax==ntst-1)) {
+      if (upEdge || lowEdge) {
 	std::cout << "WARNING: In FindBestMu -> might need to increase scan range in s! imax = " << imax << " ( " << ntst-1 << " )" << std::endl;
       }
     }
@@ -714,7 +762,7 @@ void Pole::calcLh(double s) { // TODO: Need this one????
   }
 }
 
-double Pole::calcLhRatio(double s, int & nbMin, int & nbMax, double minMuProb) {
+double Pole::calcLhRatio(double s, int & nbMin, int & nbMax) { //, double minMuProb) {
   double norm_p = 0;
   double lhSbest;
   bool upNfound  = false;
@@ -732,11 +780,11 @@ double Pole::calcLhRatio(double s, int & nbMin, int & nbMax, double minMuProb) {
     m_lhRatio[n]  = m_muProb[n]/lhSbest;
     norm_p += m_muProb[n]; // needs to be renormalised
     //
-    if ((!lowNfound) && (m_muProb[n]>minMuProb)) {
+    if ((!lowNfound) && (m_muProb[n]>m_minMuProb)) {
       lowNfound=true;
       nbMin = n;
     } else {
-      if ((nInBelt>1) && lowNfound && (m_muProb[n]<minMuProb)) {
+      if ((nInBelt>1) && lowNfound && (m_muProb[n]<m_minMuProb)) {
 	upNfound = true;
 	nbMax = n-1;
       }
@@ -842,21 +890,21 @@ double Pole::calcLimitOLD(double s) {
 
   int nBeltMaxUsed = m_nBelt;
   int nBeltMinUsed = 0;
-  const double minMuProb = 1e-5;
+  //  const double minMuProb = 1e-5;
   //
   //  std::cout << "calcLimit for " << s << std::endl;
-  if (m_useNLR) { // use method by Gary Hill
+  if (usesMBT()) { // use method by Gary Hill
     double g,pbf;
     int n=0;
     while ((n<m_nBelt) && (!upNfound)) {
       //    for (int n=0; n<m_nBelt; n++) {
       if (!upNfound) {
 	m_muProb[n] =  calcProb(n, s);
-	if ((!lowNfound) && (m_muProb[n]>minMuProb)) {
+	if ((!lowNfound) && (m_muProb[n]>m_minMuProb)) {
 	  lowNfound=true;
 	  nBeltMinUsed = n;
 	} else {
-	  if ((nInBelt>1) && lowNfound && (m_muProb[n]<minMuProb)) {
+	  if ((nInBelt>1) && lowNfound && (m_muProb[n]<m_minMuProb)) {
 	    upNfound = true;
 	    nBeltMaxUsed = n-1;
 	  }
@@ -868,10 +916,10 @@ double Pole::calcLimitOLD(double s) {
       }
       //      std::cout << "m_muProb[" << n << "] = " << m_muProb[n] << ", s = " << s << std::endl;
       if (!upNfound) {
-	if (n>m_measurement.getBkgMeas()) {
+	if (n>m_measurement.getBkgObs()) {
 	  g = static_cast<double>(n);
 	} else {
-	  g = m_measurement.getBkgMeas();
+	  g = m_measurement.getBkgObs();
 	}
 	pbf = m_poisson->getVal(n,g);
 	if (g==0) {
@@ -896,11 +944,11 @@ double Pole::calcLimitOLD(double s) {
       //    for (int n=0; n<m_nBelt; n++) {
       if (!upNfound) {
 	m_muProb[n] =  calcProb(n, s);
-	if ((!lowNfound) && (m_muProb[n]>minMuProb)) {
+	if ((!lowNfound) && (m_muProb[n]>m_minMuProb)) {
 	  lowNfound=true;
 	  nBeltMinUsed = n;
 	} else {
-	  if ((nInBelt>1) && lowNfound && (m_muProb[n]<minMuProb)) {
+	  if ((nInBelt>1) && lowNfound && (m_muProb[n]<m_minMuProb)) {
 	    upNfound = true;
 	    nBeltMaxUsed = n-1;
 	  }
@@ -1040,7 +1088,7 @@ void sort_index(std::vector<double> & input, std::vector<int> & index, bool reve
   }
 }
 
-double Pole::calcBelt(double s, int & n1, int & n2, bool verb, double muMinProb) {
+double Pole::calcBelt(double s, int & n1, int & n2, bool verb) { //, double muMinProb) {
   //
   int nBeltMinUsed;
   int nBeltMaxUsed;
@@ -1049,7 +1097,8 @@ double Pole::calcBelt(double s, int & n1, int & n2, bool verb, double muMinProb)
   //
   // Get RL(n,s)
   //
-  double norm_p = calcLhRatio(s,nBeltMinUsed,nBeltMaxUsed,muMinProb);
+  //  double norm_p = 
+  calcLhRatio(s,nBeltMinUsed,nBeltMaxUsed); //,muMinProb);
   //
   // Sort RL
   //
@@ -1069,7 +1118,7 @@ double Pole::calcBelt(double s, int & n1, int & n2, bool verb, double muMinProb)
   int n;//imax = nBeltMaxUsed - nBeltMinUsed;
   double sumProb = 0;
   int i=0;
-  int nn=nBeltMaxUsed-nBeltMinUsed+1;
+  //  int nn=nBeltMaxUsed-nBeltMinUsed+1;
   //
   while (!done) {
     n = index[i];
@@ -1116,7 +1165,7 @@ void Pole::findPower() {
   for (int i=0; i<nhyp; i++) {
     muTest = m_hypTest.min() + i*m_hypTest.step();
     //    if (m_verbose>-1) std::cout << "Hypothesis: " << muTest << std::endl;
-    sumP = calcBelt(muTest,n1,n2,false,-1.0);
+    sumP = calcBelt(muTest,n1,n2,false); //,-1.0);
     fullConstruct.push_back(m_muProb);
 
     n1vec.push_back(n1);
@@ -1124,11 +1173,12 @@ void Pole::findPower() {
   }
   if (m_verbose>-1) std::cout << "Calculate power(s)" << std::endl;
   // calculate power P(n not accepted by H0 | H1)
-  int n01,n02,n11,n12,n,nA,nB;
+  int n01,n02,n;
+  //,n11,n12,nA,nB;
   double power,powerm,powerp;
   bool usepp;
   int np,nm;
-  int npTot;
+  //  int npTot;
   int i1 = int(m_sTrue/m_hypTest.step());
   int i2 = i1+1;
   for (int i=i1; i<i2; i++) { // loop over all H0
@@ -1217,7 +1267,7 @@ void Pole::findConstruct() {
 
 int Pole::findNMin() { // calculates the minimum N rejecting s = 0.0
   int n1,n2;
-  double sumP = calcBelt(0.0,n1,n2,true,-1.0);
+  double sumP = calcBelt(0.0,n1,n2,true);//,-1.0);
   //
   std::cout << "NMIN0:\t" << n2 << "\t" << sumP << std::endl;
   return n2;
@@ -1247,6 +1297,7 @@ bool Pole::findLimits() {
   m_lowerLimitNorm = 0;
   m_upperLimitNorm = 0;
   //
+  findNMin();
   if (m_measurement.getNObserved()>=m_nBelt) return false;
   double mu_test;
   int i = 0;
@@ -1304,8 +1355,8 @@ bool Pole::findLimits() {
       // && (!heavyDBG)) {
       std::cout << "LIMITS(N,e,b,l,u): ";
       coutFixed(4,m_measurement.getNObserved());  std::cout << "\t";
-      coutFixed(4,m_measurement.getEffMeas());    std::cout << "\t";
-      coutFixed(4,m_measurement.getBkgMeas());    std::cout << "\t";
+      coutFixed(4,m_measurement.getEffObs());    std::cout << "\t";
+      coutFixed(4,m_measurement.getBkgObs());    std::cout << "\t";
       coutFixed(4,m_lowerLimit); std::cout << "\t";
       coutFixed(4,m_upperLimit); std::cout << std::endl;
       //      heavyDBG = false;
@@ -1396,8 +1447,8 @@ bool Pole::findCoverageLimits() {
       std::cout << "COVLIMITS(N,s,e,b,l,u): ";
       coutFixed(4,m_measurement.getNObserved());  std::cout << "\t";
       coutFixed(4,m_sTrue);      std::cout << "\t";
-      coutFixed(4,m_measurement.getEffMeas());    std::cout << "\t";
-      coutFixed(4,m_measurement.getBkgMeas());    std::cout << "\t";
+      coutFixed(4,m_measurement.getEffObs());    std::cout << "\t";
+      coutFixed(4,m_measurement.getBkgObs());    std::cout << "\t";
       coutFixed(4,m_lowerLimit); std::cout << "\t";
       coutFixed(4,m_upperLimit); std::cout << std::endl;;
     } else {
@@ -1417,8 +1468,8 @@ void Pole::initAnalysis() {
 
 bool Pole::analyseExperiment() {
   bool rval=false;
-  initAnalysis();
-  if (!m_useNLR) {
+  //  initAnalysis();
+  if (usesFHC2()) {
     if (m_verbose>0) std::cout << "Finding s_best" << std::endl;
     findAllBestMu(); // loops
   }
@@ -1447,10 +1498,10 @@ void Pole::printLimit(bool doTitle) {
     std::cout << "-------------------------------------------------" << std::endl;
   }
   coutFixed(4,m_measurement.getNObserved()); std::cout << "\t";
-  coutFixed(6,m_measurement.getEffMeas()); std::cout << "\t";
-  coutFixed(6,m_measurement.getEffSigma()); std::cout << "\t";
-  coutFixed(6,m_measurement.getBkgMeas()); std::cout << "\t";
-  coutFixed(6,m_measurement.getBkgSigma()); std::cout << "\t";
+  coutFixed(6,m_measurement.getEffObs()); std::cout << "\t";
+  coutFixed(6,m_measurement.getEffPdfSigma()); std::cout << "\t";
+  coutFixed(6,m_measurement.getBkgObs()); std::cout << "\t";
+  coutFixed(6,m_measurement.getBkgPdfSigma()); std::cout << "\t";
   std::cout << "[ ";
   coutFixed(2,m_lowerLimit); std::cout << ", ";
   coutFixed(2,m_upperLimit); std::cout << " ]";
@@ -1466,13 +1517,13 @@ void Pole::printSetup() {
   std::cout << " Coverage friendly  : " << yesNo(m_coverage) << std::endl;
   std::cout << " True signal        : " << m_sTrue << std::endl;
   std::cout << "----------------------------------------------\n";
-  std::cout << " Efficiency meas    : " << m_measurement.getEffMeas() << std::endl;
-  std::cout << " Efficiency sigma   : " << m_measurement.getEffSigma() << std::endl;
-  std::cout << " Efficiency dist    : " << distTypeStr(m_measurement.getEffDist()) << std::endl;
+  std::cout << " Efficiency meas    : " << m_measurement.getEffObs() << std::endl;
+  std::cout << " Efficiency sigma   : " << m_measurement.getEffPdfSigma() << std::endl;
+  std::cout << " Efficiency dist    : " << PDF::distTypeStr(m_measurement.getEffPdfDist()) << std::endl;
   std::cout << "----------------------------------------------\n";
-  std::cout << " Background meas    : " << m_measurement.getBkgMeas() << std::endl;
-  std::cout << " Background sigma   : " << m_measurement.getBkgSigma() << std::endl;
-  std::cout << " Background dist    : " << distTypeStr(m_measurement.getBkgDist()) << std::endl;
+  std::cout << " Background meas    : " << m_measurement.getBkgObs() << std::endl;
+  std::cout << " Background sigma   : " << m_measurement.getBkgPdfSigma() << std::endl;
+  std::cout << " Background dist    : " << PDF::distTypeStr(m_measurement.getBkgPdfDist()) << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Bkg-Eff correlation: " << m_measurement.getBEcorr() << std::endl;
   std::cout << "----------------------------------------------\n";
@@ -1488,14 +1539,29 @@ void Pole::printSetup() {
   std::cout << " Test hyp. max      : " << m_hypTest.max() << std::endl;
   std::cout << " Test hyp. step     : " << m_hypTest.step() << std::endl;
   std::cout << "----------------------------------------------\n";
+  std::cout << " Min. probability   : " << m_minMuProb << std::endl;
+  std::cout << "----------------------------------------------\n";
   if (m_suggestBelt) {
     std::cout << " Belt N max         : variable" << std::endl;
   } else {
     std::cout << " Belt N max         : " << m_nBelt << std::endl;
   }
   std::cout << " Step mu_best       : " << m_dmus << std::endl;
+  std::cout << " Max N, mu_best     : " << m_nmusMax << std::endl;
   std::cout << "----------------------------------------------\n";
-  std::cout << " Use NLR            : " << yesNo(m_useNLR) << std::endl;
+  std::cout << " Method             : ";
+  switch (m_method) {
+  case RL_FHC2:
+    std::cout << "FHC2";
+    break;
+  case RL_MBT:
+    std::cout << "MBT";
+    break;
+  default:
+    std::cout << "Unknown!? = " << m_method;
+    break;
+  }
+  std::cout << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Verbosity          : " << m_verbose << std::endl;
   std::cout << "==============================================\n";
@@ -1507,7 +1573,9 @@ void Pole::printFailureMsg() {
   std::cout << "1. nbelt is too small (set nbelt = " << getNBelt() << ", max used = " << getNBeltMaxUsed() << ")" << std::endl;
   std::cout << "2. precision in integrations (eff,bkg) not sufficient" << std::endl;
   std::cout << "3. hypethesis test range too small ( max = " << m_hypTest.max() << " )" << std::endl;
-  std::cout << "4. if Poisson table is used, insufficient precision. Symptom: probability of lower/upper limit diverges from unity." << std::endl;
+  std::cout << "4. Symptom: probability of lower/upper limit diverges from unity." << std::endl;
+  std::cout << "   -> if Poisson table is used, insufficient precision." << std::endl;
+  std::cout << "   -> minimum probability too large; min = " << m_minMuProb << std::endl;
   std::cout << "Input:" << std::endl;
   std::cout << "   N(obs)     = " << getNObserved() << std::endl;
   std::cout << "Results:" << std::endl;
