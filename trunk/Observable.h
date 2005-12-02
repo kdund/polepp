@@ -16,7 +16,40 @@
 // NOTE: pdf is given as a pointer and can be manipulated by the object
 //
 namespace OBS {
-  
+  template <typename T>
+  void getIntRange(T & low, T & high, double scale, double mean, double sigma, PDF::DISTYPE dist, bool positive=true) {
+    //
+    double dx;
+    //
+    if (dist==PDF::DIST_NONE) {
+      low  = mean;
+      high = mean;
+    } else {
+      switch (dist) {
+      case PDF::DIST_GAUS2D:
+      case PDF::DIST_GAUS:
+      case PDF::DIST_LOGN:
+	low  = mean - scale*sigma;
+	high = mean + scale*sigma;
+	break;
+      case PDF::DIST_FLAT:
+	dx=sigma*1.73205081; // == sqrt(12)*0.5; ignore scale - always use full range
+	low  = mean-dx;
+	high = mean+dx;
+	break;
+      case PDF::DIST_POIS:
+	
+      default: // ERROR STATE
+	std::cerr << "OBS::getIntRange() -> Unknown pdf type = " << dist << std::endl;
+	break;
+      }
+    }
+    if (positive && (low<0)) {
+      high = high-low;
+      low = 0;
+    }
+  }
+
   class Base {
   public:
     Base() {
@@ -59,6 +92,7 @@ namespace OBS {
     PDF::Base         *getPdf() const           { return m_pdf;}
     const std::string & getName() const          { return m_name;}
     const std::string & getDescription() const   { return m_description;}
+    const bool constant() const { return (m_locked || (m_dist==PDF::DIST_NONE) || (m_dist==PDF::DIST_UNDEF)); }
     const bool locked() const { return m_locked;}
     const bool valid()  const { return m_valid;}
     RND::Random *getRndGen() const { return m_rndGen;}
@@ -67,6 +101,15 @@ namespace OBS {
       Base *obj = new Base(*this);
       return obj;
     }
+
+    void initInt()        {std::cerr << "ERROR: using Base::initInt()" << std::endl;}
+    void initIntConst()   {std::cerr << "ERROR: using Base::initIntConst()" << std::endl;}
+    void initIntDefault() {std::cerr << "ERROR: using Base::initIntDefault()" << std::endl;}
+    void fillInt()        {std::cerr << "ERROR: using Base::fillInt()" << std::endl;}
+    //
+    const bool isIntFilled()  {std::cerr << "ERROR: using Base::isIntFilled()" << std::endl; return false;}
+    const int  getIntNpts() {std::cerr << "ERROR: using Base::getIntNpts()" << std::endl; return 0;}
+    const double getIntWeight(int i) {std::cerr << "ERROR: using Base::getIntWeight()" << std::endl; return 1.0;}
     //
   protected:
     void copy(const Base & other) {
@@ -106,6 +149,9 @@ namespace OBS {
       setPdf(pdf);
       m_observedValue=0;
       if (pdf) m_observedValue = static_cast<T>(m_mean);
+      m_intFilled = false;
+      m_intScale = 5.0;
+      m_intNpts  = 20;
     }
 
     BaseType(const BaseType<T> & other):Base() { copy(other);}
@@ -117,6 +163,12 @@ namespace OBS {
       copy(rh);
       return *this;
     }
+
+    BaseType<T> *clone() const {
+      BaseType<T> *obj = new BaseType<T>(*this);
+      return obj;
+    }
+
     const double getPdfVal(T val) { return (m_pdf ? static_cast< BaseType<T> >(*m_pdf).getVal(val,m_mean,m_sigma):0.0); }
 
     T       operator()()       { return ( m_locked ? m_lockedValue:rnd()); }
@@ -129,49 +181,111 @@ namespace OBS {
     const T getLockedValue() const   { return m_lockedValue;}
     const T getObservedValue() const { return m_observedValue; }
 
-    BaseType<T> *clone() const {
-      BaseType<T> *obj = new BaseType<T>(*this);
-      return obj;
+    const bool isIntFilled()   const { return m_intFilled; }
+    const int getIntNpts()     const { return m_intNpts; }
+    const double getIntScale() const { return m_intScale; }
+    const std::vector<double> * getIntWeight() const { return &m_intWeight; }
+    const double getIntWeight(int i) const { return m_intWeight[i]; }
+    const double getIntegral()       const { return m_intTotal; }
+    const Range<T> * getIntXRange()  const { return &m_intXRange; }
+    const std::vector<T> * getIntX() const { return &m_intX; }
+    const T getIntX(int i)           const { return m_intX[i]; }
+    const T getIntdX()               const { return m_intXRange.step(); }
+
+    void setIntNpts(int n)     { m_intNpts = n; }
+    void setIntScale(double s) { m_intScale = s; }
+    void setIntXRange(T xmin, T xmax, T step, int n=0) {
+      m_intFilled = false;
+      m_intXRange.setRange(xmin,xmax,step,n);
     }
 
-    void setIntXRange(T xmin, T xmax, T step, int n=0) { m_intXRange.setRange(xmin,xmax,step,n); }
     void initInt() {
       if (m_intXRange.n()<1) return;
       int np = m_intXRange.n();
       m_intWeight.resize(np,0.0);
       m_intX.resize(np,0);
       m_intTotal = 0;
+      m_intFilled = false;
     }
+
+    void initInt(T xmin, T xmax, T step, int n=0) {
+      setIntXRange(xmin,xmax,step,n);
+      initInt();
+    }
+
+    //! init with zero range
+    void initIntConst() {
+      initInt(m_observedValue,m_observedValue,0,1);
+    }
+
+    //! init with default range, given by observed value, sigma and scale
+    void initIntDefault() {
+      if (constant()) { // takes care of DIST_NONE, DIST_UNDEF
+	initIntConst();
+      } else {
+	T low;
+	T high;
+	bool pos;
+	double mean, sigma;
+	if (m_dist == PDF::DIST_LOGN) {
+	  mean = PDF::calcLogMean(double(m_observedValue),m_sigma);
+	  sigma = PDF::calcLogSigma(double(m_observedValue),m_sigma);
+	  pos = false;
+	} else {
+	  mean = double(m_observedValue);
+	  sigma = m_sigma;
+	  pos = true;
+	}
+	getIntRange(low,high,m_intScale, mean , sigma, m_dist, pos);
+	initInt(low,high,0,m_intNpts);
+      }
+    }
+
     void fillInt() {
+      if (m_intFilled) return;
       int np = int(m_intX.size());
       double f;
       double dx = static_cast<double>(m_intXRange.step());
       m_intTotal=0;
       if (np<1) return;
-      for (int i=0; i<np; i++) {
-	f = getPdfVal(m_intX[i]);
-	m_intWeight[i] = f*dx;
-	m_intTotal += m_intWeight[i];
+      if (np==1) { // Dirac spike - integral and weight == 1.0
+	m_intWeight[0] = 1.0;
+	m_intTotal = 1.0;
+      } else {
+	for (int i=0; i<np; i++) {
+	  f = getPdfVal(m_intX[i]);
+	  m_intWeight[i] = f*dx;
+	  m_intTotal += m_intWeight[i];
+	}
       }
+      m_intFilled = true;
     }
-    const double getIntWeight(int i) const { return m_intWeight[i]; }
-    const double getIntegral() const       { return m_intTotal; }
   protected:
     void copy(const BaseType<T> & other) {
       if (this != &other) {
 	Base::copy(other);
-	m_lockedValue = other.getLockedValue();
+	m_lockedValue   = other.getLockedValue();
 	m_observedValue = other.getObservedValue();
+	m_intFilled     = other.isIntFilled();
+	m_intWeight     = *(other.getIntWeight());
+	m_intXRange     = *(other.getIntXRange());
+	m_intX          = *(other.getIntX());
+	m_intTotal      = other.getIntegral();
+	m_intScale      = other.getIntScale();
+	m_intNpts       = other.getIntNpts();
       }
     }
     //
-    T m_lockedValue;   // value return by rnd() if rndGen is disabled
-    T m_observedValue; // the observed value
+    T m_lockedValue;   //! value return by rnd() if rndGen is disabled
+    T m_observedValue; //! the observed value
 
-    std::vector<double> m_intWeight;
-    std::vector<T>      m_intX;
-    Range<T>            m_intXRange;
-    double              m_intTotal;
+    std::vector<double> m_intWeight; //! array containing the weights f(x)dx
+    std::vector<T>      m_intX;      //! array of x
+    Range<T>            m_intXRange; //! range of x
+    double              m_intScale;  //! range is defined by x+-scale*sigma
+    int                 m_intNpts;   //! set number of points in integral
+    double              m_intTotal;  //! sum of all f(x)dx
+    bool                m_intFilled; //! true if integral is filled
     //
   };
 
