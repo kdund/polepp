@@ -146,8 +146,8 @@ void Pole::setInt(double & low, double & high, double scale, double mean, double
       high = mean+dx;
       break;
     case PDF::DIST_LOGN:
-      nmean  = m_logNorm->calcLogMean(mean,sigma);
-      nsigma = m_logNorm->calcLogSigma(mean,sigma);
+      nmean  = PDF::calcLogMean(mean,sigma);
+      nsigma = PDF::calcLogSigma(mean,sigma);
       low  = nmean - scale*nsigma;
       high = nmean + scale*nsigma;
       break;
@@ -412,15 +412,15 @@ void Pole::initIntegral() {
   double effMean,effSigma;
   double bkgMean,bkgSigma;
   if (m_measurement.getEffPdfDist()==PDF::DIST_LOGN) {
-    effMean  = m_logNorm->calcLogMean(m_measurement.getEffObs(),m_measurement.getEffPdfSigma());
-    effSigma = m_logNorm->calcLogSigma(m_measurement.getEffObs(),m_measurement.getEffPdfSigma());
+    effMean  = PDF::calcLogMean(m_measurement.getEffObs(),m_measurement.getEffPdfSigma());
+    effSigma = PDF::calcLogSigma(m_measurement.getEffObs(),m_measurement.getEffPdfSigma());
   } else {
     effMean  = m_measurement.getEffObs();
     effSigma = m_measurement.getEffPdfSigma();
   }
   if (m_measurement.getBkgPdfDist()==PDF::DIST_LOGN) {
-    bkgMean  = m_logNorm->calcLogMean(m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma());
-    bkgSigma = m_logNorm->calcLogSigma(m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma());
+    bkgMean  = PDF::calcLogMean(m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma());
+    bkgSigma = PDF::calcLogSigma(m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma());
   } else {
     bkgMean  = m_measurement.getBkgObs();
     bkgSigma = m_measurement.getBkgPdfSigma();
