@@ -98,6 +98,7 @@ namespace PDF {
     //
     virtual const double F(T x) const=0;
     virtual const double getVal(T x, double mean, double sigma) const=0;
+    const double getVal(T x, double mean) const {std::cerr << "ERROR: Accessing getVal(x,y) - NOT IMPLEMENTED for this class" << std::endl; return 0;}
     inline const double operator()(T x) const { return F(x); }
     
   };
@@ -127,6 +128,9 @@ namespace PDF {
     inline const double getVeffCorr(double detC, double s1, double s2, double corr) const { return ((corr*s1*s2)/detC);}
   };
 
+  inline const double calcLogMean(double mean,double sigma)  { return log(mean*mean/sqrt(sigma*sigma + mean*mean)); }
+  inline const double calcLogSigma(double mean,double sigma) { return sqrt(log((sigma*sigma/(mean*mean))+1)); }
+
   class LogNormal : protected Gauss {
   public:
     LogNormal():Gauss(1.0,1.0)                             { m_name="LogNormal"; m_dist=DIST_LOGN; }
@@ -137,8 +141,6 @@ namespace PDF {
     void setMean( double m)  { m_mean = m;  m_logMean = calcLogMean(m,m_sigma); m_logSigma = calcLogSigma(m,m_sigma); }
     void setSigma( double m) { m_sigma = m; m_logMean = calcLogMean(m_mean,m);  m_logSigma = calcLogSigma(m_mean,m); }
     //
-    inline const double calcLogMean(double mean,double sigma)  const { return log(mean*mean/sqrt(sigma*sigma + mean*mean)); }
-    inline const double calcLogSigma(double mean,double sigma) const { return sqrt(log((sigma*sigma/(mean*mean))+1)); }
     inline const double getLogMean()  const { return m_logMean; }
     inline const double getLogSigma() const { return m_logSigma; }
 
