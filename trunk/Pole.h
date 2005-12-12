@@ -184,13 +184,11 @@ public:
   void setEffMeas(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
     m_measurement.setEffPdf(mean,sigma,dist);
     m_measurement.setEffObs();
-    m_validInt = false;
     m_validBestMu = false;
   }
   void setBkgMeas(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
     m_measurement.setBkgPdf(mean,sigma,dist);
     m_measurement.setBkgObs();
-    m_validInt = false;
     m_validBestMu = false;
   }
   void setEffBkgCorr(double corr)                                   { m_measurement.setBEcorr(corr); }
@@ -200,14 +198,7 @@ public:
   bool isFullyCorrelated() { return false; } //m_measurement.isFullyCorrelated(); } // { return (((fabs(fabs(m_beCorr)-1.0)) < 1e-16)); }
   bool isNotCorrelated()   { return true;  } // m_measurement.isNotCorrelated(); }   // { return (fabs(m_beCorr) < 1e-16); }
  
-  // POLE construction 
-  void setEffInt(double scale=-1.0, int n=0);
-  //  void setEffInt(double scale,double step); // efficiency range for integral (7) [AFTER the previous]
-  void setBkgInt(double scale=-1.0, int n=0);
-  //  void setBkgInt(double scale,double step); // dito background
-
-  // Checks the integration range for eff and bkg
-  bool checkParams();
+  //////////  bool checkParams();
 
   // Set belt max value
   void setBelt(int v)    { m_nBeltMaxUsed = 0; m_nBeltMinUsed = v; m_nBelt = v; m_suggestBelt = (v<1); }
@@ -249,7 +240,6 @@ public:
   void initIntegral(std::vector<double> & eff, std::vector<double> & bkg, std::vector<double> & weight);
 
   // POLE
-  inline const double calcProb(int n, double s) const; // calculates probability (7)
   void findBestMu(int n); // finds the best fit (mu=s+b) for a given n. Fills m_bestMu[n] and m_bestMuProb[n].
   void findAllBestMu();   // dito for all n (loop n=0; n<m_nMuUsed)
   void calcConstruct(double s, bool verb);
@@ -290,6 +280,7 @@ public:
   const bool   getCoverage() const   { return m_coverage; }
   //
   const MeasPoisEB & getMeasurement() const { return m_measurement; }
+  MeasPoisEB & getMeasurement() { return m_measurement; }
   const int    getNObserved() const  { return m_measurement.getNObserved(); }
   // Efficiency
   const double  getEffMeas()  const  { return m_measurement.getEffObs(); }
@@ -306,29 +297,19 @@ public:
 								  m_measurement.getEffPdfSigma(),
 								  m_measurement.getBkgObs(),
 								  m_measurement.getBkgPdfSigma(),
-								  m_normInt);}
-  // range and steps in double integral (7), in principle infinite
-  const double  getEffIntScale() const { return m_effIntScale; }
-  const Range<double>  *getEffRangeInt() const { return &m_effRangeInt; }
-  // range and steps in double integral (7)
-  const double  getBkgIntScale() const { return m_bkgIntScale; }
-  const Range<double>  *getBkgRangeInt() const { return &m_bkgRangeInt; }
+								  m_measurement.getNuisanceIntNorm());}
   // Test range for the likelihood ratio calculation (4)
   const Range<double>  *getHypTest() const     { return &m_hypTest; }
   //
-  const bool    isValidInt() const   { return m_validInt; }
-  const unsigned int getNInt() const     { return m_nInt; }
-  //  const unsigned int getNIntMax() const  { return m_nIntMax; }
-  const std::vector<double> & getWeightInt() const { return m_weightInt; }
-  const std::vector<double> & getEffInt() const    { return m_effInt; }
-  const std::vector<double> & getBkgInt() const    { return m_bkgInt; }
-  double getEffIntMin() const { return m_effInt.front(); }
-  double getEffIntMax() const { return m_effInt.back(); }
-  double getBkgIntMin() const { return m_bkgInt.front(); }
-  double getBkgIntMax() const { return m_bkgInt.back(); }
-  double getEffIntNorm() const { return m_normEff; }
-  double getBkgIntNorm() const { return m_normBkg; }
-  double getIntNorm()    const { return m_normInt; }
+  double getEffIntMin() const { return m_measurement.getEff()->getIntXmin(); }
+  double getEffIntMax() const { return m_measurement.getEff()->getIntXmax(); }
+  double getEffIntN()   const { return m_measurement.getEff()->getIntN(); }
+  double getBkgIntMin() const { return m_measurement.getBkg()->getIntXmin(); }
+  double getBkgIntMax() const { return m_measurement.getBkg()->getIntXmax(); }
+  double getBkgIntN()   const { return m_measurement.getBkg()->getIntN(); }
+  double getEffIntNorm() const { return m_measurement.getEff()->getIntegral(); }
+  double getBkgIntNorm() const { return m_measurement.getBkg()->getIntegral(); }
+  double getIntNorm() const { return m_measurement.getNuisanceIntNorm(); }
   //
   const double  getLsbest(int n) const;
   const double  getDmus() const { return m_dmus; }
@@ -352,7 +333,6 @@ public:
   const int    getNuppLim() const    { return m_nUppLim; }
 
 private:
-  void setInt(double & low, double & high, double scale, double mean, double sigma, PDF::DISTYPE dt);
 
   const PDF::PoisTab   *m_poisson;
   const PDF::Gauss     *m_gauss;
@@ -373,30 +353,12 @@ private:
   bool   m_coverage;
   // Measurement
   MeasPoisEB m_measurement;
-  double m_normEff;
-  double m_normBkg;
-  double m_normInt; //
   // correlation between eff and bkg [-1.0..1.0]
   double  m_beCorr;
   ////////////////////////////////////////////////////
   //
-  // range and steps in double integral (7), in principle infinite
-  Range<double>  m_effRangeInt;
-  double m_effIntScale;
-  // range and steps in double integral (7)
-  Range<double>  m_bkgRangeInt;
-  double m_bkgIntScale;
   // Test range for the likelihood ratio calculation (4)
   Range<double>  m_hypTest;
-  //
-  // Kernel of double integral (7)
-  //
-  bool    m_validInt;  // true if integral is valid
-  unsigned int m_nInt;      // == m_effIntN*m_bkgIntN
-  //  unsigned int m_nIntMax;   // allocated
-  std::vector<double> m_weightInt; // array containing weights (Gauss(e)*Gauss(b)*de*db), size = n_points
-  std::vector<double> m_effInt;    // array containg e used in integral (e)
-  std::vector<double> m_bkgInt;    // array containg b used in integral (b)
   //
   // Arrays of best fit and limits
   //
@@ -447,18 +409,6 @@ inline const bool Pole::normOK(double p) const {
   return (fabs(p-1.0)<m_normMaxDiff);
 }
 
-inline const double Pole::calcProb(int n, double s) const {  
-  double p = 0.0;
-  double g;
-  //
-  for(unsigned int i=0;i<m_nInt;i++) {
-    g = m_effInt[i]*s + m_bkgInt[i];
-    p += m_weightInt[i]*m_poisson->getVal(n,g);
-    //    if (m_verbose>9) std::cout << i << " : p= " << p << ", g = " << g << ", weight = " << m_weightInt[i] << ", " << m_effInt[i] << ", " << m_bkgInt[i] << std::endl;
-  }
-  if (m_verbose>9) std::cout << "calcProb() : " << n << ", " << s << " => p = " << p << std::endl;
-  return p;
-}
 //
 // allow for gcc 2.96 fix
 //

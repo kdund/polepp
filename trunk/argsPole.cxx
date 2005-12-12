@@ -52,6 +52,7 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     //
     cmd.parse(argc,argv);
     //
+    pole->setVerbose(doVerbose.getValue());
     pole->setPoisson(&PDF::gPoisTab);
     pole->setGauss(&PDF::gGauss);
     pole->setGauss2D(&PDF::gGauss2D);
@@ -72,8 +73,8 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     pole->setDmus(dMus.getValue());
     pole->setNmusMax(nMus.getValue());
 
-    pole->setEffInt(effIntScale.getValue(),effIntN.getValue());
-    pole->setBkgInt(bkgIntScale.getValue(),bkgIntN.getValue());
+    pole->getMeasurement().setEffInt(effIntScale.getValue(),effIntN.getValue());
+    pole->getMeasurement().setBkgInt(bkgIntScale.getValue(),bkgIntN.getValue());
     //
     pole->setBelt(belt.getValue());
     pole->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
@@ -85,11 +86,9 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
       PDF::gPoisTab.setRangeX(61,0,60);
       PDF::gPoisTab.tabulate();
     }
+
     pole->initAnalysis();
-    //    pole->initIntArrays();
-    //    pole->initBeltArrays();
     //
-    pole->setVerbose(doVerbose.getValue());
 
   }
   catch (ArgException e) {

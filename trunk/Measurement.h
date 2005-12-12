@@ -75,6 +75,86 @@ class Measurement {
       }
     }
   }
+
+  //! initialize integrals of all nuisance parameters
+  void initIntNuisance() {
+    for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
+	 it !=  m_nuisancePars.end();
+       ++it) {
+      std::cout << "initIntNuisance():: " << (*it) << std::endl;
+      (*it)->initIntDefault();
+    }
+  }
+  //! Assumes that all parameters have called OBS::initInt()
+  void fillIntNuisance() {
+    for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
+	 it !=  m_nuisancePars.end();
+       ++it) {
+      (*it)->fillInt();
+      std::cout << "fillIntNuisance():: " << (*it) << std::endl;
+    }
+  }
+  //! Initialize nuisance weights: f(x)g(y)...dxdy
+  void initNuisanceWeights() {
+    std::cout << "initNuisanceWeights() start" << std::endl;
+    std::vector<int> jj;
+    std::vector<double> dx;
+    double step;
+    int n, nnpar;
+    m_nuisanceIndecis.clear();
+    m_nuisanceIndMax.clear();
+    //
+    nnpar=0;
+    for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
+	 it !=  m_nuisancePars.end();
+       ++it) {
+      nnpar++;
+      std::cout << "   obs " << (*it) << std::endl;
+      if ((*it)->isIntFilled()) {
+	n = (*it)->getIntN();
+	if (n<1) {
+	  std::cout << "WARNING: Integral with ZERO points for nuisance parameter -> " << (*it)->getName() << std::endl;
+	  n=1; //HERE: SHOULD fill integral for fixed value...
+	}
+      } else {
+	// Could in principle call fillInt() here - but let's not...
+	std::cout << "WARNING: Integral not filled for nuisance parameter -> " << (*it)->getName() << std::endl;
+	n=1; //HERE: SHOULD fill integral for fixed value...
+      }
+      std::cout << "Indmax = " << n << std::endl;
+      m_nuisanceIndMax.push_back(n-1);
+      step = (n==1 ? 1.0:(*it)->getIntdX()); // get dx (==1 if only one point)
+      dx.push_back((*it)->getIntdX());
+      jj.push_back(0);
+    }
+    //
+    // Loop over all volume elements (dxdydz...)
+    // and calculate the weight per volume element: f(x)g(y)h(z)...dxdydz
+    //
+    m_nuisanceWeights.clear();
+    double w;
+    m_nuisanceIntNorm = 0;
+    std::cout << "Init nuisance indecis" << std::endl;
+    //
+    m_nuisanceIndecis.push_back(jj); // save vector
+    while (Combination::next_vector(jj,m_nuisanceIndMax)) {
+      m_nuisanceIndecis.push_back(jj); // save vector
+    }
+    //
+    std::list< OBS::Base * >::iterator itnp = m_nuisancePars.begin();
+    //
+    for ( unsigned int i=0; i<m_nuisanceIndecis.size(); i++) {
+      w = 1.0;
+      itnp = m_nuisancePars.begin();
+      //! Calculate w(i,j,...) = f(xi)*dx * g(yj)*dy * ...
+      for (int j=0; j<nnpar; j++) {
+	w *= (*itnp)->getIntWeight(m_nuisanceIndecis[i][j]);
+	++itnp;
+      }
+      m_nuisanceWeights.push_back(w);
+      m_nuisanceIntNorm += w;
+    }
+  }
   //
   void dump() const {
     std::cout << "-----------MEASUREMENT------------------------\n";
@@ -92,6 +172,7 @@ class Measurement {
   const std::string & getName()                      const { return m_name;}
   const std::string & getDescription()               const { return m_description;}
   const std::list< OBS::Base * > & getNuisanceList() const { return m_nuisancePars; }
+  const double getNuisanceIntNorm()                  const { return m_nuisanceIntNorm; }
 
   const double rndObs() { OBS::BaseType<T> *p = static_cast< OBS::BaseType<T> * >(m_observable); return (*p)(); }
   //
@@ -144,30 +225,13 @@ class Measurement {
     }
     return np;
   }
-
-  //! initialize integrals of all nuisance parameters
-  void initIntNuisance() {
-    for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
-	 it !=  m_nuisancePars.end();
-       ++it) {
-      (*it)->initIntDefault();
-    }
-  }
-  //! Assumes that all parameters have called OBS::initInt()
-  void fillIntNuisance() {
-    for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
-	 it !=  m_nuisancePars.end();
-       ++it) {
-      (*it)->fillInt();
-    }
-  }
   
   const int getNuisanceIndex(const OBS::Base *nptr) {
     if (nptr==0) return -1;
     int rval=-1;
     bool found = false;
     std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
-    while (found && (it != m_nuisancePars.end())) {
+    while (!found && (it != m_nuisancePars.end())) {
       found = (*it==nptr);
       rval++;
       ++it;
@@ -175,53 +239,6 @@ class Measurement {
     return rval;
   }
 
-  //! Initialize nuisance weights: f(x)g(y)...dxdy
-  void initNuisanceWeights() {
-    std::vector<int> jj;
-    std::vector<double> dx;
-    double step;
-    int n;
-    m_nuisanceIndecis.clear();
-    m_nuisanceIndMax.clear();
-    //
-    for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
-	 it !=  m_nuisancePars.end();
-       ++it) {
-      if ((*it)->isIntFilled()) {
-	n = (*it)->getIntN();
-	if (n<1) {
-	  std::cout << "WARNING: Integral with ZERO points for nuisance parameter -> " << (*it)->GetName() << std::endl;
-	  n=1; //HERE: SHOULD fill integral for fixed value...
-	}
-      } else {
-	// Could in principle call fillInt() here - but let's not...
-	std::cout << "WARNING: Integral not filled for nuisance parameter -> " << (*it)->GetName() << std::endl;
-	n=1; //HERE: SHOULD fill integral for fixed value...
-      }
-      m_nuisanceIndMax.push_back(n);
-      step = (n==1 ? 1.0:(*it)->getIntdX()); // get dx (==1 if only one point)
-      dx.push_back((*it)->getXstep());
-    }
-    //
-    // Loop over all volume elements (dxdydz...)
-    // and calculate the weight per volume element: f(x)g(y)h(z)...dxdydz
-    //
-    m_nuisanceWeights.clear();
-    int ind=0;
-    double w;
-    std::list< OBS::Base * >::iterator it;
-    while (Combination::next_vector(jj,m_nuisanceIndMax)) {
-      m_nuisanceIndecis.push_back(jj); // save vector
-      w = 1.0;
-      it = m_nuisancePars.begin();
-      //! Calculate f(xi)*dx * g(yj)*dy * ...
-      for (int i=0; i<int(jj.size()); i++) {
-	w *= (*it)->getIntWeight(jj[i]);
-      }
-      m_nuisanceWeights.push_back(w);
-      ind++;
-    }
-  }
 
   std::string m_name;
   std::string m_description;
@@ -234,6 +251,7 @@ class Measurement {
   std::vector< double >                   m_nuisanceWeights; //! nuisance pars weights: f(x)g(y)...dxdy...
   std::vector< std::vector<int> >         m_nuisanceIndecis; //! indecis of (x,y...) -> (i,j,....) used in vector above
   std::vector< int >                      m_nuisanceIndMax;  //! maximum index per parameter
+  double				  m_nuisanceIntNorm;
 };
 
 class MeasPois : public Measurement<int> {
@@ -288,6 +306,20 @@ class MeasPoisEB : public MeasPois {
   void updNuisanceIndex() {
     m_bkgIndex = getNuisanceIndex(m_bkg);
     m_effIndex = getNuisanceIndex(m_eff);
+  }
+
+  void setEffInt(double scale, int n) {
+    if (m_eff) {
+      m_eff->setIntNpts(n);
+      m_eff->setIntScale(scale);
+    }
+  }
+
+  void setBkgInt(double scale, int n) {
+    if (m_bkg) {
+      m_bkg->setIntNpts(n);
+      m_bkg->setIntScale(scale);
+    }
   }
 
   void setEffObs(double eff) {
@@ -402,6 +434,12 @@ class MeasPoisEB : public MeasPois {
 	(m_bkg==0) ||
 	(m_observable==0)) {
       std::cerr << "ERROR: MeasPoisEB() - No eff and/or bkg defined!" << std::endl;
+      std::cerr << "       EffPtr = " << m_eff << std::endl;
+      std::cerr << "       BkgPtr = " << m_bkg << std::endl;
+      std::cerr << "       EffInd = " << m_effIndex << std::endl;
+      std::cerr << "       BkgInd = " << m_bkgIndex << std::endl;
+      std::cerr << "       Observ = " << m_observable << std::endl;
+
       return 0.0;
     }
     ////// BUG TRAP!
@@ -422,12 +460,20 @@ class MeasPoisEB : public MeasPois {
       std::cerr << "ERROR: nuisance weight and index arrays are not of equal size!" << std::endl;
       return 0.0;
     }
+    if (m_nuisanceWeights.size()==0) {
+      std::cerr << "ERROR: nuisance weight and index arrays are not initialized (size zero)!" << std::endl;
+      return 0.0;
+    }
+    //    std::cout << "calcProb( " << x << ", " << s << " )" << std::endl;
     for (unsigned int i=0; i<m_nuisanceIndecis.size(); i++) {
       ixeff = m_nuisanceIndecis[i][m_effIndex];
       ixbkg = m_nuisanceIndecis[i][m_bkgIndex];
-      g = getM(m_trueSignal, m_eff->getIntX(ixeff), m_bkg->getIntX(ixbkg));
+      g = getM(s, m_eff->getIntX(ixeff), m_bkg->getIntX(ixbkg));
+      //      std::cout << "   s(true), e, b, mu = " << s << ", " << m_eff->getIntX(ixeff) << ", " << m_bkg->getIntX(ixbkg) << ", " << g << std::endl;
       p += m_nuisanceWeights[i]*pdf->getVal(x,g);
+      //      std::cout << "   w, p = " << m_nuisanceWeights[i] << ", " << p << std::endl;
     }
+
     return p;
   }
 

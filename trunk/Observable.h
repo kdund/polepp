@@ -22,20 +22,20 @@ namespace OBS {
     double dx;
     //
     if (dist==PDF::DIST_NONE) {
-      low  = mean;
-      high = mean;
+      low  = static_cast<T>(mean);
+      high = static_cast<T>(mean);
     } else {
       switch (dist) {
       case PDF::DIST_GAUS2D:
       case PDF::DIST_GAUS:
       case PDF::DIST_LOGN:
-	low  = mean - scale*sigma;
-	high = mean + scale*sigma;
+	low  = static_cast<T>(mean - scale*sigma);
+	high = static_cast<T>(mean + scale*sigma);
 	break;
       case PDF::DIST_FLAT:
 	dx=sigma*1.73205081; // == sqrt(12)*0.5; ignore scale - always use full range
-	low  = mean-dx;
-	high = mean+dx;
+	low  = static_cast<T>(mean-dx);
+	high = static_cast<T>(mean+dx);
 	break;
       case PDF::DIST_POIS:
 	
@@ -74,6 +74,8 @@ namespace OBS {
     }
     //
     virtual void setObservedRnd() { std::cerr << "ERROR: Calling Base::setObservedRnd()" << std::endl;}
+    void lock() { m_locked = true; }
+    void unlock() { m_locked = false; }
     void setPdf(PDF::Base *pdf)   { m_pdf = pdf; m_dist = ((pdf==0) ? PDF::DIST_NONE:pdf->getDist());}
     void setPdfDist(const PDF::DISTYPE dist) { if (m_pdf==0) m_dist = dist; }
     void setPdfMean(double m)  { m_mean = m; }
@@ -102,14 +104,16 @@ namespace OBS {
       return obj;
     }
 
-    void initInt()        {std::cerr << "ERROR: using Base::initInt()" << std::endl;}
-    void initIntConst()   {std::cerr << "ERROR: using Base::initIntConst()" << std::endl;}
-    void initIntDefault() {std::cerr << "ERROR: using Base::initIntDefault()" << std::endl;}
-    void fillInt()        {std::cerr << "ERROR: using Base::fillInt()" << std::endl;}
+    virtual void initInt()        {std::cerr << "ERROR: using Base::initInt()" << std::endl;}
+    virtual void initIntConst()   {std::cerr << "ERROR: using Base::initIntConst()" << std::endl;}
+    virtual void initIntDefault() {std::cerr << "ERROR: using Base::initIntDefault()" << std::endl;}
+    virtual void fillInt()        {std::cerr << "ERROR: using Base::fillInt()" << std::endl;}
     //
-    const bool isIntFilled()  {std::cerr << "ERROR: using Base::isIntFilled()" << std::endl; return false;}
-    const int  getIntNpts() {std::cerr << "ERROR: using Base::getIntNpts()" << std::endl; return 0;}
-    const double getIntWeight(int i) {std::cerr << "ERROR: using Base::getIntWeight()" << std::endl; return 1.0;}
+    virtual const bool isIntFilled() const {std::cerr << "ERROR: using Base::isIntFilled()" << std::endl; return false;}
+    virtual const int  getIntNpts()  const {std::cerr << "ERROR: using Base::getIntNpts()" << std::endl; return 0;}
+    virtual const int  getIntN()     const {std::cerr << "ERROR: using Base::getIntN()" << std::endl; return 0;}
+    virtual const double getIntdX()  const {std::cerr << "ERROR: using Base::getIntdX()" << std::endl; return 0;}
+    virtual const double getIntWeight(int i) const {std::cerr << "ERROR: using Base::getIntWeight()" << std::endl; return 1.0;}
     //
   protected:
     void copy(const Base & other) {
@@ -143,12 +147,11 @@ namespace OBS {
     BaseType():Base() {}
     BaseType(const char *name,const char *desc=0):Base(name,desc) {}
     BaseType(PDF::BaseType<T> *pdf, RND::Random *rndgen, const char *name, const char *description=0):Base(name,description) {
-      m_rndGen = rndgen;
-      m_valid=((pdf!=0)&&(rndgen!=0));
-      m_lockedValue=0;
+      this->m_rndGen = rndgen;
+      this->m_valid=((pdf!=0)&&(rndgen!=0));
       setPdf(pdf);
       m_observedValue=0;
-      if (pdf) m_observedValue = static_cast<T>(m_mean);
+      if (pdf) m_observedValue = static_cast<T>(this->m_mean);
       m_intFilled = false;
       m_intScale = 5.0;
       m_intNpts  = 20;
@@ -157,7 +160,7 @@ namespace OBS {
     BaseType(const BaseType<T> & other):Base() { copy(other);}
     virtual ~BaseType() {}
     //
-    virtual T rnd() { std::cout << "ERROR::Observable - EMPTY rnd() : " << m_rndGen << std::endl; return 0; }
+    virtual T rnd() { std::cout << "ERROR::Observable - EMPTY rnd() : " << this->m_rndGen << std::endl; return 0; }
     //
     BaseType<T> const & operator=(BaseType<T> const & rh) {
       copy(rh);
@@ -169,20 +172,18 @@ namespace OBS {
       return obj;
     }
 
-    const double getPdfVal(T val) { return (m_pdf ? static_cast< BaseType<T> >(*m_pdf).getVal(val,m_mean,m_sigma):0.0); }
+    const double getPdfVal(T val) { return (this->m_pdf ? static_cast< PDF::BaseType<T> * >(this->m_pdf)->getVal(val,this->m_mean,this->m_sigma):0.0); }
 
-    T       operator()()       { return ( m_locked ? m_lockedValue:rnd()); }
+    T       operator()()       { return ( this->m_locked ? m_observedValue:rnd()); }
     double  operator()(T val)  { return getPdfVal(val); }
     //
-    void setObservedRnd()          { m_observedValue = ( m_locked ? m_lockedValue:rnd());}
+    void setObservedRnd()          { if (!this->m_locked) m_observedValue = rnd();}
     void setObservedValue(T val)   { m_observedValue = val; }
-    void setLockedValue(T val)     { m_lockedValue = val;}
     //
-    const T getLockedValue() const   { return m_lockedValue;}
     const T getObservedValue() const { return m_observedValue; }
 
     const bool isIntFilled()   const { return m_intFilled; }
-    const int getIntNpts()     const { return m_intNpts; }
+    const int getIntNpts()     const { std::cerr << "WARNING:: Don't use Observable::getIntNpts() - use getIntN()" << std::endl; return m_intNpts; } // USE getIntN()
     const double getIntScale() const { return m_intScale; }
     const std::vector<double> * getIntWeight() const { return &m_intWeight; }
     const double getIntWeight(int i) const { return m_intWeight[i]; }
@@ -190,7 +191,11 @@ namespace OBS {
     const Range<T> * getIntXRange()  const { return &m_intXRange; }
     const std::vector<T> * getIntX() const { return &m_intX; }
     const T getIntX(int i)           const { return m_intX[i]; }
-    const T getIntdX()               const { return m_intXRange.step(); }
+    const T getIntXmin()             const { return m_intX.front(); }
+    const T getIntXmax()             const { return m_intX.back(); }
+    const T getIntStep()             const { return m_intXRange.step(); }
+    const double getIntdX()          const { return static_cast<double>(m_intXRange.step()); }
+    const int getIntN()              const { return m_intXRange.n(); }
 
     void setIntNpts(int n)     { m_intNpts = n; }
     void setIntScale(double s) { m_intScale = s; }
@@ -204,6 +209,9 @@ namespace OBS {
       int np = m_intXRange.n();
       m_intWeight.resize(np,0.0);
       m_intX.resize(np,0);
+      for (int i=0; i<np; i++) {
+	m_intX[i] = m_intXRange.getVal(i);
+      }
       m_intTotal = 0;
       m_intFilled = false;
     }
@@ -221,13 +229,14 @@ namespace OBS {
     //! init with default range, given by observed value, sigma and scale
     void initIntDefault() {
       if (constant()) { // takes care of DIST_NONE, DIST_UNDEF
+	std::cout << "initIntDefault:: constant()" << std::endl;
 	initIntConst();
       } else {
 	T low;
 	T high;
 	bool pos;
 	double mean, sigma;
-	if (m_dist == PDF::DIST_LOGN) {
+	if (this->m_dist == PDF::DIST_LOGN) {
 	  mean = PDF::calcLogMean(double(m_observedValue),m_sigma);
 	  sigma = PDF::calcLogSigma(double(m_observedValue),m_sigma);
 	  pos = false;
@@ -236,7 +245,9 @@ namespace OBS {
 	  sigma = m_sigma;
 	  pos = true;
 	}
-	getIntRange(low,high,m_intScale, mean , sigma, m_dist, pos);
+	getIntRange(low,high,m_intScale, mean , sigma, this->m_dist, pos);
+	std::cout << "Int dist  = " << mean << " , " << sigma << std::endl;
+	std::cout << "    range = " << low << " : " << high << std::endl;
 	initInt(low,high,0,m_intNpts);
       }
     }
@@ -264,7 +275,6 @@ namespace OBS {
     void copy(const BaseType<T> & other) {
       if (this != &other) {
 	Base::copy(other);
-	m_lockedValue   = other.getLockedValue();
 	m_observedValue = other.getObservedValue();
 	m_intFilled     = other.isIntFilled();
 	m_intWeight     = *(other.getIntWeight());
@@ -276,7 +286,6 @@ namespace OBS {
       }
     }
     //
-    T m_lockedValue;   //! value return by rnd() if rndGen is disabled
     T m_observedValue; //! the observed value
 
     std::vector<double> m_intWeight; //! array containing the weights f(x)dx
@@ -321,7 +330,7 @@ namespace OBS {
 
   class ObservableGauss : public Observable<double> {
   public:
-    ObservableGauss():Observable<double>("gauss","Gaussian observable") {m_dist=PDF::DIST_GAUS;};
+    ObservableGauss():Observable<double>("gauss","Gaussian observable") {this->m_dist=PDF::DIST_GAUS;};
     ObservableGauss(PDF::Gauss *pdf, RND::Random *rndGen, const char *name, const char *desc=0):Observable<double>(pdf,rndGen,name,desc) {};
     ObservableGauss(const ObservableGauss & other) {
       copy(other);
@@ -333,7 +342,7 @@ namespace OBS {
       return *this;
     }
     //
-    double rnd() { return (m_valid ? m_rndGen->gauss(m_mean,m_sigma):0); }
+    double rnd() { return (this->m_valid ? this->m_rndGen->gauss(this->m_mean,this->m_sigma):0); }
 
     ObservableGauss *clone() const {
       ObservableGauss *obj = new ObservableGauss(*this);
@@ -343,7 +352,7 @@ namespace OBS {
 
   class ObservablePois : public Observable<int> {
   public:
-    ObservablePois():Observable<int>("poisson","Poisson observable") {m_dist=PDF::DIST_POIS;};
+    ObservablePois():Observable<int>("poisson","Poisson observable") {this->m_dist=PDF::DIST_POIS;};
     ObservablePois(PDF::Poisson *pdf, RND::Random *rndGen, const char *name, const char *desc=0):Observable<int>(pdf,rndGen,name,desc) {};
     ObservablePois(PDF::PoisTab *pdf, RND::Random *rndGen, const char *name, const char *desc=0):Observable<int>(pdf,rndGen,name,desc) {};
     ObservablePois(const ObservablePois & other) {
@@ -356,9 +365,9 @@ namespace OBS {
       return *this;
     }
     //
-    void setPdfMean(double m)  { m_mean = m; m_sigma = (m>0 ? sqrt(m):0.0); }
-    void setPdfSigma(double m) { m_mean = m*m; m_sigma=m; }
-    int rnd() {return (m_valid ? m_rndGen->poisson(m_mean):0);}
+    void setPdfMean(double m)  { this->m_mean = m;   this->m_sigma = (m>0 ? sqrt(m):0.0); }
+    void setPdfSigma(double m) { this->m_mean = m*m; this->m_sigma=m; }
+    int rnd() {return (this->m_valid ? this->m_rndGen->poisson(this->m_mean):0);}
 
     ObservablePois *clone() const {
       ObservablePois *obj = new ObservablePois(*this);
