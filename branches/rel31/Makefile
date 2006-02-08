@@ -8,10 +8,11 @@ LDFLAGS    = -g -fPIC -shared
 # Use -g to include debug info
 # Use -pg for profiling info
 CFLAGS     = -g
-SRCTOOLS     = polelim.cxx polecov.cxx
+SRCTOOLS     = polelim.cxx polecov.cxx argsPole.cxx argsCoverage.cxx
 SRCEXTRAS    = exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx poleconst.cxx polepow.cxx
-INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h Measurement.h Power.h
-SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Pdf.cxx Combination.cxx Power.cxx
+INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h Measurement.h \
+	       Power.h Observable.h Combine.h PseudoExperiment.h
+SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Pdf.cxx Combination.cxx Power.cxx Combine.cxx PseudoExperiment.cxx
 LDFILE	     = libPole++.so
 LDSMFILE     = libPoleSM++.so
 LIBS         = -L./ -lPole++
