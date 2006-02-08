@@ -20,18 +20,18 @@ int main(int argc, char *argv[]) {
     return 0;
   }
   int nobs=1;
-  DISTYPE deff = DIST_NONE;
+  PDF::DISTYPE deff = PDF::DIST_NONE;
   double eff=1.0;
   double seff=0.0;
-  DISTYPE dbkg = DIST_NONE;
+  PDF::DISTYPE dbkg = PDF::DIST_NONE;
   double bkg=0.0;
   double sbkg=0.0;
   //
   nobs=atoi(argv[1]);
-  deff =DISTYPE(atoi(argv[2]));
+  deff =PDF::DISTYPE(atoi(argv[2]));
   eff =atof(argv[3]);
   seff=atof(argv[4]);
-  dbkg =DISTYPE(atoi(argv[5]));
+  dbkg =PDF::DISTYPE(atoi(argv[5]));
   bkg =atof(argv[6]);
   sbkg=atof(argv[7]);
 
