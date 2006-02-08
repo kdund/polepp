@@ -8,15 +8,17 @@ LDFLAGS    = -g -fPIC -shared
 # Use -g to include debug info
 # Use -pg for profiling info
 CFLAGS     = -g
-SRCTOOLS     = polelim.cxx polecov.cxx exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx poleconst.cxx polepow.cxx
+SRCTOOLS     = polelim.cxx polecov.cxx
+SRCEXTRAS    = exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx poleconst.cxx polepow.cxx
 INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h Measurement.h Power.h
-SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Pdf.cxx Combination.cxx Measurement.cxx Power.cxx
+SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Pdf.cxx Combination.cxx Power.cxx
 LDFILE	     = libPole++.so
 LDSMFILE     = libPoleSM++.so
 LIBS         = -L./ -lPole++
 LIBSSM       = -L./ -lPoleSM++
 
-all:		$(LDFILE) polelim polebelt polecov exptest plotexp estbelt poleconst polecomb polepow
+all:		$(LDFILE) polelim polecov
+extras:         polebelt exptest plotexp estbelt poleconst polecomb polepow
 small:          $(LDSMFILE)
 
 $(LDFILE):	$(LDOBJS)
@@ -112,7 +114,7 @@ Power.o:	Power.cxx Power.h
 		g++ $(CFLAGS) -Wall -c $<
 
 package:	$(SRCLIB) $(SRCTOOLS) Makefile
-		tar -czf polelib.tgz $(SRCFILES) $(INCFILES) $(SRCTOOLS) Makefile
+		tar -czf polelib.tgz $(SRCFILES) $(INCFILES) $(SRCTOOLS) $(SRCEXTRAS) Makefile
 
 clean:
 		rm -f *.o
