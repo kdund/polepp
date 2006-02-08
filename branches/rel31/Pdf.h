@@ -78,6 +78,7 @@ namespace PDF {
       }
     }
     void setDist(DISTYPE d) { m_dist = d; }
+    void setName(std::string name) { m_name = name; }
     std::string m_name;
     DISTYPE     m_dist;
     double      m_mean;
@@ -179,7 +180,7 @@ namespace PDF {
   template <typename T>
   class Tabulated : public BaseType<T> {
   public:
-    Tabulated():BaseType<T>() { m_pdf=0; m_table=0; m_dist = DIST_UNDEF;}
+    Tabulated():BaseType<T>() { m_pdf=0; m_table=0; }
     Tabulated(const Tabulated<T> & other):BaseType<T>() {
       if (this != &other) {
 	BaseType<T>::copy(other);
@@ -212,18 +213,18 @@ namespace PDF {
     }
     virtual ~Tabulated() {if (m_table) delete [] m_table;};
     //
-    virtual void setMean(double m)  { m_pdf->setMean(m);  m_mean  = m_pdf->getMean();}
-    virtual void setSigma(double s) { m_pdf->setSigma(s); m_sigma = m_pdf->getSigma();}
+    virtual void setMean(double m)  { m_pdf->setMean(m);  Base::setMean(m_pdf->getMean());}
+    virtual void setSigma(double s) { m_pdf->setSigma(s); Base::setMean(m_pdf->getSigma());}
     //
     void setRangeX(     int npts, T      min, T      max) { m_nX     = npts; m_xmin = min; m_xmax = max; }
     void setRangeMean(  int npts, double min, double max) { m_nMean  = npts; m_mmin = min; m_mmax = max; }
     void setRangeSigma( int npts, double min, double max) { m_nSigma = npts; m_smin = min; m_smax = max; }
     void setBasePdf( BaseType<T> * pdf ) {
       m_pdf = pdf;
-      m_mean  = m_pdf->getMean();
-      m_sigma = m_pdf->getSigma();
-      m_dist  = m_pdf->getDist();
-      m_name  = "Tabulated " + m_pdf->getName();
+      Base::setMean(m_pdf->getMean());
+      Base::setSigma(m_pdf->getSigma());
+      Base::setDist(m_pdf->getDist());
+      Base::setName("Tabulated " + m_pdf->getName());
     }
     
     void initTab() {
