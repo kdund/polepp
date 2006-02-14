@@ -103,6 +103,45 @@ namespace PDF {
     
   };
 
+  class Flat : public BaseType<double> {
+  public:
+    Flat():BaseType<double>("Flat",DIST_FLAT,1.0,0.1) {}
+    Flat(double mean, double sigma):BaseType<double>("Flat",DIST_GAUS,mean,sigma) {}
+    Flat(const Flat & other):BaseType<double>(other) {m_min = other.m_min; m_max = other.m_max;}
+    virtual ~Flat() {};
+    //
+    inline const double F(double val) const;
+    inline const double getVal(double x, double mean, double sigma) const;
+    //
+    inline void setMinMax(double mean, double sigma) {
+      calcMinMax(mean,sigma,m_min,m_max);
+      m_F = calcF(m_min,m_max);
+    }
+    inline const double getMin() const { return m_min; }
+    inline const double getMax() const { return m_max; }
+    inline const double getF()   const { return m_F; }
+    
+  protected:
+    double m_min;
+    double m_max;
+    double m_F;
+
+    inline const double raw(double x, double f) const;
+
+    inline void calcMinMax(double mean, double sigma, double & xmin, double & xmax) const {
+      const double d = sqrt(12.0);
+      double wh = 0.5*d*sigma;
+      xmin = mean-wh;
+      xmax = mean+wh;
+      if (xmax<xmin) xmax=xmin;
+    }
+
+    inline const double calcF(double xmin, double xmax) const {
+      double d=(xmax-xmin);
+      return (d>0 ? 1.0/d:-1);
+    }
+  };
+
   class Gauss : public BaseType<double> {
   public:
     Gauss():BaseType<double>("Gaussian",DIST_GAUS,0.0,1.0) {}
@@ -115,7 +154,7 @@ namespace PDF {
     inline const double getVal(double x, double mean, double sigma) const;
   };
 
-  class Gauss2D : protected Gauss {
+  class Gauss2D : public Gauss {
   public:
     Gauss2D():Gauss() { m_name="Gauss2D"; m_dist=DIST_GAUS2D; }
     Gauss2D(const Gauss2D & other):Gauss(other) {}
@@ -128,11 +167,14 @@ namespace PDF {
     inline const double getVeffCorr(double detC, double s1, double s2, double corr) const { return ((corr*s1*s2)/detC);}
   };
 
-  class LogNormal : protected Gauss {
+  class LogNormal : public Gauss {
   public:
-    LogNormal():Gauss(1.0,1.0)                             { m_name="LogNormal"; m_dist=DIST_LOGN; }
-    LogNormal(double mean, double sigma):Gauss(mean,sigma) { m_name="LogNormal"; m_dist=DIST_LOGN; }
-    LogNormal(const LogNormal & other):Gauss(other) {}
+    LogNormal():Gauss()                                    { m_name="LogNormal"; m_dist=DIST_LOGN; setMean(1.0);  setSigma(1.0); }
+    LogNormal(double mean, double sigma):Gauss(mean,sigma) { m_name="LogNormal"; m_dist=DIST_LOGN; setMean(mean); setSigma(sigma);}
+    LogNormal(const LogNormal & other):Gauss(other) {
+      m_mean = other.getMean(); m_sigma = other.getSigma();
+      m_logMean = other.getLogMean(); m_logSigma = other.getLogSigma();
+    }
     virtual ~LogNormal() {};
     //
     void setMean( double m)  { m_mean = m;  m_logMean = calcLogMean(m,m_sigma); m_logSigma = calcLogSigma(m,m_sigma); }
@@ -465,6 +507,7 @@ namespace PDF {
     rval *= 1.0/sdetC;
     return rval;
   }
+
   inline const double Poisson::F(int x) const {
     return raw(x,m_mean);
   }
@@ -491,6 +534,21 @@ namespace PDF {
       std::cout << "NaN in rawPoisson: " << n << ", " << s << ", " << prob << std::endl;
     }
     return prob;
+  }
+
+
+  inline const double Flat::F(double x) const {
+    return raw(x,m_F);
+  }
+  inline const double Flat::getVal(double x, double mean, double sigma) const {
+    double xmin,xmax,f;
+    calcMinMax(mean,sigma,xmin,xmax);
+    f = calcF(xmin,xmax);
+    return raw(x,f);
+  }
+
+  inline const double Flat::raw(double x, double f) const {
+    return (((x>=m_min) && (x<=m_max)) ? f:-1);
   }
 //   template <typename T>
 //   const double Tabulated::getVal(T x, double m, double s) {
