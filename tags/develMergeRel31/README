@@ -1,0 +1,39 @@
+Tools
+=====
+
+1. polelim: limit calculator
+2. polecov: coverage calculator
+
+Some other tools exists but they are not ready yet.
+Try
+	make extras
+to see what does work.
+
+Input options
+=============
+
+The intention is to fill this file with info on each input option.
+Not yet there though. Please contact me at fredrik.tegenfeldt@cern.ch in case of problems.
+
+1. dmus  [Pole::setDmus(double d)]
+	This is the stepsize in s (signal) when finding s_best - default 0.01
+
+2. nbelt [Pole::setBelt(int n)]
+	This gives the maximum n used for calculating the likelihood ration R(n,s).
+	The minimum is always 0.
+	It can be set to a fix value (e.g 50 is usually fine). Note that this needs to be increased
+	if N_observed has a possibility of beeing above 50.
+	If set to -1, the program will make the choice depending on N_observed.
+	This is only useful when doing coverage studies where an optimised choice is
+	of great importance.
+
+3. hmin, hmax, hstep
+	These are the min,max and step of test hypothesis for the limits.
+	The defaults are (min,max)=[0,35] and step=0.02.
+	Two things should be noted:
+        A. The range (min,max) gives the maximum allowed limit range.
+	   If, e.g, the upper limit reaches 35 with the default settings, it is time to increase the max.
+	B. The step size gives the precision with which the limits are given.
+	   The resulting limit will consist of values from the set given by (min,max) and step.
+
+4. effdist, bkgdist
