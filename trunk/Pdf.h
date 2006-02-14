@@ -102,8 +102,8 @@ namespace PDF {
     virtual ~BaseType() {}
     //
     virtual const double F(T x) const=0;
-    virtual const double getVal(T x, double mean, double sigma) const=0;
-    virtual const double getVal(T x, double mean) const {std::cerr << "ERROR: Accessing getVal(x,y) - NOT IMPLEMENTED for this class" << std::endl; return 0;}
+    virtual const double getVal(const T x, const double mean, const double sigma) const=0;
+    virtual const double getVal(const T x, const double mean) const {std::cerr << "ERROR: Accessing getVal(x,y) - NOT IMPLEMENTED for this class" << std::endl; return 0;}
     inline const double operator()(T x) const { return F(x); }
     
   };
@@ -116,7 +116,7 @@ namespace PDF {
     virtual ~Flat() {};
     //
     inline const double F(double val) const;
-    inline const double getVal(double x, double mean, double sigma) const;
+    inline const double getVal(const double x, const double mean, const double sigma) const;
     //
     inline void setMinMax(double mean, double sigma) {
       calcMinMax(mean,sigma,m_min,m_max);
@@ -156,7 +156,7 @@ namespace PDF {
     //
     inline const double F(double val) const;
     inline const double phi(double mu) const;
-    inline const double getVal(double x, double mean, double sigma) const;
+    inline const double getVal(const double x, const double mean, const double sigma) const;
   };
 
   class Gauss2D : public Gauss {
@@ -165,38 +165,38 @@ namespace PDF {
     Gauss2D(const Gauss2D & other):Gauss(other) {}
     virtual ~Gauss2D() {};
     //
-    inline const double getVal2D(double x1, double mu1, double s1, double x2, double mu2, double s2, double corr) const;
-    inline const double getVal2D(double x1, double mu1, double x2, double mu2, double sdetC, double seff1, double seff2, double veffc) const;
-    inline const double getDetC(double s1,double s2,double c) const { return (s1*s1*s2*s2*(1.0-c*c)); }
-    inline const double getVeff(double detC, double s) const { return (detC/(s*s)); }
-    inline const double getVeffCorr(double detC, double s1, double s2, double corr) const { return ((corr*s1*s2)/detC);}
+    inline const double getVal2D(const double x1, const double mu1, const double s1, const double x2, const double mu2, const double s2, const double corr) const;
+    inline const double getVal2D(const double x1, const double mu1, const double x2, const double mu2, const double sdetC, const double seff1, const double seff2, const double veffc) const;
+    inline const double getDetC(const double s1,const double s2,const double c) const { return (s1*s1*s2*s2*(1.0-c*c)); }
+    inline const double getVeff(const double detC, const double s) const { return (detC/(s*s)); }
+    inline const double getVeffCorr(const double detC, const double s1, const double s2, const double corr) const { return ((corr*s1*s2)/detC);}
   };
 
   class LogNormal : public Gauss {
   public:
     LogNormal():Gauss()                                    { m_name="LogNormal"; m_dist=DIST_LOGN; setMean(1.0);  setSigma(1.0); }
-    LogNormal(double mean, double sigma):Gauss(mean,sigma) { m_name="LogNormal"; m_dist=DIST_LOGN; setMean(mean); setSigma(sigma);}
+    LogNormal(const double mean, const double sigma):Gauss(mean,sigma) { m_name="LogNormal"; m_dist=DIST_LOGN; setMean(mean); setSigma(sigma);}
     LogNormal(const LogNormal & other):Gauss(other) {
       m_mean = other.getMean(); m_sigma = other.getSigma();
       m_logMean = other.getLogMean(); m_logSigma = other.getLogSigma();
     }
     virtual ~LogNormal() {};
     //
-    void setMean( double m)  { this->m_mean = m;  m_logMean = calcLogMean(m,this->m_sigma); m_logSigma = calcLogSigma(m,this->m_sigma); }
-    void setSigma( double m) { this->m_sigma = m; m_logMean = calcLogMean(this->m_mean,m);  m_logSigma = calcLogSigma(this->m_mean,m); }
+    void setMean( const double m)  { this->m_mean = m;  m_logMean = calcLogMean(m,this->m_sigma); m_logSigma = calcLogSigma(m,this->m_sigma); }
+    void setSigma( const double m) { this->m_sigma = m; m_logMean = calcLogMean(this->m_mean,m);  m_logSigma = calcLogSigma(this->m_mean,m); }
     //
-    inline const double calcLogMean(double mean,double sigma)  { return log(mean*mean/sqrt(sigma*sigma + mean*mean)); }
-    inline const double calcLogSigma(double mean,double sigma) { return sqrt(log((sigma*sigma/(mean*mean))+1)); }
+    inline const double calcLogMean(const double mean,const double sigma)  const { return log(mean*mean/sqrt(sigma*sigma + mean*mean)); }
+    inline const double calcLogSigma(const double mean,const double sigma) const { return sqrt(log((sigma*sigma/(mean*mean))+1)); }
     inline const double getLogMean()  const { return m_logMean; }
     inline const double getLogSigma() const { return m_logSigma; }
 
 
-    inline const double F(double x) const {return (x>0.0 ? Gauss::getVal(log(x),m_logMean,m_logSigma)/x:0.0);}
-    inline const double getVal(double x, double m, double s) const {
+    inline const double F(const double x) const {return (x>0.0 ? Gauss::getVal(log(x),m_logMean,m_logSigma)/x:0.0);}
+    inline const double getVal(const double x, const double m, const double s) const {
       if (x<=0) return 0.0;
       return Gauss::getVal(log(x),calcLogMean(m,s), calcLogSigma(m,s))/x;
     }
-    inline const double getValLogN(double x, double m, double s) const {
+    inline const double getValLogN(const double x, const double m, const double s) const {
       if (x<=0) return 0.0;
       return Gauss::getVal(log(x),m, s)/x;
     }
@@ -208,18 +208,18 @@ namespace PDF {
   class Poisson : public BaseType<int> {
   public:
     Poisson():BaseType<int>("Poisson",DIST_POIS,1.0,1.0) {}
-    Poisson(double lambda):BaseType<int>("Poisson",DIST_POIS,lambda,sqrt(lambda)) {}
+    Poisson(const double lambda):BaseType<int>("Poisson",DIST_POIS,lambda,sqrt(lambda)) {}
     Poisson(const Poisson & other):BaseType<int>(other) {}
 
     virtual ~Poisson() {}
     //
-    void setMean(double mean)   { this->m_mean = mean; this->m_sigma = sqrt(mean); }
-    void setSigma(double sigma) { this->m_mean = sigma*sigma; this->m_sigma = sigma; }
+    void setMean(const double mean)   { this->m_mean = mean; this->m_sigma = sqrt(mean); }
+    void setSigma(const double sigma) { this->m_mean = sigma*sigma; this->m_sigma = sigma; }
     //
     virtual inline const double F(int val) const;
-    virtual inline const double getVal(int x, double mean, double sigma) const;
-    inline const double getVal(int x, double mean) const;
-    inline const double raw(int n, double s) const;
+    virtual inline const double getVal(const int x, const double mean, const double sigma) const;
+    inline const double getVal(const int x, const double mean) const;
+    inline const double raw(const int n, const double s) const;
   protected:
 
   };
@@ -485,7 +485,7 @@ namespace PDF {
     double mu = fabs((x-this->m_mean)/this->m_sigma); // symmetric around mu0
     return phi(mu)/this->m_sigma;
   }
-  inline const double Gauss::getVal(double x, double mean, double sigma) const {
+  inline const double Gauss::getVal(const double x, const double mean, const double sigma) const {
     double mu = fabs((x-mean)/sigma); // symmetric around mu0
     return phi(mu)/sigma;
   }
@@ -516,14 +516,14 @@ namespace PDF {
   inline const double Poisson::F(int x) const {
     return raw(x,this->m_mean);
   }
-  inline const double Poisson::getVal(int x, double mean) const {
+  inline const double Poisson::getVal(const int x, const double mean) const {
     return raw(x,mean);
   }
-  inline const double Poisson::getVal(int x, double mean, double sigma) const {
+  inline const double Poisson::getVal(const int x, const double mean, const double sigma) const {
     return raw(x,mean);
   }
 
-  inline const double Poisson::raw(int n, double s) const {
+  inline const double Poisson::raw(const int n, const double s) const {
     double prob;
     double nlnl,lnn,lnf;
     prob = 0.0;
@@ -545,14 +545,14 @@ namespace PDF {
   inline const double Flat::F(double x) const {
     return raw(x,m_F);
   }
-  inline const double Flat::getVal(double x, double mean, double sigma) const {
+  inline const double Flat::getVal(const double x, const double mean, const double sigma) const {
     double xmin,xmax,f;
     calcMinMax(mean,sigma,xmin,xmax);
     f = calcF(xmin,xmax);
     return raw(x,f);
   }
 
-  inline const double Flat::raw(double x, double f) const {
+  inline const double Flat::raw(const double x, const double f) const {
     return (((x>=m_min) && (x<=m_max)) ? f:-1);
   }
 //   template <typename T>
