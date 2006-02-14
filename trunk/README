@@ -1,3 +1,20 @@
+Tools
+=====
+
+1. polelim: limit calculator
+2. polecov: coverage calculator
+
+Some other tools exists but they are not ready yet.
+Try
+	make extras
+to see what does work.
+
+Input options
+=============
+
+The intention is to fill this file with info on each input option.
+Not yet there though. Please contact me at fredrik.tegenfeldt@cern.ch in case of problems.
+
 1. dmus  [Pole::setDmus(double d)]
 	This is the stepsize in s (signal) when finding s_best - default 0.01
 

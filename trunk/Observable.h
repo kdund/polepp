@@ -350,6 +350,31 @@ namespace OBS {
     }
   };
 
+  class ObservableLogN : public Observable<double> {
+  public:
+    ObservableLogN():Observable<double>("gauss","Gaussian observable") {m_dist=PDF::DIST_LOGN;};
+    ObservableLogN(PDF::LogNormal *pdf, RND::Random *rndGen, const char *name, const char *desc=0):Observable<double>(pdf,rndGen,name,desc) {};
+    ObservableLogN(const ObservableLogN & other) {
+      copy(other);
+    }
+    virtual ~ObservableLogN() {};
+    //
+    ObservableLogN const & operator=(ObservableLogN const & rh) {
+      copy(rh);
+      return *this;
+    }
+    //
+    double rnd() {
+      PDF::LogNormal *pdf = static_cast<PDF::LogNormal *>(m_pdf);
+      return (m_valid ? m_rndGen->logNormalLN(pdf->getLogMean(),pdf->getLogSigma()):0);
+    }
+
+    ObservableLogN *clone() const {
+      ObservableLogN *obj = new ObservableLogN(*this);
+      return obj;
+    }
+  };
+
   class ObservablePois : public Observable<int> {
   public:
     ObservablePois():Observable<int>("poisson","Poisson observable") {this->m_dist=PDF::DIST_POIS;};
@@ -375,6 +400,28 @@ namespace OBS {
     }
   };
 
+  class ObservableFlat : public Observable<double> {
+  public:
+    ObservableFlat():Observable<double>("flat","Flat observable") {m_dist=PDF::DIST_FLAT;};
+    ObservableFlat(PDF::Flat *pdf, RND::Random *rndGen, const char *name, const char *desc=0):Observable<double>(pdf,rndGen,name,desc) {};
+    ObservableFlat(const ObservableFlat & other) {
+      copy(other);
+    }
+    virtual ~ObservableFlat() {};
+    //
+    ObservableFlat const & operator=(ObservableFlat const & rh) {
+      copy(rh);
+      return *this;
+    }
+    //
+    double rnd() { return (m_valid ? m_rndGen->flat(m_mean,m_sigma):0); }
+
+    ObservableFlat *clone() const {
+      ObservableFlat *obj = new ObservableFlat(*this);
+      return obj;
+    }
+  };
+
   inline Base *makeObservable(PDF::DISTYPE dist) {
     Base *obs=0;
     switch (dist) {
@@ -392,12 +439,10 @@ namespace OBS {
       obs->setPdf(&PDF::gGauss);
       break;
     case PDF::DIST_FLAT:
-      //      obs=new ObservableFlat();
-      std::cout << "WARNING: Not yet implemented - ObservableFlat()" << std::endl;
+      obs=new ObservableFlat();
       break;
     case PDF::DIST_LOGN:
-      //      obs=new ObservableLogN();
-      std::cout << "WARNING: Not yet implemented - ObservableLogN()" << std::endl;
+      obs=new ObservableLogN();
       break;
     default:
       std::cout << "WARNING: Unknown distribution = " << distTypeStr(dist) << std::endl;

@@ -55,8 +55,8 @@ void processArgs(int argc, char *argv[]) {
     cmd.parse(argc,argv);
     //
     gFilename = dump.getValue();
-    gCoverage.setEffDist( effTrue.getValue(), effSigma.getValue(), static_cast<DISTYPE>(effDist.getValue()));
-    gCoverage.setBkgDist( bkgTrue.getValue(), bkgSigma.getValue(), static_cast<DISTYPE>(bkgDist.getValue()));
+    gCoverage.setEffDist( effTrue.getValue(), effSigma.getValue(), static_cast<PDF::DISTYPE>(effDist.getValue()));
+    gCoverage.setBkgDist( bkgTrue.getValue(), bkgSigma.getValue(), static_cast<PDF::DISTYPE>(bkgDist.getValue()));
     gCoverage.setEffBkgCorr(beCorr.getValue());
     gCoverage.checkEffBkgDists(); // will make sure the settings above are OK - it will update pole if changes are made
     //
@@ -77,6 +77,8 @@ void processArgs(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
   //
+  std::cout << "NOT FUNCTIONAL IN THIS RELEASE\n" << std::endl;
+  exit(-1);
   processArgs(argc,argv);
   //
   gCoverage.printSetup();

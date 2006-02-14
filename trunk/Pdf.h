@@ -9,6 +9,10 @@
 /*!
   
  */
+#ifndef M_PIl
+#define M_PIl 3.1415926535897932384626433832795029L
+#endif
+
 namespace PDF {
   enum DISTYPE {
     DIST_NONE=0,   /*!< No distrubution */
@@ -78,6 +82,7 @@ namespace PDF {
       }
     }
     void setDist(DISTYPE d) { m_dist = d; }
+    void setName(std::string name) { m_name = name; }
     std::string m_name;
     DISTYPE     m_dist;
     double      m_mean;
@@ -103,6 +108,45 @@ namespace PDF {
     
   };
 
+  class Flat : public BaseType<double> {
+  public:
+    Flat():BaseType<double>("Flat",DIST_FLAT,1.0,0.1) {}
+    Flat(double mean, double sigma):BaseType<double>("Flat",DIST_GAUS,mean,sigma) {}
+    Flat(const Flat & other):BaseType<double>(other) {m_min = other.m_min; m_max = other.m_max;}
+    virtual ~Flat() {};
+    //
+    inline const double F(double val) const;
+    inline const double getVal(double x, double mean, double sigma) const;
+    //
+    inline void setMinMax(double mean, double sigma) {
+      calcMinMax(mean,sigma,m_min,m_max);
+      m_F = calcF(m_min,m_max);
+    }
+    inline const double getMin() const { return m_min; }
+    inline const double getMax() const { return m_max; }
+    inline const double getF()   const { return m_F; }
+    
+  protected:
+    double m_min;
+    double m_max;
+    double m_F;
+
+    inline const double raw(double x, double f) const;
+
+    inline void calcMinMax(double mean, double sigma, double & xmin, double & xmax) const {
+      const double d = sqrt(12.0);
+      double wh = 0.5*d*sigma;
+      xmin = mean-wh;
+      xmax = mean+wh;
+      if (xmax<xmin) xmax=xmin;
+    }
+
+    inline const double calcF(double xmin, double xmax) const {
+      double d=(xmax-xmin);
+      return (d>0 ? 1.0/d:-1);
+    }
+  };
+
   class Gauss : public BaseType<double> {
   public:
     Gauss():BaseType<double>("Gaussian",DIST_GAUS,0.0,1.0) {}
@@ -115,7 +159,7 @@ namespace PDF {
     inline const double getVal(double x, double mean, double sigma) const;
   };
 
-  class Gauss2D : protected Gauss {
+  class Gauss2D : public Gauss {
   public:
     Gauss2D():Gauss() { this->m_name="Gauss2D"; this->m_dist=DIST_GAUS2D; }
     Gauss2D(const Gauss2D & other):Gauss(other) {}
@@ -128,19 +172,21 @@ namespace PDF {
     inline const double getVeffCorr(double detC, double s1, double s2, double corr) const { return ((corr*s1*s2)/detC);}
   };
 
-  inline const double calcLogMean(double mean,double sigma)  { return log(mean*mean/sqrt(sigma*sigma + mean*mean)); }
-  inline const double calcLogSigma(double mean,double sigma) { return sqrt(log((sigma*sigma/(mean*mean))+1)); }
-
-  class LogNormal : protected Gauss {
+  class LogNormal : public Gauss {
   public:
-    LogNormal():Gauss(1.0,1.0)                             { this->m_name="LogNormal"; this->m_dist=DIST_LOGN; }
-    LogNormal(double mean, double sigma):Gauss(mean,sigma) { this->m_name="LogNormal"; this->m_dist=DIST_LOGN; }
-    LogNormal(const LogNormal & other):Gauss(other) {}
+    LogNormal():Gauss()                                    { m_name="LogNormal"; m_dist=DIST_LOGN; setMean(1.0);  setSigma(1.0); }
+    LogNormal(double mean, double sigma):Gauss(mean,sigma) { m_name="LogNormal"; m_dist=DIST_LOGN; setMean(mean); setSigma(sigma);}
+    LogNormal(const LogNormal & other):Gauss(other) {
+      m_mean = other.getMean(); m_sigma = other.getSigma();
+      m_logMean = other.getLogMean(); m_logSigma = other.getLogSigma();
+    }
     virtual ~LogNormal() {};
     //
     void setMean( double m)  { this->m_mean = m;  m_logMean = calcLogMean(m,this->m_sigma); m_logSigma = calcLogSigma(m,this->m_sigma); }
     void setSigma( double m) { this->m_sigma = m; m_logMean = calcLogMean(this->m_mean,m);  m_logSigma = calcLogSigma(this->m_mean,m); }
     //
+    inline const double calcLogMean(double mean,double sigma)  { return log(mean*mean/sqrt(sigma*sigma + mean*mean)); }
+    inline const double calcLogSigma(double mean,double sigma) { return sqrt(log((sigma*sigma/(mean*mean))+1)); }
     inline const double getLogMean()  const { return m_logMean; }
     inline const double getLogSigma() const { return m_logSigma; }
 
@@ -181,7 +227,7 @@ namespace PDF {
   template <typename T>
   class Tabulated : public BaseType<T> {
   public:
-    Tabulated():BaseType<T>() { m_pdf=0; m_table=0; this->m_dist = DIST_UNDEF;}
+    Tabulated():BaseType<T>() { m_pdf=0; m_table=0; }
     Tabulated(const Tabulated<T> & other):BaseType<T>() {
       if (this != &other) {
 	BaseType<T>::copy(other);
@@ -214,18 +260,18 @@ namespace PDF {
     }
     virtual ~Tabulated() {if (m_table) delete [] m_table;};
     //
-    virtual void setMean(double m)  { m_pdf->setMean(m);  this->m_mean  = m_pdf->getMean();}
-    virtual void setSigma(double s) { m_pdf->setSigma(s); this->m_sigma = m_pdf->getSigma();}
+    virtual void setMean(double m)  { m_pdf->setMean(m);  Base::setMean(m_pdf->getMean());}
+    virtual void setSigma(double s) { m_pdf->setSigma(s); Base::setMean(m_pdf->getSigma());}
     //
     void setRangeX(     int npts, T      min, T      max) { m_nX     = npts; m_xmin = min; m_xmax = max; }
     void setRangeMean(  int npts, double min, double max) { m_nMean  = npts; m_mmin = min; m_mmax = max; }
     void setRangeSigma( int npts, double min, double max) { m_nSigma = npts; m_smin = min; m_smax = max; }
     void setBasePdf( BaseType<T> * pdf ) {
       m_pdf = pdf;
-      this->m_mean  = m_pdf->getMean();
-      this->m_sigma = m_pdf->getSigma();
-      this->m_dist  = m_pdf->getDist();
-      this->m_name  = "Tabulated " + m_pdf->getName();
+      Base::setMean(m_pdf->getMean());
+      Base::setSigma(m_pdf->getSigma());
+      Base::setDist(m_pdf->getDist());
+      Base::setName("Tabulated " + m_pdf->getName());
     }
     
     void initTab() {
@@ -466,6 +512,7 @@ namespace PDF {
     rval *= 1.0/sdetC;
     return rval;
   }
+
   inline const double Poisson::F(int x) const {
     return raw(x,this->m_mean);
   }
@@ -492,6 +539,21 @@ namespace PDF {
       std::cout << "NaN in rawPoisson: " << n << ", " << s << ", " << prob << std::endl;
     }
     return prob;
+  }
+
+
+  inline const double Flat::F(double x) const {
+    return raw(x,m_F);
+  }
+  inline const double Flat::getVal(double x, double mean, double sigma) const {
+    double xmin,xmax,f;
+    calcMinMax(mean,sigma,xmin,xmax);
+    f = calcF(xmin,xmax);
+    return raw(x,f);
+  }
+
+  inline const double Flat::raw(double x, double f) const {
+    return (((x>=m_min) && (x<=m_max)) ? f:-1);
   }
 //   template <typename T>
 //   const double Tabulated::getVal(T x, double m, double s) {

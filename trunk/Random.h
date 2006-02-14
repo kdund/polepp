@@ -21,6 +21,7 @@ namespace RND {
     //
     double gauss(double mean=0.0, double sigma=1.0);
     double logNormal(double mean=1.0, double sigma=1.0);
+    double logNormalLN(double logMean, double logSigma);
     int    poisson(double mean);
     double flat(double mean, double sigma=1.0);
     double general(int npts, double *x, double xmin, double xmax, double *f, double fmin, double fmax);

@@ -88,8 +88,8 @@ void processArgs(Pole *pole, int argc, char *argv[]) {
     pole->setCL(confLevel.getValue());
     pole->setNObserved(nObs.getValue());
     //
-    pole->setEffMeas( effMeas.getValue(), effSigma.getValue(), static_cast<DISTYPE>(effDist.getValue()) );
-    pole->setBkgMeas( bkgMeas.getValue(), bkgSigma.getValue(), static_cast<DISTYPE>(bkgDist.getValue()) );
+    pole->setEffMeas( effMeas.getValue(), effSigma.getValue(), static_cast<PDF::DISTYPE>(effDist.getValue()) );
+    pole->setBkgMeas( bkgMeas.getValue(), bkgSigma.getValue(), static_cast<PDF::DISTYPE>(bkgDist.getValue()) );
     pole->checkEffBkgDists();
     pole->setEffBkgCorr(beCorr.getValue());
 
