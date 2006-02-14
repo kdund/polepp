@@ -85,6 +85,11 @@ namespace RND {
     double nsigma = sqrt(log(sigma*sigma/mean/mean+1));
     return exp(gauss() * nsigma + nmean);
   }
+
+  double Random::logNormalLN(double logMean, double logSigma) {
+    // Return a number distributed following a lognormal with mean and sigma
+    return exp(gauss() * logSigma + logMean);
+  }
   
   double Random::flat(double mean, double sigma) {
     double dx=sigma*1.73205081; // == sqrt(12.0)*0.5 => sigma(flat) = (xmax-xmin)/sqrt(12)
