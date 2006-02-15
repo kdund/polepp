@@ -301,6 +301,7 @@ void Pole::findBestMu(int n) {
       while ((i<=nnew)) {
 	mu_test = sMin - i*dmus;
 	lh_test = m_measurement.calcProb(n,mu_test);
+	if (m_verbose>3) std::cout << " calcProb(" << n << ", " << mu_test << ") = " << lh_test << std::endl;
 	if(lh_test > lh_max) {
 	  imax = i;
 	  lh_max = lh_test;

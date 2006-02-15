@@ -464,17 +464,16 @@ class MeasPoisEB : public MeasPois {
       std::cerr << "ERROR: nuisance weight and index arrays are not initialized (size zero)!" << std::endl;
       return 0.0;
     }
-    //    std::cout << "calcProb( " << x << ", " << s << " )" << std::endl;
     for (unsigned int i=0; i<m_nuisanceIndecis.size(); i++) {
       ixeff = m_nuisanceIndecis[i][m_effIndex];
       ixbkg = m_nuisanceIndecis[i][m_bkgIndex];
       g = getM(s, m_eff->getIntX(ixeff), m_bkg->getIntX(ixbkg));
-      //      std::cout << "   s(true), e, b, mu = " << s << ", " << m_eff->getIntX(ixeff) << ", " << m_bkg->getIntX(ixbkg) << ", " << g << std::endl;
+      //    std::cout << "== s(true), e, b, mu = " << s << ", " << m_eff->getIntX(ixeff) << ", " << m_bkg->getIntX(ixbkg) << ", " << g << std::endl;
       p += m_nuisanceWeights[i]*pdf->getVal(x,g);
-      //      std::cout << "   w, p = " << m_nuisanceWeights[i] << ", " << p << std::endl;
     }
 
-    return p;
+    //    std::cout << "calcProb( " << x << ", " << s << " ) = " << p/m_nuisanceIntNorm << std::endl;
+    return p/m_nuisanceIntNorm;
   }
 
  private:

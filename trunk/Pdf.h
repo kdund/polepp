@@ -57,6 +57,11 @@ namespace PDF {
     return rval;
   }
   //
+  // Help functions for Log Normal dist
+  //
+  inline const double calcLogMean(const double mean,const double sigma)  { return log(mean*mean/sqrt(sigma*sigma + mean*mean)); }
+  inline const double calcLogSigma(const double mean,const double sigma) { return sqrt(log((sigma*sigma/(mean*mean))+1)); }
+  //
   class Base {
   public:
     Base() { m_dist=DIST_UNDEF; }
@@ -110,18 +115,17 @@ namespace PDF {
 
   class Flat : public BaseType<double> {
   public:
-    Flat():BaseType<double>("Flat",DIST_FLAT,1.0,0.1) {}
-    Flat(double mean, double sigma):BaseType<double>("Flat",DIST_GAUS,mean,sigma) {}
-    Flat(const Flat & other):BaseType<double>(other) {m_min = other.m_min; m_max = other.m_max;}
+    Flat():BaseType<double>("Flat",DIST_FLAT,1.0,0.1) { std::cout << "Flat empty constructor" << std::endl; setMinMax(getMean(),getSigma()); }
+    Flat(double mean, double sigma):BaseType<double>("Flat",DIST_GAUS,mean,sigma) { std::cout << "Flat constructor" << std::endl; setMinMax(mean,sigma); }
+    Flat(const Flat & other):BaseType<double>(other) {std::cout << "Flat COPY constructor" << std::endl; m_min = other.getMin(); m_max = other.getMax(); m_F = other.getF();}
     virtual ~Flat() {};
     //
     inline const double F(double val) const;
     inline const double getVal(const double x, const double mean, const double sigma) const;
     //
-    inline void setMinMax(double mean, double sigma) {
-      calcMinMax(mean,sigma,m_min,m_max);
-      m_F = calcF(m_min,m_max);
-    }
+    void setMean(  const double m)  { Base::setMean(m);  setMinMax(m,getSigma()); }
+    void setSigma( const double m)  { Base::setSigma(m); setMinMax(getMean(),m); }
+
     inline const double getMin() const { return m_min; }
     inline const double getMax() const { return m_max; }
     inline const double getF()   const { return m_F; }
@@ -131,7 +135,14 @@ namespace PDF {
     double m_max;
     double m_F;
 
-    inline const double raw(double x, double f) const;
+    inline const double raw(const double x, const double f) const;
+    inline const double raw(const double x, const double f, const double xmin, const double xmax) const;
+
+    inline void setMinMax(double mean, double sigma) {
+      calcMinMax(mean,sigma,m_min,m_max);
+      m_F = calcF(m_min,m_max);
+      std::cout << "Flat: " << m_F << " , " << m_min << " , " << m_max << std::endl;
+    }
 
     inline void calcMinMax(double mean, double sigma, double & xmin, double & xmax) const {
       const double d = sqrt(12.0);
@@ -185,8 +196,7 @@ namespace PDF {
     void setMean( const double m)  { this->m_mean = m;  m_logMean = calcLogMean(m,this->m_sigma); m_logSigma = calcLogSigma(m,this->m_sigma); }
     void setSigma( const double m) { this->m_sigma = m; m_logMean = calcLogMean(this->m_mean,m);  m_logSigma = calcLogSigma(this->m_mean,m); }
     //
-    inline const double calcLogMean(const double mean,const double sigma)  const { return log(mean*mean/sqrt(sigma*sigma + mean*mean)); }
-    inline const double calcLogSigma(const double mean,const double sigma) const { return sqrt(log((sigma*sigma/(mean*mean))+1)); }
+
     inline const double getLogMean()  const { return m_logMean; }
     inline const double getLogSigma() const { return m_logSigma; }
 
@@ -197,8 +207,7 @@ namespace PDF {
       return Gauss::getVal(log(x),calcLogMean(m,s), calcLogSigma(m,s))/x;
     }
     inline const double getValLogN(const double x, const double m, const double s) const {
-      if (x<=0) return 0.0;
-      return Gauss::getVal(log(x),m, s)/x;
+      return Gauss::getVal(x, m, s)/exp(x);
     }
   protected:
     double m_logMean;
@@ -546,14 +555,21 @@ namespace PDF {
     return raw(x,m_F);
   }
   inline const double Flat::getVal(const double x, const double mean, const double sigma) const {
+    std::cout << "Flat: getVal() " << std::endl;
     double xmin,xmax,f;
     calcMinMax(mean,sigma,xmin,xmax);
     f = calcF(xmin,xmax);
-    return raw(x,f);
+    double rval = raw(x,f,xmin,xmax);
+    std::cout << " : x = " << x << " , f = " << f << " , range = " << xmin << " - " << xmax << " ==> " << rval << std::endl;
+    return rval;
   }
 
   inline const double Flat::raw(const double x, const double f) const {
-    return (((x>=m_min) && (x<=m_max)) ? f:-1);
+    return (((x>=m_min) && (x<=m_max)) ? f:0);
+  }
+
+  inline const double Flat::raw(const double x, const double f, const double xmin, const double xmax) const {
+    return (((x>=xmin) && (x<=xmax)) ? f:0);
   }
 //   template <typename T>
 //   const double Tabulated::getVal(T x, double m, double s) {
@@ -587,6 +603,7 @@ namespace PDF {
 
   extern Gauss2D   gGauss2D;
   extern LogNormal gLogNormal;
+  extern Flat      gFlat;
 #endif
 };
 

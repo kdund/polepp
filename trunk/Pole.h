@@ -44,7 +44,6 @@
 #endif
 
 #include "Range.h"
-#include "Pdf.h"
 #include "BeltEstimator.h"
 #include "Measurement.h"
 
@@ -292,12 +291,15 @@ public:
   const PDF::DISTYPE getBkgDist()  const  { return m_measurement.getBkgPdfDist(); }
   const double  getEffBkgCorr() const { return m_measurement.getBEcorr(); }
   // Indep. variable
-  const double  getSVar()     const  { return BeltEstimator::getT(m_measurement.getNObserved(),
-								  m_measurement.getEffObs(),
-								  m_measurement.getEffPdfSigma(),
-								  m_measurement.getBkgObs(),
-								  m_measurement.getBkgPdfSigma(),
-								  m_measurement.getNuisanceIntNorm());}
+//   const double  getSVar()     const  { return BeltEstimator::getT(m_measurement.getNObserved(),
+// 								  m_measurement.getEffObs(),
+// 								  m_measurement.getEffPdfSigma(),
+// 								  m_measurement.getBkgObs(),
+// 								  m_measurement.getBkgPdfSigma(),
+// 								  m_measurement.getNuisanceIntNorm());}
+
+  const double  getSVar()     const  { std::cout << "BELTESTIMATOR not functional!" << std::endl; return 0.0; }
+
   // Test range for the likelihood ratio calculation (4)
   const Range<double>  *getHypTest() const     { return &m_hypTest; }
   //

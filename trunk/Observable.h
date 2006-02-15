@@ -38,8 +38,9 @@ namespace OBS {
 	high = static_cast<T>(mean+dx);
 	break;
       case PDF::DIST_POIS:
-	
       default: // ERROR STATE
+	low  = static_cast<T>(0);
+	high = static_cast<T>(0);
 	std::cerr << "OBS::getIntRange() -> Unknown pdf type = " << dist << std::endl;
 	break;
       }
@@ -188,14 +189,15 @@ namespace OBS {
     const std::vector<double> * getIntWeight() const { return &m_intWeight; }
     const double getIntWeight(int i) const { return m_intWeight[i]; }
     const double getIntegral()       const { return m_intTotal; }
-    const Range<T> * getIntXRange()  const { return &m_intXRange; }
-    const std::vector<T> * getIntX() const { return &m_intX; }
+    const Range<T> * getIntXRange()  const { return &m_intXRange; } //! Integration range - log(x) if DIST_LOGN
+    const T getIntXRangeStep()       const { return m_intXRange.step(); }
+    const T getIntXRangeN()          const { return m_intXRange.n(); }
+    const double getIntdX()          const { return static_cast<double>(m_intXRange.step()); }
+    const std::vector<T> * getIntX() const { return &m_intX; } //! Always x (even for LOGN)
     const T getIntX(int i)           const { return m_intX[i]; }
     const T getIntXmin()             const { return m_intX.front(); }
     const T getIntXmax()             const { return m_intX.back(); }
-    const T getIntStep()             const { return m_intXRange.step(); }
-    const double getIntdX()          const { return static_cast<double>(m_intXRange.step()); }
-    const int getIntN()              const { return m_intXRange.n(); }
+    const int getIntN()              const { return static_cast<int>(m_intX.size()); }
 
     void setIntNpts(int n)     { m_intNpts = n; }
     void setIntScale(double s) { m_intScale = s; }
@@ -209,9 +211,11 @@ namespace OBS {
       int np = m_intXRange.n();
       m_intWeight.resize(np,0.0);
       m_intX.resize(np,0);
+
       for (int i=0; i<np; i++) {
-	m_intX[i] = m_intXRange.getVal(i);
+	m_intX[i] = transX((m_intXRange.getVal(i))); //! for LOGN, the Xrange is in log(x)
       }
+
       m_intTotal = 0;
       m_intFilled = false;
     }
@@ -237,8 +241,8 @@ namespace OBS {
 	bool pos;
 	double mean, sigma;
 	if (this->m_dist == PDF::DIST_LOGN) {
-	  mean = PDF::calcLogMean(double(m_observedValue),m_sigma);
-	  sigma = PDF::calcLogSigma(double(m_observedValue),m_sigma);
+ 	  mean = PDF::calcLogMean(double(m_observedValue),double(m_sigma));
+ 	  sigma = PDF::calcLogSigma(double(m_observedValue),double(m_sigma));
 	  pos = false;
 	} else {
 	  mean = double(m_observedValue);
@@ -256,15 +260,17 @@ namespace OBS {
       if (m_intFilled) return;
       int np = int(m_intX.size());
       double f;
-      double dx = static_cast<double>(m_intXRange.step());
+      //      double dx = static_cast<double>(m_intXRange.step());
+      double dx;
       m_intTotal=0;
       if (np<1) return;
       if (np==1) { // Dirac spike - integral and weight == 1.0
 	m_intWeight[0] = 1.0;
 	m_intTotal = 1.0;
       } else {
-	for (int i=0; i<np; i++) {
+	for (int i=0; i<np-1; i++) {
 	  f = getPdfVal(m_intX[i]);
+	  dx = m_intX[i+1]-m_intX[i];
 	  m_intWeight[i] = f*dx;
 	  m_intTotal += m_intWeight[i];
 	}
@@ -285,6 +291,7 @@ namespace OBS {
 	m_intNpts       = other.getIntNpts();
       }
     }
+    virtual T transX(T x) { return x; }
     //
     T m_observedValue; //! the observed value
 
@@ -373,6 +380,8 @@ namespace OBS {
       ObservableLogN *obj = new ObservableLogN(*this);
       return obj;
     }
+  protected:
+    double transX(double x) { return exp(x); }
   };
 
   class ObservablePois : public Observable<int> {
@@ -440,9 +449,11 @@ namespace OBS {
       break;
     case PDF::DIST_FLAT:
       obs=new ObservableFlat();
+      obs->setPdf(&PDF::gFlat);
       break;
     case PDF::DIST_LOGN:
       obs=new ObservableLogN();
+      obs->setPdf(&PDF::gLogNormal);
       break;
     default:
       std::cout << "WARNING: Unknown distribution = " << distTypeStr(dist) << std::endl;

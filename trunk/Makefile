@@ -1,6 +1,7 @@
 ROOTCFLAGS = $(shell root-config --cflags)
 ROOTLIBS   = $(shell root-config --libs)
-LDOBJS     =  Pdf.o Random.o Coverage.o Pole.o Combination.o Combine.o
+LDOBJS     =  Pdf.o Random.o Pole.o Combination.o
+###LDOBJS     =  Pdf.o Random.o Coverage.o Pole.o Combination.o Combine.o
 #### Power.o
 LDSMOBJS    =  Pdf.o Random.o
 LDFLAGS    = -g -fPIC -shared
