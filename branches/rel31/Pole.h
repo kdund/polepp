@@ -454,9 +454,10 @@ inline const double Pole::calcProb(int n, double s) const {
   for(unsigned int i=0;i<m_nInt;i++) {
     g = m_effInt[i]*s + m_bkgInt[i];
     p += m_weightInt[i]*m_poisson->getVal(n,g);
+    //    std::cout << "== s(true), e, b, mu = " << s << ", " << m_effInt[i] << ", " << m_bkgInt[i] << ", " << g << std::endl;
+    //    std::cout << "   w, p = " << m_weightInt[i] << ", " << m_poisson->getVal(n,g) << std::endl;
     //    if (m_verbose>9) std::cout << i << " : p= " << p << ", g = " << g << ", weight = " << m_weightInt[i] << ", " << m_effInt[i] << ", " << m_bkgInt[i] << std::endl;
   }
-  if (m_verbose>9) std::cout << "calcProb() : " << n << ", " << s << " => p = " << p << std::endl;
   return p;
 }
 //

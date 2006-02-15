@@ -146,8 +146,10 @@ void Pole::setInt(double & low, double & high, double scale, double mean, double
       high = mean+dx;
       break;
     case PDF::DIST_LOGN:
-      nmean  = m_logNorm->calcLogMean(mean,sigma);
-      nsigma = m_logNorm->calcLogSigma(mean,sigma);
+      nmean  = PDF::calcLogMean(mean,sigma);
+      nsigma = PDF::calcLogSigma(mean,sigma);
+      //      nmean  = m_logNorm->calcLogMean(mean,sigma);
+      //      nsigma = m_logNorm->calcLogSigma(mean,sigma);
       low  = nmean - scale*nsigma;
       high = nmean + scale*nsigma;
       break;
@@ -412,15 +414,15 @@ void Pole::initIntegral() {
   double effMean,effSigma;
   double bkgMean,bkgSigma;
   if (m_measurement.getEffPdfDist()==PDF::DIST_LOGN) {
-    effMean  = m_logNorm->calcLogMean(m_measurement.getEffObs(),m_measurement.getEffPdfSigma());
-    effSigma = m_logNorm->calcLogSigma(m_measurement.getEffObs(),m_measurement.getEffPdfSigma());
+    effMean  = PDF::calcLogMean(m_measurement.getEffObs(),m_measurement.getEffPdfSigma());
+    effSigma = PDF::calcLogSigma(m_measurement.getEffObs(),m_measurement.getEffPdfSigma());
   } else {
     effMean  = m_measurement.getEffObs();
     effSigma = m_measurement.getEffPdfSigma();
   }
   if (m_measurement.getBkgPdfDist()==PDF::DIST_LOGN) {
-    bkgMean  = m_logNorm->calcLogMean(m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma());
-    bkgSigma = m_logNorm->calcLogSigma(m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma());
+    bkgMean  = PDF::calcLogMean(m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma());
+    bkgSigma = PDF::calcLogSigma(m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma());
   } else {
     bkgMean  = m_measurement.getBkgObs();
     bkgSigma = m_measurement.getBkgPdfSigma();
@@ -499,7 +501,8 @@ void Pole::initIntegral() {
 	break;
       case PDF::DIST_FLAT:
 	if (m_measurement.getEffPdfSigma()>0) {
-	  eff_prob = 1.0/(m_measurement.getEffPdfSigma()*3.46410161513775);
+	  eff_prob = PDF::gFlat.getVal(effs,m_measurement.getEffObs(),m_measurement.getEffPdfSigma());
+	    //1.0/(m_measurement.getEffPdfSigma()*3.46410161513775);
 	} else {
 	  eff_prob = 1.0;
 	}
@@ -550,7 +553,8 @@ void Pole::initIntegral() {
 	  break;
 	case PDF::DIST_FLAT:
 	  if (m_measurement.getBkgPdfSigma()>0) {
-	    bkg_prob = 1.0/(m_measurement.getBkgPdfSigma()*3.46410161513775);
+	    bkg_prob = PDF::gFlat.getVal(bkgs,m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma());
+	    //	    bkg_prob = 1.0/(m_measurement.getBkgPdfSigma()*3.46410161513775);
 	  } else {
 	    bkg_prob = 1.0;
 	  }
@@ -606,6 +610,7 @@ void Pole::initIntegral() {
   m_normEff = norm_eff;
   m_normBkg = norm_bkg;
   m_normInt = norm;
+
   if (m_verbose>2) {
     std::cout << "s_V  = " << getSVar() << std::endl;
     std::cout << "norm = " << m_normInt << std::endl;
@@ -688,6 +693,7 @@ void Pole::findBestMu(int n) {
     for (i=0;i<ntst;i++) {
       mu_test = sMin + i*dmus;
       lh_test = calcProb(n,mu_test);
+      if (m_verbose>9) std::cout << " calcProb(" << n << ", " << mu_test << ") = " << lh_test << std::endl;
       if(lh_test > lh_max) {
 	imax = i;
 	lh_max = lh_test;

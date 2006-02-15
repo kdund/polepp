@@ -317,9 +317,11 @@ namespace OBS {
       break;
     case PDF::DIST_FLAT:
       obs=new ObservableFlat();
+      obs->setPdf(&PDF::gFlat);
       break;
     case PDF::DIST_LOGN:
       obs=new ObservableLogN();
+      obs->setPdf(&PDF::gLogNormal);
       break;
     default:
       std::cout << "WARNING: Unknown distribution = " << distTypeStr(dist) << std::endl;
