@@ -1,39 +1,483 @@
-Tools
-=====
+>Created 16/2/2006, Fredrik Tegenfeldt, CERN<
+
+This is a short version of a 'manual'. The intention is to include this in the doxygen
+documentation with somewhat more fancy layout.
+
+The contents for now is:
+
+I   Installation
+II  Tools
+III Input options, polelim
+IV  Input options, polecov
+V   Example, polelim
+VI  Example, polecov
+VII Known issues
+
+
+
+I. INSTALLATION
+==============
+
+1. untar file. The files will be created in current directory.
+
+tar -xzvf polelib.tgz
+
+2. compile
+
+make
+
+3. to run the code, you need to make the library available.
+   This can be done by copying libPole++.so to /usr/lib or similar (need to be root).
+   Otherwise, you can add the current directory to the library path:
+
+	setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:.
+
+   or in bash:
+
+	export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:.
+
+   Now it should be possible to run polelim or polecov.
+
+4. To clean up:
+
+make clean
+
+
+II. TOOLS
+==========
 
 1. polelim: limit calculator
 2. polecov: coverage calculator
 
 Some other tools exists but they are not ready yet.
 Try
+
 	make extras
+
 to see what does work.
 
-Input options
-=============
 
-The intention is to fill this file with info on each input option.
-Not yet there though. Please contact me at fredrik.tegenfeldt@cern.ch in case of problems.
+III. INPUT OPTIONS, POLELIM
+============================
 
-1. dmus  [Pole::setDmus(double d)]
-	This is the stepsize in s (signal) when finding s_best - default 0.01
+Running polelim with option --help yields:
 
-2. nbelt [Pole::setBelt(int n)]
-	This gives the maximum n used for calculating the likelihood ration R(n,s).
-	The minimum is always 0.
-	It can be set to a fix value (e.g 50 is usually fine). Note that this needs to be increased
-	if N_observed has a possibility of beeing above 50.
-	If set to -1, the program will make the choice depending on N_observed.
-	This is only useful when doing coverage studies where an optimised choice is
-	of great importance.
+USAGE: 
 
-3. hmin, hmax, hstep
-	These are the min,max and step of test hypothesis for the limits.
-	The defaults are (min,max)=[0,35] and step=0.02.
-	Two things should be noted:
-        A. The range (min,max) gives the maximum allowed limit range.
-	   If, e.g, the upper limit reaches 35 with the default settings, it is time to increase the max.
-	B. The step size gives the precision with which the limits are given.
-	   The resulting limit will consist of values from the set given by (min,max) and step.
+   ./polelim  [-V <int>] [--bkgn <int>] [--bscale <float>] [--effn <int>]
+              [--effscale <float>] [--hstep <float>] [--hmax <float>]
+              [--hmin <float>] [--nbelt <int>] [--nmus <float>] [--dmus
+              <float>] [--corr <float>] [--bkgdist <int>] [--bkgmeas
+              <float>] [--bkgsigma <float>] [--effdist <int>] [--effmeas
+              <float>] [--effsigma <float>] [--minp <float>] [-T] [-m
+              <int>] [--strue <float>] [--cl <float>] [--nobs <int>] [--]
+              [-v] [-h]
 
-4. effdist, bkgdist
+
+Pole calculates the confidence interval of a given confidence level from the following information:
+
+* Number of observed events
+  --nobs
+
+* Method
+  -m or --method   : 1 - FHC2 (default), 2 - MBT
+
+* Confidence level : --cl
+
+* Signal efficiency: --effmeas
+  distribution     : --effdist
+  uncertainty      : --effmeas
+
+* Background       : --bkgmeas
+  distribution     : --bkgdist
+  uncertainty      : --bkgmeas
+
+* Correlation coefficient between eff and bkg:
+  --corr      : is in the range of [-1,1]
+
+The distributions above are:
+  0 - none
+  1 - poisson
+  2 - gauss
+  3 - flat
+  4 - log normal
+  5 - 2d gauss, that is, use --corr; eff and bkg correlated
+
+------------------------------------------------------------------
+
+In many cases it is enough if these are set.
+However, there are several other parameters to control the precision of integrals etc.
+
+* Integral over aposteriori efficiency distribution:
+  --effn     :   number of points, default = 21
+  --effscale :   integrate between [ mean-scale*sigma, mean+scale*sigma ]
+		 where mean == --effmeas and sigma = --effsigma
+		 default = 5.0
+
+* Ditto for background integration:
+  --bkgn
+  --bkgscale
+
+* Confidence belt construct:
+  --hstep : hypothesis step size
+  --hmin  : minimum
+  --hmax  : maximum
+
+  --nbelt : maximum N in belt - if set to -1, the code will try to guess what is needed
+
+  These might very well need modifications if it fails finding a limit.
+  Usually what is needed is to increase hmax and/or nbelt.
+
+* Finding s_best
+
+  --dmus  : step size in search, usually fine with 0.01
+	    increase or reduce depending on requirements in precision or speed.
+  --nmus  : maximum number of steps - using the given step size, the number of steps is not allowed
+            to be greater than nmus. default = 100
+
+* Diverse
+  --minp  : minimum probability considered when creating the belt - default=-1.0
+	    for speed, this number may be > 0.0 without loosing precision
+
+  -T or --tab : use tabulated poisson - only relevant when speed is an issue
+
+  -V or --verbose : verbose mode; mainly for debugging. Output may be confusing...
+
+  --strue  : has no effect *OBSOLETE*
+
+  -v or --version: print version
+
+  -h or --help : print help
+
+
+IV. INPUT OPTIONS, POLECOV
+===========================
+
+Running polecov --help gives:
+
+USAGE: 
+
+   ./polecov  [--bkgn <int>] [--bkgscale <float>] [--effn <int>] [--effscale
+              <float>] [--hstep <float>] [--hmax <float>] [--hmin <float>]
+              [--nbelt <int>] [--nmus <float>] [--dmus <float>] [--corr
+              <float>] [--bstep <float>] [--bmax <float>] [--bmin <float>]
+              [--bsigma <float>] [--bkgdist <int>] [--estep <float>]
+              [--emax <float>] [--emin <float>] [--esigma <float>]
+              [--effdist <int>] [--sstep <float>] [--smax <float>] [--smin
+              <float>] [-P <int>] [-V <int>] [--dump <string>] [--minp
+              <float>] [-S] [-C] [-K] [-m <int>] [--cl <float>] [--rseedofs
+              <int>] [--rseed <int>] [--nloops <int>] [--] [-v] [-h]
+
+
+
+polecov calculates the coverage over a given range of parameters.
+It accepts largely the same arguments as for polelim.
+The specifics for polecov are described below.
+
+*The program can scan over:
+
+1. true signal
+   --smin   : min signal
+   --smax   : max signal
+   --sstep  : step size
+
+2. efficiency:
+   --emin, --emax, --estep
+   --effdist: distribution (not scanable...)
+
+3. background
+   --bmin, --bmax, --bstep, --bkgdist
+
+Number of loops
+
+   --nloops : number of MC experiments (default = 1), usually 1000 is enough, increase the number for increased precision
+
+Random number generator
+
+  --rseed    :  set the random number seed; if not set, a seed is set based on the time
+  --rseedofs :  seed offset (not really used)
+
+It is possible to fix the N(obs) in each experiment:
+
+   -S or --fixsig
+
+Control the usage of tabulated poisson:
+
+   -K or --notab  : do not use the table
+
+Verbosity:
+
+   -P or --verbpol : set verbosity level for the pole part
+
+   -V or --verbcov : ditto for the coverage
+
+Statistics:
+
+   --dump   :  dump file prefix
+
+   -C,  --stats : collect statistics - will take longer time since it will always calculate the full limits
+
+* The output
+
+For each point calculated a line is printed as follows:
+
+ DATA: <s(true)>    <eff>  <sigma(eff)>  <bkg> <sigma(bkg)>  <corr>  <coverage> <coverage uncertainty>  <number of loops done>  <max n(loops)>  <...>
+
+From the logfile, a tabulated file can be obtained using the following:
+
+ grep "DATA:" <logfile> | cut -d ":" -f 2 > output.dat
+
+The coverage can then be plotted using, e.g, gnuplot.
+
+
+* Special features
+
+1. Process signal handling:
+
+   SIGINT (ctrl-c) : stops the program and prints out the latest result
+   SIGUSR1         : prints out a "STATUS:" line which has the same contents as "DATA:"
+
+2. Run time estimations:
+
+   After a certain time, the code will print out a time estimation based on the performance so far.
+   This estimation is rather a lower limit as the time per point varies with the values of the parameters.
+
+
+V. EXAMPLE POLELIM
+===================
+
+Running the polelim with default parameters:
+
+
+
+================ P O L E ==================
+ Confidence level   : 0.9
+ N observed         : 1
+----------------------------------------------
+ Coverage friendly  : No
+ True signal        : 1
+----------------------------------------------
+ Efficiency meas    : 1
+ Efficiency sigma   : 0.2
+ Efficiency dist    : Gauss
+----------------------------------------------
+ Background meas    : 0
+ Background sigma   : 0
+ Background dist    : None
+----------------------------------------------
+ Bkg-Eff correlation: 0
+----------------------------------------------
+ Int. eff. min      : 0
+ Int. eff. max      : 2
+ Int. eff. N pts    : 21
+----------------------------------------------
+ Int. bkg. min      : 0
+ Int. bkg. max      : 0
+ Int. bkg. N pts    : 1
+----------------------------------------------
+ Test hyp. min      : 0
+ Test hyp. max      : 35
+ Test hyp. step     : 0.01
+----------------------------------------------
+ Min. probability   : 0.001
+----------------------------------------------
+ Belt N max         : variable
+ Step mu_best       : 0.002
+ Max N, mu_best     : 100
+----------------------------------------------
+ Method             : FHC2
+----------------------------------------------
+ Verbosity          : 0
+==============================================
+CONFBELT: 0	0	1	1
+NMIN0:	1	1
+-------------------------------------------------
+ Max N(belt) set  : 47
+ Max N(belt) used : 13
+-------------------------------------------------
+ Nobs  	  Eff   	 Bkg
+-------------------------------------------------
+1	1.000000	0.200000	0.000000	0.000000	[ 0.11, 4.63 ]
+
+
+The last line contains: nobs, eff, sigma(eff), bkg, sigma(bkg), [limits].
+Note the lines further up "Max N(belt) set...". The max used gives the lower limit of --nbelt argument.
+In the case above we could set --nbelt 13 without loosing precision.
+This is only really relevant when calculating coverage.
+
+
+* Fixed efficiency, gaussian backgound:
+
+./polelim --effdist 0 --bkgdist 2 --bkgmeas 2 --bkgsigma 0.5 --nobs 4
+
+ => [0.00,6.94]
+
+* Very large N(obs)
+
+./polelim --nobs 30
+
+ => FAILS with the following message:
+
+-------------------------------------------
+ERROR: limit calculation failed. Possible causes:
+1. nbelt is too small (set nbelt = 121, max used = 61)
+2. precision in integrations (eff,bkg) not sufficient
+3. hypethesis test range too small ( max = 35 )
+4. Symptom: probability of lower/upper limit diverges from unity.
+   -> if Poisson table is used, insufficient precision.
+   -> minimum probability too large; min = 0.001
+Input:
+   N(obs)     = 30
+Results:
+   probability (should be = CL)  = 0.44372
+   lower lim norm (should be 1)  = 0.998133
+   upper lim norm (ditto)        = 0.99708
+   lower lim                     = 18.75
+   upper lim                     = 34.99
+-------------------------------------------
+
+Lower limit is ok but upper limit has reached the upper test range.
+The remedy is to increase the range. Adding --hmax 50 gives a proper limit:
+[18.75,47.65]
+
+
+
+
+VI. EXAMPLE POLECOV
+====================
+
+* Running polecov with default settings:
+
+
+
+<<Pole::CheckParams() is disabled - Manually make sure that the integration limits are ok>>
+
+==============C O V E R A G E=================
+ Random seed        : 1140085666
+ Number of loops    : 1
+ Collect statistics : No
+----------------------------------------------
+ Signal min         : 1
+ Signal max         : 1
+ Signal step        : 0
+ Signal N           : 1
+ Signal fixed       : No
+----------------------------------------------
+ Efficiency min     : 1
+ Efficiency max     : 1
+ Efficiency step    : 0
+ Efficiency sigma   : 0.2
+ Efficiency dist    : Gauss
+----------------------------------------------
+ Background min     : 0
+ Background max     : 0
+ Background step    : 0
+ Background sigma   : 0
+ Background dist    : None
+----------------------------------------------
+ Correlated bkg,eff : No
+ Correlation coef.  : 0
+==============================================
+Start of run: 16/02/2006 11:27:47
+       Signal 	Efficiency			Background			Correlation	Coverage			Loops	Max loops
+      --------------------------------------------------------------------------------------------
+DATA: 1.000000	1.000000	0.200000	0.000000	0.000000	0.000000	1.000000	0.000000	1	1	30.000000
+>>>Limit calculation failure rate: 0.000000
+
+End of run: 16/02/2006 11:27:47
+
+
+
+* Scanning several parameters
+
+
+
+<<Pole::CheckParams() is disabled - Manually make sure that the integration limits are ok>>
+
+==============C O V E R A G E=================
+ Random seed        : 1140085784
+ Number of loops    : 10
+ Collect statistics : No
+----------------------------------------------
+ Signal min         : 1
+ Signal max         : 2
+ Signal step        : 1
+ Signal N           : 2
+ Signal fixed       : No
+----------------------------------------------
+ Efficiency min     : 0.9
+ Efficiency max     : 1.1
+ Efficiency step    : 0.1
+ Efficiency sigma   : 0.2
+ Efficiency dist    : Gauss
+----------------------------------------------
+ Background min     : 1
+ Background max     : 2
+ Background step    : 0.5
+ Background sigma   : 0
+ Background dist    : None
+----------------------------------------------
+ Correlated bkg,eff : No
+ Correlation coef.  : 0
+==============================================
+Start of run: 16/02/2006 11:29:44
+       Signal 	Efficiency			Background			Correlation	Coverage			Loops	Max loops
+      --------------------------------------------------------------------------------------------
+DATA: 1.000000	0.900000	0.200000	1.000000	0.000000	0.000000	0.900000	0.094868	10	10	300.000000
+DATA: 1.000000	0.900000	0.200000	1.500000	0.000000	0.000000	0.900000	0.094868	10	10	310.000000
+.
+.
+.
+DATA: 2.000000	1.000000	0.200000	1.500000	0.000000	0.000000	0.900000	0.094868	10	10	350.000000
+DATA: 2.000000	1.000000	0.200000	2.000000	0.000000	0.000000	1.000000	0.000000	10	10	360.000000
+Estimated end of run: 16/02/2006 11:29:51 ( 0h 0m 7s )
+
+DATA: 2.000000	1.100000	0.200000	1.000000	0.000000	0.000000	1.000000	0.000000	10	10	360.000000
+DATA: 2.000000	1.100000	0.200000	1.500000	0.000000	0.000000	0.900000	0.094868	10	10	350.000000
+DATA: 2.000000	1.100000	0.200000	2.000000	0.000000	0.000000	0.700000	0.144914	10	10	340.000000
+>>>Limit calculation failure rate: 0.000000
+
+End of run: 16/02/2006 11:29:50
+
+
+* A long run first checked with  kill -USR1 <process id>
+
+  polecov --nloops 10000
+
+---------------------------------------------------------------------
+
+ < SAME BEGINNING AS BEFORE>
+
+Start of run: 16/02/2006 11:33:00
+Estimated end of run: 16/02/2006 11:37:54 ( 0h 4m 54s )
+
+       Signal 	Efficiency			Background			Correlation	Coverage			Loops	Max loops
+      --------------------------------------------------------------------------------------------
+STATUS: 1.000000	1.000000	0.200000	0.000000	0.000000	0.000000	0.906736	0.014801	386	10000	-310.000000
+WARNING (16/02/2006 11:33:17 ) Job aborting (signal = 2 ). Will output data from unfinnished loop.
+
+DATA: 1.000000	1.000000	0.200000	0.000000	0.000000	0.000000	0.920553	0.011239	579	10000	-310.000000
+
+
+---------------------------------------------------------------------
+
+The STATUS: line is printed whenever polecov receives a SIGUSR1 signal (eg through kill -USR1 <pid> ).
+With a ctrl-c (or kill -2 <pid>) the running is aborted and the current result is printed out.
+
+
+
+
+
+VII. KNOWN ISSUES
+==================
+
+
+1. Using efficiency and background with poisson distribution does NOT
+   converge when using larger integration range (ie scale).
+	=> NEEDS to be fixed - result is not reliable
+
+2. The belt estimator is not optimal - does not handle absolute efficiencies properly.
+	=> not too problematic since you can set N(belt) etc manually.
+
+I'm sure there are some more...
+
