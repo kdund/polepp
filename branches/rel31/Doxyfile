@@ -50,11 +50,10 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = . release.notes
+INPUT                  = . release.notes README
 FILE_PATTERNS          = *.h *.cxx *.hpp *.cpp
 RECURSIVE              = YES
-EXCLUDE                = Observable.cxx \
-			 Observable.h \
+EXCLUDE                = Observable.h \
 			 Tabulated.cxx \
 			 Tabulated.h \
 			 obstest.cxx \

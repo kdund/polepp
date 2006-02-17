@@ -115,7 +115,7 @@ Power.o:	Power.cxx Power.h
 		g++ $(CFLAGS) -Wall -c $<
 
 package:	$(SRCLIB) $(SRCTOOLS) Makefile
-		tar -czf polelib.tgz $(SRCFILES) $(INCFILES) $(SRCTOOLS) $(SRCEXTRAS) Makefile
+		tar -czf polelib.tgz $(SRCFILES) $(INCFILES) $(SRCTOOLS) $(SRCEXTRAS) release.notes Makefile Doxyfile README
 
 clean:
 		rm -f *.o

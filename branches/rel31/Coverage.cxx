@@ -472,22 +472,23 @@ void Coverage::dumpExperiments(std::string name, bool limits) {
   *os << "# bkg           = " << m_bkgTrue.min() << std::endl;
   *os << "# bkg sigma     = " << m_bkgSigma << std::endl;
   *os << "# bkg dist      = " << distTypeStr(m_bkgDist) << std::endl;
-  *os << "# lhRatio       = " << (m_pole->usesMBT() ? "MBT":"FHC2") << std::endl;
-  *os << "# corr.         = " << m_beCorr << std::endl;
+  *os << "# method        = " << (m_pole->usesMBT() ? "MBT":"FHC2") << std::endl;
+  *os << "# corr(eff,bkg) = " << m_beCorr << std::endl;
   *os << "# coverage      = " << m_coverage << std::endl;
   *os << "# coverage unc. = " << m_errCoverage << std::endl;
   *os << "#" << std::endl;
-  *os << "# N_obs   Efficiency     Background" << std::endl;
-  *os << "#-----------------------------------" << std::endl;
+  *os << "# N(obs) Efficiency     Eff/sigma       Background      Bkg/sigma       Var          N(belt)   min     max   Status    Lower   Upper    Prob   Hyp(max)" << std::endl;
+
+  *os << "#---------------------------------------------------------------------------------------------------------------------------------------------------------" << std::endl;
 #if __GNUC__ > 2
   for (i=0; i<sz; i++) {
-    *os << std::fixed
+    *os << "  " << std::fixed
 	<< std::setprecision(0)
 	<< m_nobsStat[i] << '\t'
 	<< std::setprecision(6)
 	<< m_effStat[i] << '\t'
 	<< m_effFrac[i] << '\t'
-        << m_bkgStat[i] << '\t'\
+        << m_bkgStat[i] << '\t'
         << m_bkgFrac[i] << '\t'
         << m_sigVar[i] << '\t'
 	<< std::setprecision(0)
