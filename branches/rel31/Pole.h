@@ -134,11 +134,6 @@
  *    Setting this flag causes the limit calculation to terminate the scan as soon as it is
  *    decided whether the true signal is inside or outside the confidence limit.
  *
- *  Tabulated PDFs
- *  - initPoisson() : Initialises a tabulated poisson.\n
- *    It is not required but it greatly speeds up the coverage calculations.
- *  - initGauss() : Dito but for a gauss pdf.\n
- *    The gain in speed is much less significant (REMOVE???)
  *
  *  \b RUNNING
  *
@@ -352,7 +347,7 @@ public:
   const int    getNuppLim() const    { return m_nUppLim; }
 
 private:
-  void setInt(double & low, double & high, double scale, double mean, double sigma, PDF::DISTYPE dt);
+  void setInt(double & low, double & high, int & np, double scale, double mean, double sigma, PDF::DISTYPE dt);
 
   const PDF::PoisTab   *m_poisson;
   const PDF::Gauss     *m_gauss;

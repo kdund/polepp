@@ -124,7 +124,7 @@ bool Pole::checkEffBkgDists() {
 //
 // Calculates the range for integration.
 //
-void Pole::setInt(double & low, double & high, double scale, double mean, double sigma, PDF::DISTYPE dist) {
+void Pole::setInt(double & low, double & high, int & np, double scale, double mean, double sigma, PDF::DISTYPE dist) {
   //
   double dx;
   double nsigma;
@@ -134,6 +134,7 @@ void Pole::setInt(double & low, double & high, double scale, double mean, double
     low  = mean;
     high = mean;
   } else {
+    double lnmin,b,c,rt;
     switch (dist) {
     case PDF::DIST_GAUS2D:
     case PDF::DIST_GAUS:
@@ -152,6 +153,25 @@ void Pole::setInt(double & low, double & high, double scale, double mean, double
       //      nsigma = m_logNorm->calcLogSigma(mean,sigma);
       low  = nmean - scale*nsigma;
       high = nmean + scale*nsigma;
+      break;
+    case PDF::DIST_POIS:
+      //
+      // The range in poisson case is determined by finding n1 and n2
+      // which has a certain maximum probability.
+      // 
+      //
+      lnmin = -scale*log(10.0); // ln(min probability)
+      b = 1.0 - 2.0*log(mean);
+      c = 2.0*(lnmin + mean);
+      rt = b*b - 4*c;
+      if (rt<0.0) rt=0;
+      rt = 0.5*sqrt(rt);
+      low  = -0.5*b - rt;
+      high = -0.5*b + rt;
+      low  = floor(low);
+      high = ceil(high);
+      if (high-low<0.5) high = low + 1.0;
+      np = static_cast<int>(high-low+1.5);
       break;
     default: // ERROR STATE
       break;
@@ -178,7 +198,7 @@ void Pole::setEffInt(double scale,int n) {
     high = m_measurement.getEffObs();
     n = 1;
   } else {
-    setInt(low,high,scale,m_measurement.getEffObs(),m_measurement.getEffPdfSigma(),m_measurement.getEffPdfDist());  
+    setInt(low,high,n,scale,m_measurement.getEffObs(),m_measurement.getEffPdfSigma(),m_measurement.getEffPdfDist());  
   }
   //
   m_effRangeInt.setRange(low,high,-1,n);
@@ -215,7 +235,7 @@ void Pole::setBkgInt(double scale,int n) {
   //
   double low,high;
   //
-  setInt(low,high,scale,m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma(),m_measurement.getBkgPdfDist());  
+  setInt(low,high,n,scale,m_measurement.getBkgObs(),m_measurement.getBkgPdfSigma(),m_measurement.getBkgPdfDist());  
   //
   m_bkgRangeInt.setRange(low,high,-1,n);
 }
@@ -1273,9 +1293,9 @@ void Pole::findConstruct() {
 
 int Pole::findNMin() { // calculates the minimum N rejecting s = 0.0
   int n1,n2;
-  double sumP = calcBelt(0.0,n1,n2,true);//,-1.0);
+  double sumP = calcBelt(0.0,n1,n2,false);//,-1.0);
   //
-  std::cout << "NMIN0:\t" << n2 << "\t" << sumP << std::endl;
+  if (m_verbose>2) std::cout << "NMIN0:\t" << n2 << "\t" << sumP << std::endl;
   return n2;
 }
 
