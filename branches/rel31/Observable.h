@@ -43,8 +43,8 @@ namespace OBS {
     virtual void setObservedRnd() { std::cerr << "ERROR: Calling Base::setObservedRnd()" << std::endl;}
     void setPdf(PDF::Base *pdf)   { m_pdf = pdf; m_dist = ((pdf==0) ? PDF::DIST_NONE:pdf->getDist());}
     void setPdfDist(const PDF::DISTYPE dist) { if (m_pdf==0) m_dist = dist; }
-    void setPdfMean(double m)  { m_mean = m; }
-    void setPdfSigma(double m) { m_sigma = m; } //if (m_pdf) m_pdf->setSigma(m); }
+    virtual void setPdfMean(double m)  { m_mean = m; }
+    virtual void setPdfSigma(double m) { m_sigma = m; } //if (m_pdf) m_pdf->setSigma(m); }
     void setRndGen(RND::Random *rndgen)               { m_rndGen = rndgen;}
     void setName(const char *name)               { m_name=name;}
     void setDescription(const char *description) { m_description=description;}
@@ -268,7 +268,7 @@ namespace OBS {
     }
     //
     void setPdfMean(double m)  { m_mean = m; m_sigma = (m>0 ? sqrt(m):0.0); }
-    void setPdfSigma(double m) { m_mean = m*m; m_sigma=m; }
+    void setPdfSigma(double m) { } // m_mean = m*m; m_sigma=m; }
     int rnd() {return (m_valid ? m_rndGen->poisson(m_mean):0);}
 
     ObservablePois *clone() const {
