@@ -42,10 +42,17 @@ class Measurement {
   void setDescription(const char *descr)     { m_description = descr; }
   //
   OBS::Base *addNuisance(OBS::Base * nuPar) { if (nuPar) m_nuisancePars.push_back( nuPar ); return nuPar;}
+  void removeNuisance(OBS::Base * nuPar, bool del=false) {
+    if (nuPar) {
+      m_nuisancePars.remove( nuPar );
+      if (del) delete nuPar;
+    }
+  }
   void deleteNuisance() {
     for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
 	 it != m_nuisancePars.end();
 	 ++it) {
+      removeNuisance( *it, true);
       if (*it) delete *it;
     }
     m_nuisancePars.clear();
@@ -215,7 +222,8 @@ class MeasPoisEB : public MeasPois {
   void setEffPdf(double eff, double sigma, PDF::DISTYPE dist) {
     if (m_eff!=0) {
       if (m_eff->getPdfDist()!=dist) {
-	delete m_eff;
+	removeNuisance(m_eff,true); // delete and remove
+	//	delete m_eff;
 	m_eff=0;
       }
     }
@@ -227,7 +235,8 @@ class MeasPoisEB : public MeasPois {
   void setBkgPdf(double bkg, double sigma, PDF::DISTYPE dist) {
     if (m_bkg!=0) {
       if (m_bkg->getPdfDist()!=dist) {
-	delete m_bkg;
+	removeNuisance(m_bkg,true); // delete and remove
+	//	delete m_bkg;
 	m_bkg=0;
       }
     }
