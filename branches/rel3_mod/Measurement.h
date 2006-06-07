@@ -53,9 +53,9 @@ class Measurement {
 	 it != m_nuisancePars.end();
 	 ++it) {
       removeNuisance( *it, true);
-      if (*it) delete *it;
+      //      if (*it) delete *it;
     }
-    m_nuisancePars.clear();
+    //    m_nuisancePars.clear();
   }
   void dump() const {
     std::cout << "-----------MEASUREMENT------------------------\n";
@@ -223,7 +223,6 @@ class MeasPoisEB : public MeasPois {
     if (m_eff!=0) {
       if (m_eff->getPdfDist()!=dist) {
 	removeNuisance(m_eff,true); // delete and remove
-	//	delete m_eff;
 	m_eff=0;
       }
     }
@@ -236,7 +235,6 @@ class MeasPoisEB : public MeasPois {
     if (m_bkg!=0) {
       if (m_bkg->getPdfDist()!=dist) {
 	removeNuisance(m_bkg,true); // delete and remove
-	//	delete m_bkg;
 	m_bkg=0;
       }
     }
