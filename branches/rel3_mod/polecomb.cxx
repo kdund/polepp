@@ -28,16 +28,20 @@ int main(int argc, char *argv[]) {
 
   //  poleA.setVerbose(100);
   //  poleB.setVerbose(100);
-  double es = 0.1/sqrt(2.0);
-  double bs = 0.3/sqrt(2.0);
-  expA.setEffPdf(0.50,es,PDF::DIST_GAUS);
-  expA.setBkgPdf(1.50,bs,PDF::DIST_GAUS);
+  double scale = 1.0;
+  double es = scale*0.1/sqrt(2.0);
+  double bs = scale*0.3/sqrt(2.0);
+  double eff = scale*0.5;
+  double bkg = scale*1.5;
+
+  expA.setEffPdf(eff,es,PDF::DIST_GAUS);
+  expA.setBkgPdf(bkg,bs,PDF::DIST_GAUS);
   expA.setNObserved(n0);
   expA.setEffObs();
   expA.setBkgObs();
 
-  expB.setEffPdf(0.50,es,PDF::DIST_GAUS);
-  expB.setBkgPdf(1.50,bs,PDF::DIST_GAUS);
+  expB.setEffPdf(eff,es,PDF::DIST_GAUS);
+  expB.setBkgPdf(bkg,bs,PDF::DIST_GAUS);
   expB.setNObserved(n1);
   expB.setEffObs();
   expB.setBkgObs();
@@ -60,12 +64,12 @@ int main(int argc, char *argv[]) {
     pole->setGauss2D(&PDF::gGauss2D);
     pole->setLogNormal(&PDF::gLogNormal);
     pole->setCL(0.90);
-    pole->setMinMuProb();
+    pole->setMinMuProb(0.0001);
     pole->setDmus(0.01);
-    pole->setBelt(20);
-    pole->setEffInt(5.0,20); // integrate +-5 sigma around eff and bkg
-    pole->setBkgInt(5.0,20); // integrate +-5 sigma around eff and bkg
-    pole->setTestHyp(0.0,20.0,0.01); // should be called AFTER the integration construct has been initiated (needs the norm)
+    pole->setBelt(30);
+    pole->setEffInt(5.0,25); // integrate +-5 sigma around eff and bkg
+    pole->setBkgInt(5.0,25); // integrate +-5 sigma around eff and bkg
+    pole->setTestHyp(0.0,40.0,0.01); // should be called AFTER the integration construct has been initiated (needs the norm)
     pole->initAnalysis();
 
     pole->setMethod(RL_FHC2);
@@ -75,7 +79,7 @@ int main(int argc, char *argv[]) {
   //
   // Uncorrelated combination
   //
-  combine.setSmax(5.0);
+  combine.setSmax(10.0);
   combine.init();
   combine.doIt();
 }
