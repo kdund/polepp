@@ -168,8 +168,8 @@ enum RLMETHOD {
 class Pole {
 public:
   Pole();
-  ~Pole();
-  // Main parameters
+ ~Pole();
+  //! Main parameters
   void setCL(double cl)    { m_cl = cl; if ((cl>1.0)||(cl<0.0)) m_cl=0.9;}
 
   void setMethod( RLMETHOD m ) { m_method = m; }

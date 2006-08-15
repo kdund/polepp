@@ -81,18 +81,20 @@ class Measurement {
     for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
 	 it !=  m_nuisancePars.end();
        ++it) {
-      std::cout << "initIntNuisance():: " << (*it) << std::endl;
+      std::cout << "initIntNuisance():: " << (*it)->getName() << std::endl;
       (*it)->initIntDefault();
     }
+    std::cout << "All nuisance parameter integrals have been initialized" << std::endl;
   }
   //! Assumes that all parameters have called OBS::initInt()
   void fillIntNuisance() {
     for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
 	 it !=  m_nuisancePars.end();
        ++it) {
+      std::cout << "fillIntNuisance():: " << (*it)->getName() << std::endl;
       (*it)->fillInt();
-      std::cout << "fillIntNuisance():: " << (*it) << std::endl;
     }
+    std::cout << "fillIntNuisance():: DONE!" << std::endl;
   }
   //! Initialize nuisance weights: f(x)g(y)...dxdy
   void initNuisanceWeights() {
@@ -357,6 +359,7 @@ class MeasPoisEB : public MeasPois {
     if (m_eff==0) m_eff = static_cast< OBS::BaseType<double> *>(makeNuisance(dist));
     m_eff->setPdfMean(eff);
     m_eff->setPdfSigma(sigma);
+    m_eff->setName("efficiency");
     updNuisanceIndex();
   }
 
@@ -371,6 +374,7 @@ class MeasPoisEB : public MeasPois {
     if (m_bkg==0) m_bkg = static_cast< OBS::BaseType<double> *>(makeNuisance(dist));
     m_bkg->setPdfMean(bkg);
     m_bkg->setPdfSigma(sigma);
+    m_bkg->setName("background");
     updNuisanceIndex(); // this will set m_bkgIndex (and m_effIndex if needed)
   }
 

@@ -241,8 +241,8 @@ int main(int argc, char *argv[]) {
   //
   argsCoverage(&gCoverage,&gPole,argc,argv);
   //
-  if (gPole.checkParams()) {
-    gCoverage.printSetup();
-    gCoverage.doLoop();
-  }
+  //  if (gPole.checkParams()) {
+  gCoverage.printSetup();
+  gCoverage.doLoop();
+    //  }
 }

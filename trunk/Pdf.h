@@ -115,9 +115,9 @@ namespace PDF {
 
   class Flat : public BaseType<double> {
   public:
-    Flat():BaseType<double>("Flat",DIST_FLAT,1.0,0.1) { std::cout << "Flat empty constructor" << std::endl; setMinMax(getMean(),getSigma()); }
-    Flat(double mean, double sigma):BaseType<double>("Flat",DIST_GAUS,mean,sigma) { std::cout << "Flat constructor" << std::endl; setMinMax(mean,sigma); }
-    Flat(const Flat & other):BaseType<double>(other) {std::cout << "Flat COPY constructor" << std::endl; m_min = other.getMin(); m_max = other.getMax(); m_F = other.getF();}
+    Flat():BaseType<double>("Flat",DIST_FLAT,1.0,0.1) { setMinMax(getMean(),getSigma()); }
+    Flat(double mean, double sigma):BaseType<double>("Flat",DIST_FLAT,mean,sigma) { setMinMax(mean,sigma); }
+    Flat(const Flat & other):BaseType<double>(other) { m_min = other.getMin(); m_max = other.getMax(); m_F = other.getF();}
     virtual ~Flat() {};
     //
     inline const double F(double val) const;
@@ -141,7 +141,7 @@ namespace PDF {
     inline void setMinMax(double mean, double sigma) {
       calcMinMax(mean,sigma,m_min,m_max);
       m_F = calcF(m_min,m_max);
-      std::cout << "Flat: " << m_F << " , " << m_min << " , " << m_max << std::endl;
+      //      std::cout << "Flat: " << m_F << " , " << m_min << " , " << m_max << std::endl;
     }
 
     inline void calcMinMax(double mean, double sigma, double & xmin, double & xmax) const {
@@ -555,12 +555,12 @@ namespace PDF {
     return raw(x,m_F);
   }
   inline const double Flat::getVal(const double x, const double mean, const double sigma) const {
-    std::cout << "Flat: getVal() " << std::endl;
+    //    std::cout << "Flat: getVal() " << std::endl;
     double xmin,xmax,f;
     calcMinMax(mean,sigma,xmin,xmax);
     f = calcF(xmin,xmax);
     double rval = raw(x,f,xmin,xmax);
-    std::cout << " : x = " << x << " , f = " << f << " , range = " << xmin << " - " << xmax << " ==> " << rval << std::endl;
+    //    std::cout << " : x = " << x << " , f = " << f << " , range = " << xmin << " - " << xmax << " ==> " << rval << std::endl;
     return rval;
   }
 

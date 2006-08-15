@@ -18,8 +18,14 @@
 namespace OBS {
   template <typename T>
   void getIntRange(T & low, T & high, double scale, double mean, double sigma, PDF::DISTYPE dist, bool positive=true) {
+  //  void getIntRange(T & low, T & high, double scale, double mean, double sigma, PDF::BaseType<T> *pdf, bool positive=true) {
     //
+    //    if (pdf==0) return;
     double dx;
+    const double maxp = 0.9999;
+    int n=0, nprev, nlow, nhigh;
+    double p=0.0;
+    //  PDF::DISTYPE dist = pdf->getDist();
     //
     if (dist==PDF::DIST_NONE) {
       low  = static_cast<T>(mean);
@@ -38,6 +44,27 @@ namespace OBS {
 	high = static_cast<T>(mean+dx);
 	break;
       case PDF::DIST_POIS:
+        nlow  = -1;
+        nhigh = -1;
+        // find min and max range of poisson
+        // this is defined by maxp above
+        // low  : max N for wich sum( p(n) ) < 1.0-maxp
+        // high : min N for wich sum( p(n) ) > maxp
+        while (nhigh<0) {
+          nprev=n;
+          p += PDF::gPoisTab.getVal( n, mean );
+          //          p += pdf->getVal( n, mean );
+          if ((n==0) || (p<(1.0-maxp))) nlow  = n;
+          if (p>maxp)       nhigh = n;
+          n++;
+          if (nprev>n) { // just a STUPID test; can be done better...
+            std::cerr << "Infinite loop caugh in OBS::getIntRange() for Poisson - brutal exit" << std::endl;
+            exit(-1);
+          }
+        }
+	low  = static_cast<T>(nlow);
+	high = static_cast<T>(nhigh);
+	break;
       default: // ERROR STATE
 	low  = static_cast<T>(0);
 	high = static_cast<T>(0);
@@ -140,6 +167,15 @@ namespace OBS {
     RND::Random *m_rndGen;
     bool m_valid;
     bool m_locked;
+    //
+    // Integral def.
+    //
+    double              m_intScale;  //! range is defined by x+-scale*sigma
+    int                 m_intNpts;   //! set number of points in integral
+    double              m_intTotal;  //! sum of all f(x)dx
+    bool                m_intFilled; //! true if integral is filled
+    std::vector<double> m_intWeight; //! array containing the weights f(x)dx
+
   };
 
   template <typename T>
@@ -172,7 +208,66 @@ namespace OBS {
       BaseType<T> *obj = new BaseType<T>(*this);
       return obj;
     }
-
+    void getIntRange(T & low, T & high, double mean, double sigma, bool positive=true)
+    {
+      double dx;
+      const double maxp = 0.9999;
+      int n=0, nprev, nlow, nhigh;
+      double p=0.0;
+      //  PDF::DISTYPE dist = pdf->getDist();
+      //
+      if (m_dist==PDF::DIST_NONE) {
+        low  = static_cast<T>(mean);
+        high = static_cast<T>(mean);
+      } else {
+        switch (m_dist) {
+        case PDF::DIST_GAUS2D:
+        case PDF::DIST_GAUS:
+        case PDF::DIST_LOGN:
+          low  = static_cast<T>(mean - m_intScale*sigma);
+          high = static_cast<T>(mean + m_intScale*sigma);
+          break;
+        case PDF::DIST_FLAT:
+          dx=sigma*1.73205081; // == sqrt(12)*0.5; ignore scale - always use full range
+          low  = static_cast<T>(mean-dx);
+          high = static_cast<T>(mean+dx);
+          break;
+        case PDF::DIST_POIS:
+          nlow  = -1;
+          nhigh = -1;
+          // find min and max range of poisson
+          // this is defined by maxp above
+          // low  : max N for wich sum( p(n) ) < 1.0-maxp
+          // high : min N for wich sum( p(n) ) > maxp
+          while (nhigh<0) {
+            nprev=n;
+            p += PDF::gPoisTab.getVal( n, mean );
+            //          p += pdf->getVal( n, mean );
+            //p += m_pdf->getVal( n, mean );
+            if ((n==0) || (p<(1.0-maxp))) nlow  = n;
+            if (p>maxp)       nhigh = n;
+            n++;
+            if (nprev>n) { // just a STUPID test; can be done better...
+              std::cerr << "Infinite loop caugh in OBS::getIntRange() for Poisson - brutal exit" << std::endl;
+              exit(-1);
+            }
+          }
+          m_intNpts = nhigh-nlow+1;
+          low  = static_cast<T>(nlow);
+          high = static_cast<T>(nhigh);
+          break;
+        default: // ERROR STATE
+          low  = static_cast<T>(0);
+          high = static_cast<T>(0);
+          std::cerr << "OBS::getIntRange() -> Unknown pdf type = " << m_dist << std::endl;
+          break;
+        }
+      }
+      if (positive && (low<0)) {
+        high = high-low;
+        low = 0;
+      }
+    }
     const double getPdfVal(T val) { return (this->m_pdf ? static_cast< PDF::BaseType<T> * >(this->m_pdf)->getVal(val,this->m_mean,this->m_sigma):0.0); }
 
     T       operator()()       { return ( this->m_locked ? m_observedValue:rnd()); }
@@ -207,13 +302,18 @@ namespace OBS {
     }
 
     void initInt() {
+      std::cout << "OBS::initInt()" << std::endl;
       if (m_intXRange.n()<1) return;
       int np = m_intXRange.n();
-      m_intWeight.resize(np,0.0);
-      m_intX.resize(np,0);
+      std::cout << "OBS::initInt(): n = " << np << std::endl;
+      m_intWeight.clear(); //resize(np,0.0);
+      std::cout << "OBS::initInt(): resize of intWeight done" << std::endl;
+      m_intX.clear();
+      std::cout << "OBS::initInt(): resize of intX done - NOW; loop..." << std::endl;
 
       for (int i=0; i<np; i++) {
-	m_intX[i] = transX((m_intXRange.getVal(i))); //! for LOGN, the Xrange is in log(x)
+	m_intX.push_back(transX(m_intXRange.getVal(i))); //! for LOGN, the Xrange is in log(x)
+        std::cout << "OBS::initInt(): val " << i << " = " << m_intX[i] << std::endl; 
       }
 
       m_intTotal = 0;
@@ -240,19 +340,29 @@ namespace OBS {
 	T high;
 	bool pos;
 	double mean, sigma;
-	if (this->m_dist == PDF::DIST_LOGN) {
+        switch ( this->m_dist ) {
+        case PDF::DIST_LOGN:
  	  mean = PDF::calcLogMean(double(m_observedValue),double(m_sigma));
  	  sigma = PDF::calcLogSigma(double(m_observedValue),double(m_sigma));
 	  pos = false;
-	} else {
+          break;
+        case PDF::DIST_POIS:
+          mean = double(m_observedValue);
+          sigma = sqrt((mean>0 ? mean:0.0));
+          break;
+        default:
 	  mean = double(m_observedValue);
 	  sigma = m_sigma;
 	  pos = true;
 	}
-	getIntRange(low,high,m_intScale, mean , sigma, this->m_dist, pos);
-	std::cout << "Int dist  = " << mean << " , " << sigma << std::endl;
-	std::cout << "    range = " << low << " : " << high << std::endl;
+        //        getIntRange(low,high,m_intScale, mean , sigma, this->m_pdf, pos);
+        // OBS::getIntRange(low,high,m_intScale, mean , sigma, this->m_dist, pos);
+        getIntRange(low,high, mean , sigma, pos);
+	std::cout << "Int dist   = " << mean << " , " << sigma << std::endl;
+	std::cout << "    range  = " << low << " : " << high << std::endl;
+	std::cout << "    N(pts) = " << m_intNpts << std::endl;
 	initInt(low,high,0,m_intNpts);
+        std::cout << "Integral range set" << std::endl;
       }
     }
 
@@ -295,13 +405,8 @@ namespace OBS {
     //
     T m_observedValue; //! the observed value
 
-    std::vector<double> m_intWeight; //! array containing the weights f(x)dx
     std::vector<T>      m_intX;      //! array of x
     Range<T>            m_intXRange; //! range of x
-    double              m_intScale;  //! range is defined by x+-scale*sigma
-    int                 m_intNpts;   //! set number of points in integral
-    double              m_intTotal;  //! sum of all f(x)dx
-    bool                m_intFilled; //! true if integral is filled
     //
   };
 
