@@ -16,67 +16,67 @@
 // NOTE: pdf is given as a pointer and can be manipulated by the object
 //
 namespace OBS {
-  template <typename T>
-  void getIntRange(T & low, T & high, double scale, double mean, double sigma, PDF::DISTYPE dist, bool positive=true) {
-  //  void getIntRange(T & low, T & high, double scale, double mean, double sigma, PDF::BaseType<T> *pdf, bool positive=true) {
-    //
-    //    if (pdf==0) return;
-    double dx;
-    const double maxp = 0.9999;
-    int n=0, nprev, nlow, nhigh;
-    double p=0.0;
-    //  PDF::DISTYPE dist = pdf->getDist();
-    //
-    if (dist==PDF::DIST_NONE) {
-      low  = static_cast<T>(mean);
-      high = static_cast<T>(mean);
-    } else {
-      switch (dist) {
-      case PDF::DIST_GAUS2D:
-      case PDF::DIST_GAUS:
-      case PDF::DIST_LOGN:
-	low  = static_cast<T>(mean - scale*sigma);
-	high = static_cast<T>(mean + scale*sigma);
-	break;
-      case PDF::DIST_FLAT:
-	dx=sigma*1.73205081; // == sqrt(12)*0.5; ignore scale - always use full range
-	low  = static_cast<T>(mean-dx);
-	high = static_cast<T>(mean+dx);
-	break;
-      case PDF::DIST_POIS:
-        nlow  = -1;
-        nhigh = -1;
-        // find min and max range of poisson
-        // this is defined by maxp above
-        // low  : max N for wich sum( p(n) ) < 1.0-maxp
-        // high : min N for wich sum( p(n) ) > maxp
-        while (nhigh<0) {
-          nprev=n;
-          p += PDF::gPoisTab.getVal( n, mean );
-          //          p += pdf->getVal( n, mean );
-          if ((n==0) || (p<(1.0-maxp))) nlow  = n;
-          if (p>maxp)       nhigh = n;
-          n++;
-          if (nprev>n) { // just a STUPID test; can be done better...
-            std::cerr << "Infinite loop caugh in OBS::getIntRange() for Poisson - brutal exit" << std::endl;
-            exit(-1);
-          }
-        }
-	low  = static_cast<T>(nlow);
-	high = static_cast<T>(nhigh);
-	break;
-      default: // ERROR STATE
-	low  = static_cast<T>(0);
-	high = static_cast<T>(0);
-	std::cerr << "OBS::getIntRange() -> Unknown pdf type = " << dist << std::endl;
-	break;
-      }
-    }
-    if (positive && (low<0)) {
-      high = high-low;
-      low = 0;
-    }
-  }
+//   template <typename T>
+//   void getIntRange(T & low, T & high, double scale, double mean, double sigma, PDF::DISTYPE dist, bool positive=true) {
+//   //  void getIntRange(T & low, T & high, double scale, double mean, double sigma, PDF::BaseType<T> *pdf, bool positive=true) {
+//     //
+//     //    if (pdf==0) return;
+//     double dx;
+//     const double maxp = 0.9999;
+//     int n=0, nprev, nlow, nhigh;
+//     double p=0.0;
+//     //  PDF::DISTYPE dist = pdf->getDist();
+//     //
+//     if (dist==PDF::DIST_NONE) {
+//       low  = static_cast<T>(mean);
+//       high = static_cast<T>(mean);
+//     } else {
+//       switch (dist) {
+//       case PDF::DIST_GAUS2D:
+//       case PDF::DIST_GAUS:
+//       case PDF::DIST_LOGN:
+// 	low  = static_cast<T>(mean - scale*sigma);
+// 	high = static_cast<T>(mean + scale*sigma);
+// 	break;
+//       case PDF::DIST_FLAT:
+// 	dx=sigma*1.73205081; // == sqrt(12)*0.5; ignore scale - always use full range
+// 	low  = static_cast<T>(mean-dx);
+// 	high = static_cast<T>(mean+dx);
+// 	break;
+//       case PDF::DIST_POIS:
+//         nlow  = -1;
+//         nhigh = -1;
+//         // find min and max range of poisson
+//         // this is defined by maxp above
+//         // low  : max N for wich sum( p(n) ) < 1.0-maxp
+//         // high : min N for wich sum( p(n) ) > maxp
+//         while (nhigh<0) {
+//           nprev=n;
+//           p += PDF::gPoisTab.getVal( n, mean );
+//           //          p += pdf->getVal( n, mean );
+//           if ((n==0) || (p<(1.0-maxp))) nlow  = n;
+//           if (p>maxp)       nhigh = n;
+//           n++;
+//           if (nprev>n) { // just a STUPID test; can be done better...
+//             std::cerr << "Infinite loop caugh in OBS::getIntRange() for Poisson - brutal exit" << std::endl;
+//             exit(-1);
+//           }
+//         }
+// 	low  = static_cast<T>(nlow);
+// 	high = static_cast<T>(nhigh);
+// 	break;
+//       default: // ERROR STATE
+// 	low  = static_cast<T>(0);
+// 	high = static_cast<T>(0);
+// 	std::cerr << "OBS::getIntRange() -> Unknown pdf type = " << dist << std::endl;
+// 	break;
+//       }
+//     }
+//     if (positive && (low<0)) {
+//       high = high-low;
+//       low = 0;
+//     }
+//   }
 
   class Base {
   public:
@@ -90,91 +90,301 @@ namespace OBS {
       if (name) m_name=name;
       if (description) m_description=description;
     }
-    Base(const Base & other) {
-      copy(other);
-    }
-
+    Base(const Base & other) { copy(other);}
+    //
     virtual ~Base() {}
     //
-    Base const & operator=(Base const & rh) {
-      copy(rh);
-      return *this;
-    }
+    /////////////////////////////////////////////////////
+    // VIRTUAL MEMBERS - some are instances of typed template BaseType<T> with T=int,double
+    // TODO: Move these to separate file....
+    /////////////////////////////////////////////////////
+
+    virtual void   setObservedRnd(void)           { std::cout << "1MUST BE OVERLOADED!" << std::endl; }
+    virtual void   setObservedValue(double v)     { std::cout << "2MUST BE OVERLOADED!" << std::endl; }
+    virtual void   setObservedValue(int v)        { std::cout << "3MUST BE OVERLOADED!" << std::endl; }
+    virtual void   setObservedValue()             { std::cout << "4MUST BE OVERLOADED!" << std::endl; }
     //
-    virtual void setObservedRnd() { std::cerr << "ERROR: Calling Base::setObservedRnd()" << std::endl;}
-    void lock() { m_locked = true; }
-    void unlock() { m_locked = false; }
-    void setPdf(PDF::Base *pdf)   { m_pdf = pdf; m_dist = ((pdf==0) ? PDF::DIST_NONE:pdf->getDist());}
-    void setPdfDist(const PDF::DISTYPE dist) { if (m_pdf==0) m_dist = dist; }
-    void setPdfMean(double m)  { m_mean = m; }
-    void setPdfSigma(double m) { m_sigma = m; } //if (m_pdf) m_pdf->setSigma(m); }
-    void setRndGen(RND::Random *rndgen)               { m_rndGen = rndgen;}
-    void setName(const char *name)               { m_name=name;}
-    void setDescription(const char *description) { m_description=description;}
+    virtual const void   getObservedValue(int & val)    const { std::cout << "5MUST BE OVERLOADED!" << std::endl; val=0; }
+    virtual const void   getObservedValue(double & val) const { std::cout << "6MUST BE OVERLOADED!" << std::endl; val=0.0; }
+    virtual const double getObservedValue()             const { std::cout << "7MUST BE OVERLOADED!" << std::endl; return 0.0;}
 
-    virtual void validate() { m_valid = ((m_pdf!=0) && (m_rndGen!=0)); }
+    /////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////
 
-    virtual void dump() const { std::cout << "OBS::Base::dump(): observable dump not yet implemented" << std::endl; }
+    // setting name, pdf and rdn generator
+    void         setName(const char *name)               { m_name=name;}
+    void         setDescription(const char *description) { m_description=description;}
+    void         lock()                                  { m_locked = true; }
+    void         unlock()                                { m_locked = false; }
+    void         setPdf(PDF::Base *pdf)                  { m_pdf = pdf; m_dist = ((pdf==0) ? PDF::DIST_NONE:pdf->getDist());}
+    void         setPdfDist(const PDF::DISTYPE dist)     { if (m_pdf==0) m_dist = dist; }
+    virtual void setPdfMean(double m)                    { m_mean = m; }
+    virtual void setPdfSigma(double m)                   { m_sigma = m; } //if (m_pdf) m_pdf->setSigma(m); }
+    void         setRndGen(RND::Random *rndgen)          { m_rndGen = rndgen;}
+    virtual void validate()                              { m_valid = ((m_pdf!=0) && (m_rndGen!=0)); }
 
-    const double getPdfMean() const              { return m_mean; } //(m_pdf ? m_pdf->getMean():0); }
-    const double getPdfSigma() const             { return m_sigma; } //(m_pdf ? m_pdf->getSigma():0); }
-    const PDF::DISTYPE getPdfDist() const       { return m_dist; }
-    PDF::Base         *getPdf() const           { return m_pdf;}
-    const std::string & getName() const          { return m_name;}
-    const std::string & getDescription() const   { return m_description;}
+    // setting integral related
+    void setIntNpts(int n)     { m_intNpts = n; }
+    void setIntScale(double s) { m_intScale = s; }
+    void setIntXRange(double xmin, double xmax, double step, int n=0) {
+      m_intFilled = false;
+      m_intXRange.setRange(xmin,xmax,step,n);
+    }
+
+    virtual double transIntX(double x) { return x; }
+
+    void calcIntRange(double & low, double & high, double mean, double sigma, bool positive=true)
+    {
+      double dx;
+      const double maxp = 0.9999;
+      int n=0, nprev, nlow, nhigh;
+      double p=0.0;
+      //  PDF::DISTYPE dist = pdf->getDist();
+      //
+      if (m_dist==PDF::DIST_NONE) {
+        low  = mean;
+        high = mean;
+      } else {
+        switch (m_dist) {
+        case PDF::DIST_GAUS2D:
+        case PDF::DIST_GAUS:
+        case PDF::DIST_LOGN:
+          low  = mean - m_intScale*sigma;
+          high = mean + m_intScale*sigma;
+          break;
+        case PDF::DIST_FLAT:
+          dx=sigma*1.73205081; // == sqrt(12)*0.5; ignore scale - always use full range
+          low  = mean-dx;
+          high = mean+dx;
+          break;
+        case PDF::DIST_POIS:
+          nlow  = -1;
+          nhigh = -1;
+          // find min and max range of poisson
+          // this is defined by maxp above
+          // low  : max N for wich sum( p(n) ) < 1.0-maxp
+          // high : min N for wich sum( p(n) ) > maxp
+          while (nhigh<0) {
+            nprev=n;
+            p += PDF::gPoisTab.getVal( n, mean );
+            //          p += pdf->getVal( n, mean );
+            //p += m_pdf->getVal( n, mean );
+            if ((n==0) || (p<(1.0-maxp))) nlow  = n;
+            if (p>maxp)       nhigh = n;
+            n++;
+            if (nprev>n) { // just a STUPID test; can be done better...
+              std::cerr << "Infinite loop caugh in OBS::calcIntRange() for Poisson - brutal exit" << std::endl;
+              exit(-1);
+            }
+          }
+          m_intNpts = nhigh-nlow+1;
+          low  = static_cast<double>(nlow);
+          high = static_cast<double>(nhigh);
+          break;
+        default: // ERROR STATE
+          low  = 0;
+          high = 0;
+          std::cerr << "OBS::calcIntRange() -> Unknown pdf type = " << m_dist << std::endl;
+          break;
+        }
+      }
+      if (positive && (low<0)) {
+        high = high-low;
+        low = 0;
+      }
+    }
+
+    void initInt() {
+      if (m_intXRange.n()<1) return;
+      int np = m_intXRange.n();
+      std::cout << "OBS::initInt() intXRange.size() = " << np << std::endl;
+      m_intWeight.resize(np,0.0);
+      m_intX.resize(np,0.0);
+      //
+      double x;
+      for (int i=0; i<np; i++) {
+        std::cout << "     " << i << std::flush;
+        x = m_intXRange.getVal(i);
+        std::cout << " : x = " << x << std::endl;
+        x = transIntX(x);
+        std::cout << "       : x'= " << x << std::endl;
+        m_intX[i] = x; //! for LOGN, the Xrange is in log(x)
+        std::cout << "OBS::initInt(): val " << i << " = " << m_intX[i] << std::endl; 
+      }
+
+      m_intTotal = 0;
+      m_intFilled = false;
+    }
+
+    void initInt(double xmin, double xmax, double step, int n=0) {
+      setIntXRange(xmin,xmax,step,n);
+      initInt();
+    }
+
+    //! init with zero range
+    void initIntConst() {
+      initInt(m_obsVal,m_obsVal,0,1);
+    }
+
+    //! init with default range, given by observed value, sigma and scale
+    void initIntegral() {
+      std::cout << "initIntegral:: dist type = " << PDF::distTypeStr( this->m_dist ) << std::endl;
+      if (constant()) { // takes care of DIST_NONE, DIST_UNDEF
+	std::cout << "initIntegral:: constant()" << std::endl;
+	initIntConst();
+      } else {
+	double low;
+	double high;
+	bool pos=true;
+	double mean, sigma;
+        switch ( this->m_dist ) {
+        case PDF::DIST_LOGN:
+ 	  mean = PDF::calcLogMean(m_obsVal,double(m_sigma));
+ 	  sigma = PDF::calcLogSigma(m_obsVal,double(m_sigma));
+	  pos = false;
+          break;
+        case PDF::DIST_POIS:
+          mean = m_obsVal;
+          sigma = sqrt((mean>0 ? mean:0.0));
+          pos = true;
+          break;
+        default:
+	  mean = m_obsVal;
+	  sigma = m_sigma;
+	  pos = true;
+	}
+        calcIntRange(low,high, mean , sigma, pos);
+	std::cout << "Int dist   = " << mean << " , " << sigma << std::endl;
+	std::cout << "    range  = " << low << " : " << high << std::endl;
+	std::cout << "    N(pts) = " << m_intNpts << std::endl;
+	initInt(low,high,0,m_intNpts);
+        std::cout << "Integral range set" << std::endl;
+      }
+    }
+
+    void fillInt() {
+      std::cout << "fillInt(): " << getName() << std::endl;
+      if (m_intFilled) return;
+      int np = int(m_intX.size());
+      double f;
+      //      double dx = static_cast<double>(m_intXRange.step());
+      double dx;
+      m_intTotal=0;
+      std::cout << "fillInt(): n(p) = " << np << std::endl;
+      if (np<1) return;
+      if (np==1) { // Dirac spike - integral and weight == 1.0
+	m_intWeight[0] = 1.0;
+	m_intTotal = 1.0;
+      } else {
+        std::cout << "fillInt(): size of m_intWeight = " << m_intWeight.size() << std::endl;
+	for (int i=0; i<np-1; i++) {
+          std::cout << "fillInt(): i = " << i << std::endl;
+	  f = getPdfVal(m_intX[i]);
+          std::cout << "fillInt(): f  = " << f << std::endl;
+	  dx = static_cast<double>(m_intX[i+1]-m_intX[i]); // might be lognormal!
+          std::cout << "fillInt(): dx = " << dx << std::endl;
+	  m_intWeight[i] = f*dx;
+	  m_intTotal += m_intWeight[i];
+	}
+      }
+      m_intFilled = true;
+    }
+
+    // print out
+    virtual void dump() const {
+      //      std::cout << "OBS::Base::dump(): observable dump not yet implemented" << std::endl;
+      std::cout << "--------------------------------------------" << std::endl;
+      std::cout << "OBS::Base:dump()" << std::endl;
+      std::cout << "Name : " << getName() << std::endl;
+      std::cout << "Mean : " << getPdfMean() << std::endl;
+      std::cout << "Sigma: " << getPdfSigma() << std::endl;
+      std::cout << "Dist : " << PDF::distTypeStr(getPdfDist()) << std::endl;
+      std::cout << "Obs  : " << getObsVal() << std::endl;
+      std::cout << "--------------------------------------------" << std::endl;
+    }
+
+    const double getPdfVal(double val) { return (this->m_pdf ? (this->m_pdf)->getVal(val,this->m_mean,this->m_sigma):0.0); }
+    // accessors
+    const std::string & getName()        const { return this->m_name;}
+    const std::string & getDescription() const { return this->m_description;}
+    const double        getPdfMean()     const { return this->m_mean; } //(m_pdf ? m_pdf->getMean():0); }
+    const double        getPdfSigma()    const { return this->m_sigma; } //(m_pdf ? m_pdf->getSigma():0); }
+    const PDF::DISTYPE  getPdfDist()     const { return this->m_dist; }
+    PDF::Base          *getPdf()         const { return this->m_pdf;}
+    RND::Random        *getRndGen()      const { return this->m_rndGen;}
+    
+    // status
     const bool constant() const { return (m_locked || (m_dist==PDF::DIST_NONE) || (m_dist==PDF::DIST_UNDEF)); }
-    const bool locked() const { return m_locked;}
-    const bool valid()  const { return m_valid;}
-    RND::Random *getRndGen() const { return m_rndGen;}
+    const bool locked()   const { return m_locked;}
+    const bool valid()    const { return m_valid;}
 
-    Base *clone() const {
-      Base *obj = new Base(*this);
-      return obj;
+    // integral accessors
+    const bool                 isIntFilled()       const { return m_intFilled; }
+    const double               getIntScale()       const { return m_intScale; }
+    const std::vector<double> *getIntWeight()      const { return &m_intWeight; }
+    const double               getIntWeight(int i) const { return m_intWeight[i]; }
+    const double               getIntegral()       const { return m_intTotal; }
+    const Range<double>       *getIntXRange()      const { return &m_intXRange; } //! Integration range - log(x) if DIST_LOGN
+    const double               getIntdX()          const { return m_intXRange.step(); }
+    const std::vector<double> *getIntX()           const { return &m_intX; } //! Always x (even for LOGN)
+    const double               getIntX(int i)      const { return m_intX[i]; }
+    const double               getIntXmin()        const { return m_intX.front(); }
+    const double               getIntXmax()        const { return m_intX.back(); }
+    const int                  getIntN()           const { return static_cast<int>(m_intX.size()); }
+
+
+    Base *clone() const { // keep it as debug
+      return new Base( *this );
     }
-
-    virtual void initInt()        {std::cerr << "ERROR: using Base::initInt()" << std::endl;}
-    virtual void initIntConst()   {std::cerr << "ERROR: using Base::initIntConst()" << std::endl;}
-    virtual void initIntDefault() {std::cerr << "ERROR: using Base::initIntDefault()" << std::endl;}
-    virtual void fillInt()        {std::cerr << "ERROR: using Base::fillInt()" << std::endl;}
-    //
-    virtual const bool isIntFilled() const {std::cerr << "ERROR: using Base::isIntFilled()" << std::endl; return false;}
-    virtual const int  getIntNpts()  const {std::cerr << "ERROR: using Base::getIntNpts()" << std::endl; return 0;}
-    virtual const int  getIntN()     const {std::cerr << "ERROR: using Base::getIntN()" << std::endl; return 0;}
-    virtual const double getIntdX()  const {std::cerr << "ERROR: using Base::getIntdX()" << std::endl; return 0;}
-    virtual const double getIntWeight(int i) const {std::cerr << "ERROR: using Base::getIntWeight()" << std::endl; return 1.0;}
     //
   protected:
+    const double  getObsVal() const { return m_obsVal; } // users should not use this one - only set in BaseType<T>
     void copy(const Base & other) {
       if (this != &other) {
 	m_pdf    = other.getPdf();
 	m_mean   = other.getPdfMean();
 	m_sigma  = other.getPdfSigma();
 	m_dist   = other.getPdfDist();
+        m_obsVal = other.getObsVal();
 	m_rndGen = other.getRndGen();
 	m_valid  = other.valid();
 	m_locked = other.locked();
 	m_name   = "Copy of " + other.getName();
 	m_description = other.getDescription();
+        // integral stuff
+	m_intFilled     = other.isIntFilled();
+	m_intWeight     = *(other.getIntWeight());
+	m_intXRange     = *(other.getIntXRange());
+	m_intX          = *(other.getIntX());
+	m_intTotal      = other.getIntegral();
+	m_intScale      = other.getIntScale();
+	m_intNpts       = other.getIntN();
       }
     }
+    //
+    std::string m_name;
+    std::string m_description;
+    //
+    // PDF def + rnd gen
     //
     PDF::Base *m_pdf;
     double m_mean;
     double m_sigma;
     PDF::DISTYPE m_dist;
-    std::string m_name;
-    std::string m_description;
-    RND::Random *m_rndGen;
-    bool m_valid;
     bool m_locked;
+    bool m_valid;
+    RND::Random *m_rndGen;
+    double m_obsVal; //! copy of BaseType<T>::m_observedValue
     //
     // Integral def.
     //
     double              m_intScale;  //! range is defined by x+-scale*sigma
-    int                 m_intNpts;   //! set number of points in integral
+    int                 m_intNpts;   //! requested number of points in integral - NOTE not == actual number of points
     double              m_intTotal;  //! sum of all f(x)dx
     bool                m_intFilled; //! true if integral is filled
     std::vector<double> m_intWeight; //! array containing the weights f(x)dx
+    std::vector<double> m_intX;      //! array of x, always double although X may be from an integer PDF
+    Range<double>       m_intXRange; //! range of x
 
   };
 
@@ -187,8 +397,8 @@ namespace OBS {
       this->m_rndGen = rndgen;
       this->m_valid=((pdf!=0)&&(rndgen!=0));
       setPdf(pdf);
-      m_observedValue=0;
-      if (pdf) m_observedValue = static_cast<T>(this->m_mean);
+      setObsVal(0);
+      if (pdf) setObsVal(static_cast<T>(this->m_mean));
       m_intFilled = false;
       m_intScale = 5.0;
       m_intNpts  = 20;
@@ -208,205 +418,50 @@ namespace OBS {
       BaseType<T> *obj = new BaseType<T>(*this);
       return obj;
     }
-    void getIntRange(T & low, T & high, double mean, double sigma, bool positive=true)
-    {
-      double dx;
-      const double maxp = 0.9999;
-      int n=0, nprev, nlow, nhigh;
-      double p=0.0;
-      //  PDF::DISTYPE dist = pdf->getDist();
-      //
-      if (m_dist==PDF::DIST_NONE) {
-        low  = static_cast<T>(mean);
-        high = static_cast<T>(mean);
-      } else {
-        switch (m_dist) {
-        case PDF::DIST_GAUS2D:
-        case PDF::DIST_GAUS:
-        case PDF::DIST_LOGN:
-          low  = static_cast<T>(mean - m_intScale*sigma);
-          high = static_cast<T>(mean + m_intScale*sigma);
-          break;
-        case PDF::DIST_FLAT:
-          dx=sigma*1.73205081; // == sqrt(12)*0.5; ignore scale - always use full range
-          low  = static_cast<T>(mean-dx);
-          high = static_cast<T>(mean+dx);
-          break;
-        case PDF::DIST_POIS:
-          nlow  = -1;
-          nhigh = -1;
-          // find min and max range of poisson
-          // this is defined by maxp above
-          // low  : max N for wich sum( p(n) ) < 1.0-maxp
-          // high : min N for wich sum( p(n) ) > maxp
-          while (nhigh<0) {
-            nprev=n;
-            p += PDF::gPoisTab.getVal( n, mean );
-            //          p += pdf->getVal( n, mean );
-            //p += m_pdf->getVal( n, mean );
-            if ((n==0) || (p<(1.0-maxp))) nlow  = n;
-            if (p>maxp)       nhigh = n;
-            n++;
-            if (nprev>n) { // just a STUPID test; can be done better...
-              std::cerr << "Infinite loop caugh in OBS::getIntRange() for Poisson - brutal exit" << std::endl;
-              exit(-1);
-            }
-          }
-          m_intNpts = nhigh-nlow+1;
-          low  = static_cast<T>(nlow);
-          high = static_cast<T>(nhigh);
-          break;
-        default: // ERROR STATE
-          low  = static_cast<T>(0);
-          high = static_cast<T>(0);
-          std::cerr << "OBS::getIntRange() -> Unknown pdf type = " << m_dist << std::endl;
-          break;
-        }
-      }
-      if (positive && (low<0)) {
-        high = high-low;
-        low = 0;
-      }
-    }
+
     const double getPdfVal(T val) { return (this->m_pdf ? static_cast< PDF::BaseType<T> * >(this->m_pdf)->getVal(val,this->m_mean,this->m_sigma):0.0); }
 
     T       operator()()       { return ( this->m_locked ? m_observedValue:rnd()); }
     double  operator()(T val)  { return getPdfVal(val); }
     //
-    void setObservedRnd()          { if (!this->m_locked) m_observedValue = rnd();}
-    void setObservedValue(T val)   { m_observedValue = val; }
+    void setObservedRnd()          { if (!this->m_locked) setObsVal(rnd());}
+    void setObservedValue(T val)   {
+      std::cout << "ObsVal - " << getName()
+                << " explicit = " << val << std::endl;
+      setObsVal(val); }
+    void setObservedValue()        {
+      std::cout << "ObsVal - " << getName()
+                << " implicit = " << static_cast<T>(getPdfMean()) << std::endl;
+      setObsVal(static_cast<T>(getPdfMean())); }
     //
-    const T getObservedValue() const { return m_observedValue; }
+    const double getObservedValue()        const { return static_cast<double>(m_observedValue); }
+    const void   getObservedValue(T & val) const { val = m_observedValue; }
 
-    const bool isIntFilled()   const { return m_intFilled; }
-    const int getIntNpts()     const { std::cerr << "WARNING:: Don't use Observable::getIntNpts() - use getIntN()" << std::endl; return m_intNpts; } // USE getIntN()
-    const double getIntScale() const { return m_intScale; }
-    const std::vector<double> * getIntWeight() const { return &m_intWeight; }
-    const double getIntWeight(int i) const { return m_intWeight[i]; }
-    const double getIntegral()       const { return m_intTotal; }
-    const Range<T> * getIntXRange()  const { return &m_intXRange; } //! Integration range - log(x) if DIST_LOGN
-    const T getIntXRangeStep()       const { return m_intXRange.step(); }
-    const T getIntXRangeN()          const { return m_intXRange.n(); }
-    const double getIntdX()          const { return static_cast<double>(m_intXRange.step()); }
-    const std::vector<T> * getIntX() const { return &m_intX; } //! Always x (even for LOGN)
-    const T getIntX(int i)           const { return m_intX[i]; }
-    const T getIntXmin()             const { return m_intX.front(); }
-    const T getIntXmax()             const { return m_intX.back(); }
-    const int getIntN()              const { return static_cast<int>(m_intX.size()); }
-
-    void setIntNpts(int n)     { m_intNpts = n; }
-    void setIntScale(double s) { m_intScale = s; }
-    void setIntXRange(T xmin, T xmax, T step, int n=0) {
-      m_intFilled = false;
-      m_intXRange.setRange(xmin,xmax,step,n);
+    virtual void dump() const {
+      //      std::cout << "OBS::Base::dump(): observable dump not yet implemented" << std::endl;
+      std::cout << "--------------------------------------------" << std::endl;
+      std::cout << "OBS::BaseType<T>:dump()" << std::endl;
+      std::cout << "Name : " << getName() << std::endl;
+      std::cout << "Mean : " << getPdfMean() << std::endl;
+      std::cout << "Sigma: " << getPdfSigma() << std::endl;
+      std::cout << "Dist : " << PDF::distTypeStr(getPdfDist()) << std::endl;
+      std::cout << "Obs  : " << getObservedValue() << std::endl;
+      std::cout << "--------------------------------------------" << std::endl;
     }
 
-    void initInt() {
-      std::cout << "OBS::initInt()" << std::endl;
-      if (m_intXRange.n()<1) return;
-      int np = m_intXRange.n();
-      std::cout << "OBS::initInt(): n = " << np << std::endl;
-      m_intWeight.clear(); //resize(np,0.0);
-      std::cout << "OBS::initInt(): resize of intWeight done" << std::endl;
-      m_intX.clear();
-      std::cout << "OBS::initInt(): resize of intX done - NOW; loop..." << std::endl;
-
-      for (int i=0; i<np; i++) {
-	m_intX.push_back(transX(m_intXRange.getVal(i))); //! for LOGN, the Xrange is in log(x)
-        std::cout << "OBS::initInt(): val " << i << " = " << m_intX[i] << std::endl; 
-      }
-
-      m_intTotal = 0;
-      m_intFilled = false;
-    }
-
-    void initInt(T xmin, T xmax, T step, int n=0) {
-      setIntXRange(xmin,xmax,step,n);
-      initInt();
-    }
-
-    //! init with zero range
-    void initIntConst() {
-      initInt(m_observedValue,m_observedValue,0,1);
-    }
-
-    //! init with default range, given by observed value, sigma and scale
-    void initIntDefault() {
-      if (constant()) { // takes care of DIST_NONE, DIST_UNDEF
-	std::cout << "initIntDefault:: constant()" << std::endl;
-	initIntConst();
-      } else {
-	T low;
-	T high;
-	bool pos;
-	double mean, sigma;
-        switch ( this->m_dist ) {
-        case PDF::DIST_LOGN:
- 	  mean = PDF::calcLogMean(double(m_observedValue),double(m_sigma));
- 	  sigma = PDF::calcLogSigma(double(m_observedValue),double(m_sigma));
-	  pos = false;
-          break;
-        case PDF::DIST_POIS:
-          mean = double(m_observedValue);
-          sigma = sqrt((mean>0 ? mean:0.0));
-          break;
-        default:
-	  mean = double(m_observedValue);
-	  sigma = m_sigma;
-	  pos = true;
-	}
-        //        getIntRange(low,high,m_intScale, mean , sigma, this->m_pdf, pos);
-        // OBS::getIntRange(low,high,m_intScale, mean , sigma, this->m_dist, pos);
-        getIntRange(low,high, mean , sigma, pos);
-	std::cout << "Int dist   = " << mean << " , " << sigma << std::endl;
-	std::cout << "    range  = " << low << " : " << high << std::endl;
-	std::cout << "    N(pts) = " << m_intNpts << std::endl;
-	initInt(low,high,0,m_intNpts);
-        std::cout << "Integral range set" << std::endl;
-      }
-    }
-
-    void fillInt() {
-      if (m_intFilled) return;
-      int np = int(m_intX.size());
-      double f;
-      //      double dx = static_cast<double>(m_intXRange.step());
-      double dx;
-      m_intTotal=0;
-      if (np<1) return;
-      if (np==1) { // Dirac spike - integral and weight == 1.0
-	m_intWeight[0] = 1.0;
-	m_intTotal = 1.0;
-      } else {
-	for (int i=0; i<np-1; i++) {
-	  f = getPdfVal(m_intX[i]);
-	  dx = m_intX[i+1]-m_intX[i];
-	  m_intWeight[i] = f*dx;
-	  m_intTotal += m_intWeight[i];
-	}
-      }
-      m_intFilled = true;
-    }
   protected:
+    void setObsVal( T val) {
+      m_obsVal = static_cast<double>(val);
+      m_observedValue = val;
+    }
     void copy(const BaseType<T> & other) {
       if (this != &other) {
 	Base::copy(other);
-	m_observedValue = other.getObservedValue();
-	m_intFilled     = other.isIntFilled();
-	m_intWeight     = *(other.getIntWeight());
-	m_intXRange     = *(other.getIntXRange());
-	m_intX          = *(other.getIntX());
-	m_intTotal      = other.getIntegral();
-	m_intScale      = other.getIntScale();
-	m_intNpts       = other.getIntNpts();
+	other.getObservedValue(m_observedValue);
       }
     }
-    virtual T transX(T x) { return x; }
     //
     T m_observedValue; //! the observed value
-
-    std::vector<T>      m_intX;      //! array of x
-    Range<T>            m_intXRange; //! range of x
     //
   };
 
@@ -486,7 +541,7 @@ namespace OBS {
       return obj;
     }
   protected:
-    double transX(double x) { return exp(x); }
+    double transIntX(double x) { return exp(x); }
   };
 
   class ObservablePois : public Observable<int> {
@@ -504,8 +559,8 @@ namespace OBS {
       return *this;
     }
     //
-    void setPdfMean(double m)  { this->m_mean = m;   this->m_sigma = (m>0 ? sqrt(m):0.0); }
-    void setPdfSigma(double m) { this->m_mean = m*m; this->m_sigma=m; }
+    void setPdfMean(double m)  { std::cout << "ObsPois::setPdfMean()" << std::endl; this->m_mean = m;   this->m_sigma = (m>0 ? sqrt(m):0.0); }
+    void setPdfSigma(double m) { std::cout << "ObsPois::setPdfSigma()" << std::endl; this->m_mean = m*m; this->m_sigma=m; }
     int rnd() {return (this->m_valid ? this->m_rndGen->poisson(this->m_mean):0);}
 
     ObservablePois *clone() const {

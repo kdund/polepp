@@ -62,10 +62,12 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     pole->setCL(confLevel.getValue());
     pole->setNObserved(nObs.getValue());
     //
-    pole->setEffMeas( effMeas.getValue(), effSigma.getValue(), static_cast<PDF::DISTYPE>(effDist.getValue()) );
-    pole->setBkgMeas( bkgMeas.getValue(), bkgSigma.getValue(), static_cast<PDF::DISTYPE>(bkgDist.getValue()) );
+    pole->setEffPdf( effMeas.getValue(), effSigma.getValue(), static_cast<PDF::DISTYPE>(effDist.getValue()) );
+    pole->setEffObs();
+    pole->setBkgPdf( bkgMeas.getValue(), bkgSigma.getValue(), static_cast<PDF::DISTYPE>(bkgDist.getValue()) );
+    pole->setBkgObs();
     pole->checkEffBkgDists();
-    pole->setEffBkgCorr(beCorr.getValue());
+    pole->setEffPdfBkgCorr(beCorr.getValue());
 
     pole->setTrueSignal(sTrue.getValue());
     pole->setCoverage(false); //coverage.getValue());

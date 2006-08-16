@@ -178,19 +178,43 @@ public:
   //! Set measurement
   void setMeasurement( const MeasPoisEB & m ) { m_measurement.copy(m); }
   //
-  void setNObserved(int nobs) {m_measurement.setNObserved(nobs); }
+  void setNObserved(int nobs) { m_measurement.setObsVal(nobs); }
+  //  {m_measurement.setNObserved(nobs); }
   //! distribution info on eff and bkg
-  void setEffMeas(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
+  void setEffPdf(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
+    std::cout << "POLE::EFF = " << mean << std::endl;
     m_measurement.setEffPdf(mean,sigma,dist);
+    m_validBestMu = false;
+  }
+  void setBkgPdf(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
+    m_measurement.setBkgPdf(mean,sigma,dist);
+    m_validBestMu = false;
+  }
+  // set observed eff and bkg, not changing the PDF def
+  void setEffObs(double mean) {
+    m_measurement.setEffObs(mean);
+    m_validBestMu = false;
+  }
+  void setBkgObs(double mean) {
+    m_measurement.setBkgObs(mean);
+    m_validBestMu = false;
+  }
+  // set ditto using the pdf mean
+  void setEffObs() {
     m_measurement.setEffObs();
     m_validBestMu = false;
   }
-  void setBkgMeas(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
-    m_measurement.setBkgPdf(mean,sigma,dist);
+  void setBkgObs() {
     m_measurement.setBkgObs();
     m_validBestMu = false;
   }
-  void setEffBkgCorr(double corr)                                   { m_measurement.setBEcorr(corr); }
+  // generate a random observation (observable + nuisance parameters)
+  void generatePseudoExperiment() {
+    m_measurement.generatePseudoExperiment();
+    m_validBestMu = false;
+  }
+  // eff,bkg correlation...
+  void setEffPdfBkgCorr(double corr)    { m_measurement.setBEcorr(corr); }
   ////////////////////////////////
   //
   bool checkEffBkgDists();
@@ -278,18 +302,20 @@ public:
   const double getSTrue() const      { return m_sTrue; }
   const bool   getCoverage() const   { return m_coverage; }
   //
-  const MeasPoisEB & getMeasurement() const { return m_measurement; }
-  MeasPoisEB & getMeasurement() { return m_measurement; }
-  const int    getNObserved() const  { return m_measurement.getNObserved(); }
+  const MeasPoisEB & getMeasurement() const  { return m_measurement; }
+  MeasPoisEB & getMeasurement()              { return m_measurement; }
+  const int    getNObserved() const          { return m_measurement.getObsVal(); }
   // Efficiency
-  const double  getEffMeas()  const  { return m_measurement.getEffObs(); }
-  const double  getEffSigma() const  { return m_measurement.getEffPdfSigma(); }
-  const PDF::DISTYPE getEffDist()  const  { return m_measurement.getEffPdfDist(); }
+  const double  getEffObs()   const          { return m_measurement.getEffObs(); }
+  const double  getEffPdfMean()  const       { return m_measurement.getEffPdfMean(); }
+  const double  getEffPdfSigma() const       { return m_measurement.getEffPdfSigma(); }
+  const PDF::DISTYPE getEffPdfDist()  const  { return m_measurement.getEffPdfDist(); }
   // Background
-  const double  getBkgMeas()  const  { return m_measurement.getBkgObs(); }
-  const double  getBkgSigma() const  { return m_measurement.getBkgPdfSigma(); }
-  const PDF::DISTYPE getBkgDist()  const  { return m_measurement.getBkgPdfDist(); }
-  const double  getEffBkgCorr() const { return m_measurement.getBEcorr(); }
+  const double  getBkgObs()  const  { return m_measurement.getBkgObs(); }
+  const double  getBkgPdfMean() const  { return m_measurement.getBkgPdfMean(); }
+  const double  getBkgPdfSigma() const  { return m_measurement.getBkgPdfSigma(); }
+  const PDF::DISTYPE getBkgPdfDist()  const  { return m_measurement.getBkgPdfDist(); }
+  const double  getEffPdfBkgCorr() const { return m_measurement.getBEcorr(); }
   // Indep. variable
 //   const double  getSVar()     const  { return BeltEstimator::getT(m_measurement.getNObserved(),
 // 								  m_measurement.getEffObs(),

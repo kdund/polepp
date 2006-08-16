@@ -78,11 +78,13 @@ class Measurement {
 
   //! initialize integrals of all nuisance parameters
   void initIntNuisance() {
+    this->dump();
     for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
 	 it !=  m_nuisancePars.end();
        ++it) {
       std::cout << "initIntNuisance():: " << (*it)->getName() << std::endl;
-      (*it)->initIntDefault();
+      (*it)->dump();
+      (*it)->initIntegral();
     }
     std::cout << "All nuisance parameter integrals have been initialized" << std::endl;
   }
@@ -165,7 +167,8 @@ class Measurement {
   }
   //
   const double getTrueSignal() const        { return m_trueSignal; }
-  const T getObsVal() const                 { return (m_observable ? m_observable->getObservedValue():0); }
+  //  const T getObsVal() const                 { T val=0; if (m_observable) m_observable->getObservedValue(val); return val;}
+  const T getObsVal() const                 { T val=0; if (m_observable) m_observable->getObservedValue(val); return val;}
   const double getObsPdfMean() const        { return (m_observable ? m_observable->getPdfMean():0); }
   const double getObsPdfSigma() const       { return (m_observable ? m_observable->getPdfSigma():0); }
   const PDF::DISTYPE getObsPdfDist() const  { return (m_observable ? m_observable->getPdfDist():0); }
@@ -183,7 +186,8 @@ class Measurement {
   virtual const double getSignalUnc() const =0;
   virtual const double calcProb(T x, double s) const =0;
 
-  void generateObservation() { // generates a random pseudoexperiment and stores this in the observed parts of the observables
+ // generate a random pseudoexperiment and store this in the observed parts of the observables
+  void generatePseudoExperiment() {
     //
     // First set observed nuisance to random values
     //
@@ -207,6 +211,8 @@ class Measurement {
   }
   //
  protected:
+  virtual void initObservable()=0;
+
   void copy(const Measurement<T> & other) {
     if (this != &other) {
       m_name        = other.getName();
@@ -258,8 +264,8 @@ class Measurement {
 
 class MeasPois : public Measurement<int> {
  public:
-  MeasPois() : Measurement<int>() {};
-  MeasPois(const char *name, const char *desc=0) : Measurement<int>(name,desc) {};
+  MeasPois() : Measurement<int>() { initObservable(); };
+  MeasPois(const char *name, const char *desc=0) : Measurement<int>(name,desc) { initObservable(); };
   MeasPois(OBS::ObservablePois * obs) : Measurement<int>(obs->getName().c_str(),obs->getDescription().c_str()) {
     m_observable = obs->clone();
   }
@@ -269,20 +275,28 @@ class MeasPois : public Measurement<int> {
   void copy(const MeasPois & other) { Measurement<int>::copy(other);}
   void setObservable(const OBS::ObservablePois * obs) { if (m_observable) delete m_observable; m_observable = (obs ? obs->clone():0);}
 
-  void setNObserved(int n) {
-    if (m_observable==0) {
-      m_observable = static_cast< OBS::BaseType<int> *>(OBS::makeObservable(PDF::DIST_POIS));
-      m_observable->setPdfMean(n);
-    }
-    m_observable->setObservedValue(n);
-  }
+//   void setNObserved(int n) {
+//     if (m_observable==0) {
+//       m_observable = static_cast< OBS::BaseType<int> *>(OBS::makeObservable(PDF::DIST_POIS));
+//       m_observable->setPdfMean(n);
+//     }
+//     m_observable->setObservedValue(n);
+//   }
 
-  const int    getNObserved() const { return getObsVal(); }
+//  const int    getNObserved() const { return getObsVal(); }
 
   const double getM(double s) const { return 0;}
   const double getSignal()    const { return 0;}
   const double getSignalUnc() const { return 0;}
   const double calcProb(int x, double s) const {return 0;}
+ protected:
+  virtual void initObservable() {
+    if (m_observable!=0) {
+      std::cerr << "MeasPois::FATAL - m_observable non-zero ptr in initObservable()!!! BUG!" << std::endl;
+      exit(-1);
+    }
+    m_observable = static_cast< OBS::BaseType<int> *>(OBS::makeObservable(PDF::DIST_POIS));
+  }
 };
 
 class MeasPoisEB : public MeasPois {
@@ -295,7 +309,8 @@ class MeasPoisEB : public MeasPois {
   void copy(const MeasPoisEB & other) {
     if (this != &other) {
       MeasPois::copy(other);
-      const OBS::BaseType<double> *eff, *bkg;
+      //      const OBS::BaseType<double> *eff, *bkg;
+      const OBS::Base *eff, *bkg;
       m_eff=0;
       m_bkg=0;
       eff = other.getEff();
@@ -332,7 +347,7 @@ class MeasPoisEB : public MeasPois {
 
   void setEffObs() {
     if (m_eff) {
-      m_eff->setObservedValue(m_eff->getPdfMean());
+      m_eff->setObservedValue();
     }
   }
 
@@ -344,7 +359,7 @@ class MeasPoisEB : public MeasPois {
 
   void setBkgObs() {
     if (m_bkg) {
-      m_bkg->setObservedValue(m_bkg->getPdfMean());
+      m_bkg->setObservedValue();
     }
   }
 
@@ -356,10 +371,14 @@ class MeasPoisEB : public MeasPois {
 	m_eff=0;
       }
     }
-    if (m_eff==0) m_eff = static_cast< OBS::BaseType<double> *>(makeNuisance(dist));
-    m_eff->setPdfMean(eff);
+    if (m_eff==0) 
+      m_eff = static_cast<OBS::Base *>(makeNuisance(dist));
     m_eff->setPdfSigma(sigma);
+    m_eff->setPdfMean(eff);
     m_eff->setName("efficiency");
+    std::cout << "****DUMP********" << std::endl;
+    m_eff->dump();
+  
     updNuisanceIndex();
   }
 
@@ -371,7 +390,7 @@ class MeasPoisEB : public MeasPois {
 	m_bkg=0;
       }
     }
-    if (m_bkg==0) m_bkg = static_cast< OBS::BaseType<double> *>(makeNuisance(dist));
+    if (m_bkg==0) m_bkg = static_cast< OBS::Base *>(makeNuisance(dist));
     m_bkg->setPdfMean(bkg);
     m_bkg->setPdfSigma(sigma);
     m_bkg->setName("background");
@@ -388,10 +407,15 @@ class MeasPoisEB : public MeasPois {
   //
   const double getBEcorr() const { return 0.0; } // TODO
 
-  const double getEffObs() const { return (m_eff ? m_eff->getObservedValue():0); }
-  const double getBkgObs() const { return (m_bkg ? m_bkg->getObservedValue():0); }
+const double getEffObs() const { return (m_eff ? m_eff->getObservedValue():0); }
+    //; return val; }// return (m_eff ? m_eff->getObservedValue():0); }
+//const double getBkgObs() const { double val=0.0; if (m_bkg) m_bkg->getObservedValue(val); return val; }// return (m_bkg ? m_bkg->getObservedValue():0); }
+const double getBkgObs() const { return (m_bkg ? m_bkg->getObservedValue():0); }
 
-  const OBS::BaseType<double> *getEff() const {
+//   const OBS::BaseType<double> *getEff() const {
+//     return m_eff;
+//   }
+  const OBS::Base *getEff() const {
     return m_eff;
   }
   const double getEffPdfMean() const {
@@ -403,8 +427,7 @@ class MeasPoisEB : public MeasPois {
   const PDF::DISTYPE getEffPdfDist() const {
     return (m_eff ? m_eff->getPdfDist():PDF::DIST_UNDEF);
   }
-
-  const OBS::BaseType<double> *getBkg() const {
+  const OBS::Base *getBkg() const {
     return m_bkg;
   }
   const double getBkgPdfMean() const {
@@ -418,7 +441,10 @@ class MeasPoisEB : public MeasPois {
   }
 
   const double getM(double s) const {
-    return m_eff->getObservedValue()*s + m_bkg->getObservedValue();
+    double e,b;
+    m_eff->getObservedValue(e);
+    m_bkg->getObservedValue(b);
+    return e*s + b;
   }
 
   const double getM(double s, double eff, double bkg) const {
@@ -426,8 +452,10 @@ class MeasPoisEB : public MeasPois {
   }
 
   const double getSignal() const {
-    double dn = m_observable->getObservedValue() - m_bkg->getObservedValue();
-    double e = m_eff->getObservedValue(); // >0
+    double e,b;
+    m_eff->getObservedValue(e);
+    m_bkg->getObservedValue(b);
+    double dn = m_observable->getObservedValue() - b;
     return (e>0 ? dn/e : 0);
   }
 
@@ -481,8 +509,10 @@ class MeasPoisEB : public MeasPois {
   }
 
  private:
-  OBS::BaseType<double> *m_eff; // pointers to nuisance params in list
-  OBS::BaseType<double> *m_bkg;
+//   OBS::BaseType<double> *m_eff; // pointers to nuisance params in list
+//   OBS::BaseType<double> *m_bkg;
+  OBS::Base *m_eff; // pointers to nuisance params in list
+  OBS::Base *m_bkg;
   int m_effIndex;
   int m_bkgIndex;
 };

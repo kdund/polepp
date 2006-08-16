@@ -72,6 +72,26 @@ namespace PDF {
     virtual void setMean(double m)  { m_mean  = m; }
     virtual void setSigma(double s) { m_sigma = s; }
     //
+    virtual const double getVal(const double x, const double mean, const double sigma) const {
+      std::cerr << "ERROR: PDF::Base - Accessing getVal(x,m,s) - VERBOTEN!!!" << std::endl;
+      exit(-1);
+      return 0;
+    }
+    virtual const double getVal(const double x, const double mean) const {
+      std::cerr << "ERROR: PDF::Base - Accessing getVal(double x,m) - VERBOTEN!!!" << std::endl;
+      exit(-1);
+      return 0;
+    }
+    virtual const double getVal(const int x, const double mean, const double sigma) const {
+      std::cerr << "ERROR: PDF::Base - Accessing getVal(int x,m,s) - VERBOTEN!!!" << std::endl;
+      exit(-1);
+      return 0;
+    }
+    virtual const double getVal(const int x, const double mean) const {
+      std::cerr << "ERROR: PDF::Base - Accessing getVal(int x,m) - VERBOTEN!!!" << std::endl;
+      exit(-1);
+      return 0;
+    }
     const std::string & getName() const { return m_name;}
     const DISTYPE getDist()      const { return m_dist;}
     const double  getMean()      const { return m_mean;}
@@ -107,8 +127,8 @@ namespace PDF {
     virtual ~BaseType() {}
     //
     virtual const double F(T x) const=0;
-    virtual const double getVal(const T x, const double mean, const double sigma) const=0;
-    virtual const double getVal(const T x, const double mean) const {std::cerr << "ERROR: Accessing getVal(x,y) - NOT IMPLEMENTED for this class" << std::endl; return 0;}
+    virtual const double getVal(const T x, const double mean, const double sigma) const {std::cerr << "ERROR: Accessing getVal(T x,m,s) - NOT IMPLEMENTED for this class" << std::endl; exit(-1); return 0;}
+    virtual const double getVal(const T x, const double mean) const {std::cerr << "ERROR: Accessing getVal(T x,m) - NOT IMPLEMENTED for this class" << std::endl; exit(-1); return 0;}
     inline const double operator()(T x) const { return F(x); }
     
   };
@@ -228,6 +248,8 @@ namespace PDF {
     virtual inline const double F(int val) const;
     virtual inline const double getVal(const int x, const double mean, const double sigma) const;
     inline const double getVal(const int x, const double mean) const;
+    virtual inline const double getVal(const double x, const double mean, const double sigma) const;
+    inline const double getVal(const double x, const double mean) const;
     inline const double raw(const int n, const double s) const;
   protected:
 
@@ -425,6 +447,9 @@ namespace PDF {
     virtual const double getVal(int x, double m, double s) const {
       return getVal(x,m);
     }
+    virtual const double getVal(double x, double m, double s) const {
+      return getVal(int(x+0.5),m);
+    }
   };
     
   class GaussTab : public Tabulated<double> {
@@ -530,6 +555,12 @@ namespace PDF {
   }
   inline const double Poisson::getVal(const int x, const double mean, const double sigma) const {
     return raw(x,mean);
+  }
+  inline const double Poisson::getVal(const double x, const double mean) const {
+    return raw(int(x+0.5),mean);
+  }
+  inline const double Poisson::getVal(const double x, const double mean, const double sigma) const {
+    return raw(int(x+0.5),mean);
   }
 
   inline const double Poisson::raw(const int n, const double s) const {

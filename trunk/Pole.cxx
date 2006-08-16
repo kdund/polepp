@@ -46,12 +46,20 @@ Pole::Pole() {
   //
   // Default observation
   //
-  m_measurement.setNObserved(1);
-  m_measurement.setEffPdf(1.0,0.1,PDF::DIST_GAUS);
-  m_measurement.setEffObs(); // sets the mean from PDF as the observed efficiency
-  m_measurement.setBkgPdf(0.0,0.0,PDF::DIST_NONE);
-  m_measurement.setBkgObs();
-  m_measurement.setBEcorr(0.0);
+  // N = 1
+  // eff = 1.0, Gaus(1.0,0.1)
+  // bkg = 0.0
+  //
+  setNObserved(1);
+  setEffPdf(1.0,0.1,PDF::DIST_GAUS);
+  setEffObs();
+  //  m_measurement.setEffPdf(1.0,0.1,PDF::DIST_GAUS);
+  //  m_measurement.setEffObs(); // sets the mean from PDF as the observed efficiency
+  setBkgPdf(0.0,0.0,PDF::DIST_NONE);
+  setBkgObs();
+  //  m_measurement.setBkgPdf(0.0,0.0,PDF::DIST_NONE);
+  //  m_measurement.setBkgObs();
+  setEffPdfBkgCorr(0.0);
   //
   m_stepMin = 0.001;
   m_minMuProb = 1e-6;
@@ -92,21 +100,21 @@ Pole::~Pole() {
 bool Pole::checkEffBkgDists() {
   bool change=false;
   // If ONLY one is PDF::DIST_GAUS2D, make bkgDist == effDist
-  if ( ((m_measurement.getEffPdfDist() == PDF::DIST_GAUS2D) && (m_measurement.getBkgPdfDist() != PDF::DIST_GAUS2D)) ||
-       ((m_measurement.getEffPdfDist() != PDF::DIST_GAUS2D) && (m_measurement.getBkgPdfDist() == PDF::DIST_GAUS2D)) ) {
-    m_measurement.setBkgPdf(m_measurement.getEffPdfMean(),m_measurement.getEffPdfSigma(),m_measurement.getEffPdfDist());
+  if ( ((getEffPdfDist() == PDF::DIST_GAUS2D) && (getBkgPdfDist() != PDF::DIST_GAUS2D)) ||
+       ((getEffPdfDist() != PDF::DIST_GAUS2D) && (getBkgPdfDist() == PDF::DIST_GAUS2D)) ) {
+    setBkgPdf(getEffPdfMean(),getEffPdfSigma(),getEffPdfDist());
     change = true;
   }
-  if (m_measurement.getEffPdfDist() != PDF::DIST_GAUS2D) {
-    m_measurement.setBEcorr(0);
+  if (getEffPdfDist() != PDF::DIST_GAUS2D) {
+    setEffPdfBkgCorr(0);
     change = true;
   }
   //
-  if (m_measurement.getEffPdfDist()==PDF::DIST_NONE) {
+  if (getEffPdfDist()==PDF::DIST_NONE) {
     m_measurement.setEffPdfSigma(0.0);
     change = true;
   }
-  if (m_measurement.getBkgPdfDist()==PDF::DIST_NONE) {
+  if (getBkgPdfDist()==PDF::DIST_NONE) {
     m_measurement.setBkgPdfSigma(0.0);
     change = true;
   }
@@ -124,11 +132,11 @@ void Pole::setTestHyp(double step) {
   }
   
   double low = BeltEstimator::getSigLow(getNObserved(),
-					getEffDist(), getEffMeas(), getEffSigma(),
-					getBkgDist(), getBkgMeas(), getBkgSigma(), m_measurement.getNuisanceIntNorm());
+					getEffPdfDist(), getEffObs(), getEffPdfSigma(),
+					getBkgPdfDist(), getBkgObs(), getBkgPdfSigma(), m_measurement.getNuisanceIntNorm());
   double up  = BeltEstimator::getSigUp( getNObserved(),
-					getEffDist(), getEffMeas(), getEffSigma(),
-					getBkgDist(), getBkgMeas(), getBkgSigma(), m_measurement.getNuisanceIntNorm());
+					getEffPdfDist(), getEffObs(), getEffPdfSigma(),
+					getBkgPdfDist(), getBkgObs(), getBkgPdfSigma(), m_measurement.getNuisanceIntNorm());
   m_hypTest.setRange(low,up,step);
 }
 
@@ -161,7 +169,7 @@ void Pole::setTestHyp(double low, double high, double step) {
 //   std::cout << "Checking efficiency integration - ";
 //   double dsLow, dsHigh;
 //   // remember, RangeInt for bkg and eff, LOGN, are in lnx, hence exp() is the true eff or bkg
-//   dsLow  = (m_measurement.getEffObs() - m_effRangeInt.min())/m_measurement.getEffPdfSigma();
+//   dsLow  = (m_measurement.getEffObs() - m_effRangeInt.min())/m_measurement.getEffPdfPdfSigma();
 //   dsHigh = (m_effRangeInt.max()  - m_measurement.getEffObs())/m_measurement.getEffPdfSigma();
 //   if ( (m_measurement.getEffPdfDist()!=PDF::DIST_NONE) && ( ((dsLow<4.0)&&(m_effRangeInt.min()>0)) ||
 //                                    (dsHigh<4.0) ) ) {
@@ -215,13 +223,15 @@ void Pole::setTestHyp(double low, double high, double step) {
 
 int Pole::suggestBelt() {
   int rval=50;
-  if (m_measurement.getNObserved()>=0) {
-    rval = BeltEstimator::getBeltMin(m_measurement.getNObserved(),
-				     m_measurement.getEffPdfDist(),
-				     m_measurement.getEffObs(), m_measurement.getEffPdfSigma(),
-				     m_measurement.getBkgPdfDist(),
-				     m_measurement.getBkgObs(), m_measurement.getBkgPdfSigma(),
-				     m_measurement.getNuisanceIntNorm());
+  if ( getNObserved()>=0) {
+    rval = BeltEstimator::getBeltMin( getNObserved(),
+				      getEffPdfDist(),
+                                      getEffObs(),
+                                      getEffPdfSigma(),
+                                      getBkgPdfDist(),
+                                      getBkgObs(),
+                                      getBkgPdfSigma(),
+                                      getIntNorm());
     if (rval<20) rval=20; // becomes less reliable for small n
   }
   if (m_verbose>1) {
@@ -419,14 +429,14 @@ double Pole::calcLimit(double s) {
     }
   }
   //
-  k = m_measurement.getNObserved();
+  k = getNObserved();
 
   if ((k>nBeltMaxUsed) || (k<nBeltMinUsed)) m_lhRatio[k] = 0.0;
 
   if (k>=m_nBelt) {
     k=m_nBelt; // WARNING::
     std::cout << "WARNING:: n_observed is larger than the maximum n used for R(n,s)!!" << std::endl;
-    std::cout << "          -> increase nbelt such that it is more than n_obs = " << m_measurement.getNObserved() << std::endl;
+    std::cout << "          -> increase nbelt such that it is more than n_obs = " << getNObserved() << std::endl;
   }									\
   if (m_verbose>2) std::cout << "Got nBelt range: " << nBeltMinUsed << ":" << nBeltMaxUsed << "( max = " << m_nBelt-1 << " )" << std::endl;
   // Calculate the probability for all n and the given s.
@@ -571,14 +581,14 @@ double Pole::calcLimitOLD(double s) {
   if (nBeltMaxUsed>m_nBeltMaxUsed) m_nBeltMaxUsed = nBeltMaxUsed;
   //
   //  if (m_verbose>1) std::cout << "Used max NBelt = " << m_nBeltMaxUsed << " ( " << m_nBelt << " )" << std::endl;
-  k = m_measurement.getNObserved();
+  k = getNObserved();
 
   if ((k>nBeltMaxUsed) || (k<=nBeltMinUsed)) m_lhRatio[k] = 0.0;
 
   if (k>=m_nBelt) {
     k=m_nBelt; // WARNING::
     std::cout << "WARNING:: n_observed is larger than the maximum n used for R(n,s)!!" << std::endl;
-    std::cout << "          -> increase nbelt such that it is more than n_obs = " << m_measurement.getNObserved() << std::endl;
+    std::cout << "          -> increase nbelt such that it is more than n_obs = " << getNObserved() << std::endl;
   }									\
   if (m_verbose>2) std::cout << "Got nBelt range: " << nBeltMinUsed << ":" << nBeltMaxUsed << "( max = " << m_nBelt << " )" << std::endl;
   // Calculate the probability for all n and the given s.
@@ -898,7 +908,7 @@ bool Pole::findLimits() {
   m_upperLimitNorm = 0;
   //
   findNMin();
-  if (m_measurement.getNObserved()>=m_nBelt) return false;
+  if (getNObserved()>=m_nBelt) return false;
   double mu_test;
   int i = 0;
   bool done = (i==m_hypTest.n());
@@ -954,9 +964,9 @@ bool Pole::findLimits() {
     if (limitsOK()) {
       // && (!heavyDBG)) {
       std::cout << "LIMITS(N,e,b,l,u): ";
-      coutFixed(4,m_measurement.getNObserved());  std::cout << "\t";
-      coutFixed(4,m_measurement.getEffObs());    std::cout << "\t";
-      coutFixed(4,m_measurement.getBkgObs());    std::cout << "\t";
+      coutFixed(4,getNObserved());  std::cout << "\t";
+      coutFixed(4,getEffObs());    std::cout << "\t";
+      coutFixed(4,getBkgObs());    std::cout << "\t";
       coutFixed(4,m_lowerLimit); std::cout << "\t";
       coutFixed(4,m_upperLimit); std::cout << std::endl;
       //      heavyDBG = false;
@@ -994,7 +1004,7 @@ bool Pole::findCoverageLimits() {
   m_lowerLimit = 0;
   m_upperLimit = 0;
   //
-  if (m_measurement.getNObserved()>=m_nBelt) return false;
+  if (getNObserved()>=m_nBelt) return false;
   //
   double mu_test;
   int i = 0;
@@ -1045,10 +1055,10 @@ bool Pole::findCoverageLimits() {
   if (m_verbose>1) {
     if (limitsOK()) {
       std::cout << "COVLIMITS(N,s,e,b,l,u): ";
-      coutFixed(4,m_measurement.getNObserved());  std::cout << "\t";
+      coutFixed(4,getNObserved());  std::cout << "\t";
       coutFixed(4,m_sTrue);      std::cout << "\t";
-      coutFixed(4,m_measurement.getEffObs());    std::cout << "\t";
-      coutFixed(4,m_measurement.getBkgObs());    std::cout << "\t";
+      coutFixed(4,getEffObs());    std::cout << "\t";
+      coutFixed(4,getBkgObs());    std::cout << "\t";
       coutFixed(4,m_lowerLimit); std::cout << "\t";
       coutFixed(4,m_upperLimit); std::cout << std::endl;;
     } else {
@@ -1098,11 +1108,11 @@ void Pole::printLimit(bool doTitle) {
     std::cout << " Nobs  \t  Eff   \t Bkg" << std::endl;
     std::cout << "-------------------------------------------------" << std::endl;
   }
-  coutFixed(4,m_measurement.getNObserved()); std::cout << "\t";
-  coutFixed(6,m_measurement.getEffObs()); std::cout << "\t";
-  coutFixed(6,m_measurement.getEffPdfSigma()); std::cout << "\t";
-  coutFixed(6,m_measurement.getBkgObs()); std::cout << "\t";
-  coutFixed(6,m_measurement.getBkgPdfSigma()); std::cout << "\t";
+  coutFixed(4,getNObserved()); std::cout << "\t";
+  coutFixed(6,getEffObs()); std::cout << "\t";
+  coutFixed(6,getEffPdfSigma()); std::cout << "\t";
+  coutFixed(6,getBkgObs()); std::cout << "\t";
+  coutFixed(6,getBkgPdfSigma()); std::cout << "\t";
   std::cout << "[ ";
   coutFixed(2,m_lowerLimit); std::cout << ", ";
   coutFixed(2,m_upperLimit); std::cout << " ]";
@@ -1113,18 +1123,18 @@ void Pole::printSetup() {
   std::cout << "\n";
   std::cout << "================ P O L E ==================\n";
   std::cout << " Confidence level   : " << m_cl << std::endl;
-  std::cout << " N observed         : " << m_measurement.getNObserved() << std::endl;
+  std::cout << " N observed         : " << getNObserved() << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Coverage friendly  : " << yesNo(m_coverage) << std::endl;
   std::cout << " True signal        : " << m_sTrue << std::endl;
   std::cout << "----------------------------------------------\n";
-  std::cout << " Efficiency meas    : " << m_measurement.getEffObs() << std::endl;
-  std::cout << " Efficiency sigma   : " << m_measurement.getEffPdfSigma() << std::endl;
-  std::cout << " Efficiency dist    : " << PDF::distTypeStr(m_measurement.getEffPdfDist()) << std::endl;
+  std::cout << " Efficiency meas    : " << getEffObs() << std::endl;
+  std::cout << " Efficiency sigma   : " << getEffPdfSigma() << std::endl;
+  std::cout << " Efficiency dist    : " << PDF::distTypeStr(getEffPdfDist()) << std::endl;
   std::cout << "----------------------------------------------\n";
-  std::cout << " Background meas    : " << m_measurement.getBkgObs() << std::endl;
-  std::cout << " Background sigma   : " << m_measurement.getBkgPdfSigma() << std::endl;
-  std::cout << " Background dist    : " << PDF::distTypeStr(m_measurement.getBkgPdfDist()) << std::endl;
+  std::cout << " Background meas    : " << getBkgObs() << std::endl;
+  std::cout << " Background sigma   : " << getBkgPdfSigma() << std::endl;
+  std::cout << " Background dist    : " << PDF::distTypeStr(getBkgPdfDist()) << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Bkg-Eff correlation: " << m_measurement.getBEcorr() << std::endl;
   std::cout << "----------------------------------------------\n";
