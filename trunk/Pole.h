@@ -182,7 +182,6 @@ public:
   //  {m_measurement.setNObserved(nobs); }
   //! distribution info on eff and bkg
   void setEffPdf(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
-    std::cout << "POLE::EFF = " << mean << std::endl;
     m_measurement.setEffPdf(mean,sigma,dist);
     m_validBestMu = false;
   }
@@ -280,6 +279,7 @@ public:
   void findBelt();
   bool findLimits();        // finds CL limits
   bool findCoverageLimits();//  same as previous but stop if it's obvious that initial true mean is inside or outside
+  void setPrintLimitStyle( int style ) { m_printLimStyle = style; }
   void printLimit(bool doTitle=false);
   // 
   void printSetup();
@@ -368,6 +368,7 @@ private:
   const PDF::LogNormal *m_logNorm;
   //
   int    m_verbose;
+  int    m_printLimStyle;
   //
   double m_stepMin;
   // CL, confidence limit

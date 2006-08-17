@@ -197,19 +197,14 @@ namespace OBS {
     void initInt() {
       if (m_intXRange.n()<1) return;
       int np = m_intXRange.n();
-      std::cout << "OBS::initInt() intXRange.size() = " << np << std::endl;
       m_intWeight.resize(np,0.0);
       m_intX.resize(np,0.0);
       //
       double x;
       for (int i=0; i<np; i++) {
-        std::cout << "     " << i << std::flush;
         x = m_intXRange.getVal(i);
-        std::cout << " : x = " << x << std::endl;
         x = transIntX(x);
-        std::cout << "       : x'= " << x << std::endl;
         m_intX[i] = x; //! for LOGN, the Xrange is in log(x)
-        std::cout << "OBS::initInt(): val " << i << " = " << m_intX[i] << std::endl; 
       }
 
       m_intTotal = 0;
@@ -228,9 +223,7 @@ namespace OBS {
 
     //! init with default range, given by observed value, sigma and scale
     void initIntegral() {
-      std::cout << "initIntegral:: dist type = " << PDF::distTypeStr( this->m_dist ) << std::endl;
       if (constant()) { // takes care of DIST_NONE, DIST_UNDEF
-	std::cout << "initIntegral:: constant()" << std::endl;
 	initIntConst();
       } else {
 	double low;
@@ -254,35 +247,25 @@ namespace OBS {
 	  pos = true;
 	}
         calcIntRange(low,high, mean , sigma, pos);
-	std::cout << "Int dist   = " << mean << " , " << sigma << std::endl;
-	std::cout << "    range  = " << low << " : " << high << std::endl;
-	std::cout << "    N(pts) = " << m_intNpts << std::endl;
 	initInt(low,high,0,m_intNpts);
-        std::cout << "Integral range set" << std::endl;
       }
     }
 
     void fillInt() {
-      std::cout << "fillInt(): " << getName() << std::endl;
       if (m_intFilled) return;
       int np = int(m_intX.size());
       double f;
       //      double dx = static_cast<double>(m_intXRange.step());
       double dx;
       m_intTotal=0;
-      std::cout << "fillInt(): n(p) = " << np << std::endl;
       if (np<1) return;
       if (np==1) { // Dirac spike - integral and weight == 1.0
 	m_intWeight[0] = 1.0;
 	m_intTotal = 1.0;
       } else {
-        std::cout << "fillInt(): size of m_intWeight = " << m_intWeight.size() << std::endl;
 	for (int i=0; i<np-1; i++) {
-          std::cout << "fillInt(): i = " << i << std::endl;
 	  f = getPdfVal(m_intX[i]);
-          std::cout << "fillInt(): f  = " << f << std::endl;
 	  dx = static_cast<double>(m_intX[i+1]-m_intX[i]); // might be lognormal!
-          std::cout << "fillInt(): dx = " << dx << std::endl;
 	  m_intWeight[i] = f*dx;
 	  m_intTotal += m_intWeight[i];
 	}
@@ -425,14 +408,8 @@ namespace OBS {
     double  operator()(T val)  { return getPdfVal(val); }
     //
     void setObservedRnd()          { if (!this->m_locked) setObsVal(rnd());}
-    void setObservedValue(T val)   {
-      std::cout << "ObsVal - " << getName()
-                << " explicit = " << val << std::endl;
-      setObsVal(val); }
-    void setObservedValue()        {
-      std::cout << "ObsVal - " << getName()
-                << " implicit = " << static_cast<T>(getPdfMean()) << std::endl;
-      setObsVal(static_cast<T>(getPdfMean())); }
+    void setObservedValue(T val)   { setObsVal(val); }
+    void setObservedValue()        { setObsVal(static_cast<T>(getPdfMean())); }
     //
     const double getObservedValue()        const { return static_cast<double>(m_observedValue); }
     const void   getObservedValue(T & val) const { val = m_observedValue; }
@@ -559,8 +536,8 @@ namespace OBS {
       return *this;
     }
     //
-    void setPdfMean(double m)  { std::cout << "ObsPois::setPdfMean()" << std::endl; this->m_mean = m;   this->m_sigma = (m>0 ? sqrt(m):0.0); }
-    void setPdfSigma(double m) { std::cout << "ObsPois::setPdfSigma()" << std::endl; this->m_mean = m*m; this->m_sigma=m; }
+    void setPdfMean(double m)  { this->m_mean = m;   this->m_sigma = (m>0 ? sqrt(m):0.0); }
+    void setPdfSigma(double m) { this->m_mean = m*m; this->m_sigma=m; }
     int rnd() {return (this->m_valid ? this->m_rndGen->poisson(this->m_mean):0);}
 
     ObservablePois *clone() const {
@@ -616,7 +593,8 @@ namespace OBS {
       obs->setPdf(&PDF::gLogNormal);
       break;
     default:
-      std::cout << "WARNING: Unknown distribution = " << distTypeStr(dist) << std::endl;
+      std::cout << "FATAL: Unknown distribution = " << distTypeStr(dist) << std::endl;
+      exit(-1);
       break;
     }
     if (obs) {

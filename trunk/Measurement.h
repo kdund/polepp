@@ -78,29 +78,22 @@ class Measurement {
 
   //! initialize integrals of all nuisance parameters
   void initIntNuisance() {
-    this->dump();
     for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
 	 it !=  m_nuisancePars.end();
        ++it) {
-      std::cout << "initIntNuisance():: " << (*it)->getName() << std::endl;
-      (*it)->dump();
       (*it)->initIntegral();
     }
-    std::cout << "All nuisance parameter integrals have been initialized" << std::endl;
   }
   //! Assumes that all parameters have called OBS::initInt()
   void fillIntNuisance() {
     for (std::list< OBS::Base * >::iterator it = m_nuisancePars.begin();
 	 it !=  m_nuisancePars.end();
        ++it) {
-      std::cout << "fillIntNuisance():: " << (*it)->getName() << std::endl;
       (*it)->fillInt();
     }
-    std::cout << "fillIntNuisance():: DONE!" << std::endl;
   }
   //! Initialize nuisance weights: f(x)g(y)...dxdy
   void initNuisanceWeights() {
-    std::cout << "initNuisanceWeights() start" << std::endl;
     std::vector<int> jj;
     std::vector<double> dx;
     double step;
@@ -113,7 +106,6 @@ class Measurement {
 	 it !=  m_nuisancePars.end();
        ++it) {
       nnpar++;
-      std::cout << "   obs " << (*it) << std::endl;
       if ((*it)->isIntFilled()) {
 	n = (*it)->getIntN();
 	if (n<1) {
@@ -125,7 +117,6 @@ class Measurement {
 	std::cout << "WARNING: Integral not filled for nuisance parameter -> " << (*it)->getName() << std::endl;
 	n=1; //HERE: SHOULD fill integral for fixed value...
       }
-      std::cout << "Indmax = " << n << std::endl;
       m_nuisanceIndMax.push_back(n-1);
       step = (n==1 ? 1.0:(*it)->getIntdX()); // get dx (==1 if only one point)
       dx.push_back((*it)->getIntdX());
@@ -138,7 +129,6 @@ class Measurement {
     m_nuisanceWeights.clear();
     double w;
     m_nuisanceIntNorm = 0;
-    std::cout << "Init nuisance indecis" << std::endl;
     //
     m_nuisanceIndecis.push_back(jj); // save vector
     while (Combination::next_vector(jj,m_nuisanceIndMax)) {
@@ -376,8 +366,6 @@ class MeasPoisEB : public MeasPois {
     m_eff->setPdfSigma(sigma);
     m_eff->setPdfMean(eff);
     m_eff->setName("efficiency");
-    std::cout << "****DUMP********" << std::endl;
-    m_eff->dump();
   
     updNuisanceIndex();
   }
@@ -391,8 +379,8 @@ class MeasPoisEB : public MeasPois {
       }
     }
     if (m_bkg==0) m_bkg = static_cast< OBS::Base *>(makeNuisance(dist));
-    m_bkg->setPdfMean(bkg);
     m_bkg->setPdfSigma(sigma);
+    m_bkg->setPdfMean(bkg);
     m_bkg->setName("background");
     updNuisanceIndex(); // this will set m_bkgIndex (and m_effIndex if needed)
   }

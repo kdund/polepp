@@ -29,6 +29,7 @@ inline char *yesNo(bool var) {
  */
 // HERE: Should have a truly empty with NO initiation of variables -> SPEED!
 Pole::Pole() {
+  m_printLimStyle=0; // computer readable
   m_verbose=0;
   m_coverage = false;
   m_method = RL_FHC2;
@@ -1100,23 +1101,54 @@ bool Pole::analyseExperiment() {
 }
 
 void Pole::printLimit(bool doTitle) {
-  if (doTitle) {
-    std::cout << "-------------------------------------------------" << std::endl;
-    std::cout << " Max N(belt) set  : " << m_nBelt << std::endl;
-    std::cout << " Max N(belt) used : " << m_nBeltMaxUsed << std::endl;
-    std::cout << "-------------------------------------------------" << std::endl;
-    std::cout << " Nobs  \t  Eff   \t Bkg" << std::endl;
-    std::cout << "-------------------------------------------------" << std::endl;
+  std::string cmtPre;
+  std::string linePre;
+  bool simple;
+  switch (m_printLimStyle) {
+  case 0:
+    cmtPre = "#";
+    linePre = "  ";
+    simple=false;
+    break;
+  case 1:
+    cmtPre = "";
+    linePre = " ";
+    simple=false;
+    break;
+  case 2:
+    cmtPre = "";
+    linePre = " ";
+    simple=true;
+    break;
+  default:
+    cmtPre = "";
+    linePre = " ";
+    simple=true;
   }
-  coutFixed(4,getNObserved()); std::cout << "\t";
-  coutFixed(6,getEffObs()); std::cout << "\t";
-  coutFixed(6,getEffPdfSigma()); std::cout << "\t";
-  coutFixed(6,getBkgObs()); std::cout << "\t";
-  coutFixed(6,getBkgPdfSigma()); std::cout << "\t";
-  std::cout << "[ ";
-  coutFixed(2,m_lowerLimit); std::cout << ", ";
-  coutFixed(2,m_upperLimit); std::cout << " ]";
-  std::cout << std::endl;
+  if (doTitle && (!simple)) {
+    std::cout << cmtPre << "-------------------------------------------------------------------------------------" << std::endl;
+    std::cout << cmtPre << " Max N(belt) set  : " << m_nBelt << std::endl;
+    std::cout << cmtPre << " Max N(belt) used : " << m_nBeltMaxUsed << std::endl;
+    std::cout << cmtPre << "-------------------------------------------------------------------------------------" << std::endl;
+    std::cout << cmtPre << " N(obs)  eff(mean)     eff(sigma)      bkg(mean)       bkg(sigma)      low     up" << std::endl;
+    std::cout << cmtPre << "-------------------------------------------------------------------------------------" << std::endl;
+  }
+  std::cout << linePre;
+  if (!simple) {
+    coutFixed(6,getNObserved());   std::cout << "\t  ";
+    coutFixed(6,getEffObs());      std::cout << "\t";
+    coutFixed(6,getEffPdfSigma()); std::cout << "\t";
+    coutFixed(6,getBkgObs());      std::cout << "\t";
+    coutFixed(6,getBkgPdfSigma()); std::cout << "\t";
+    coutFixed(2,m_lowerLimit);     std::cout << "\t";
+    coutFixed(2,m_upperLimit);     std::cout << std::endl;
+  }
+  if (simple) {
+    std::cout << "Limits = [ ";
+    coutFixed(2,m_lowerLimit); std::cout << ", ";
+    coutFixed(2,m_upperLimit); std::cout << " ]";
+    std::cout << std::endl;
+  }
 }
 
 void Pole::printSetup() {
