@@ -11,6 +11,8 @@ int main(int argc, char *argv[]) {
   //
   argsPole(&pole, argc, argv);
   //
+  pole.initAnalysis();
+
   pole.printSetup();
     //
   if (!pole.usesMBT()) {

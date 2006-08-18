@@ -2,7 +2,6 @@
 #include "Pdf.h"
 
 namespace PDF {
-
   Poisson  gPoisson;
   PoisTab  gPoisTab(&gPoisson);
   Gauss    gGauss;

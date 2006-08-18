@@ -310,7 +310,7 @@ class MeasPoisEB : public MeasPois {
     }
   }
 
-  void updNuisanceIndex() {
+  void updNuisanceIndex() { // get's the indices of the bkg and eff in the nuisance list
     m_bkgIndex = getNuisanceIndex(m_bkg);
     m_effIndex = getNuisanceIndex(m_eff);
   }

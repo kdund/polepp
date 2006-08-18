@@ -11,13 +11,17 @@ int main(int argc, char *argv[]) {
   //
   //  processArgs(&pole, argc, argv);
   argsPole(&pole, argc, argv);
-  //
-  //  if (pole.checkParams()) {
-  pole.printSetup();
-  if (pole.analyseExperiment()) {
-    pole.printLimit(true);
-  } else {
-    pole.printFailureMsg();
-  }
-  //  }
+
+  pole.execute();
+
+//   pole.initAnalysis();
+//   //
+//   //  if (pole.checkParams()) {
+//   pole.printSetup();
+//   if (pole.analyseExperiment()) {
+//     pole.printLimit(true);
+//   } else {
+//     pole.printFailureMsg();
+//   }
+//   //  }
 }

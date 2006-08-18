@@ -13,7 +13,14 @@
 #define M_PIl 3.1415926535897932384626433832795029L
 #endif
 
+
+
 namespace PDF {
+#ifdef PDF_CXX
+  bool gPrintStat = false;
+#else
+  extern bool gPrintStat;
+#endif
   enum DISTYPE {
     DIST_NONE=0,   /*!< No distrubution */
     DIST_POIS,     /*!< Poisson */
@@ -21,6 +28,7 @@ namespace PDF {
     DIST_FLAT,     /*!< Flat */
     DIST_LOGN,     /*!< Log-Normal */
     DIST_GAUS2D,   /*!< Correlated gauss (eff,bkg) */
+    DIST_LAST,     /*!< Last element before UNDEF */
     DIST_UNDEF=999 /*!< No distrubution defined*/
   };
   /*!
@@ -64,10 +72,12 @@ namespace PDF {
   //
   class Base {
   public:
-    Base() { m_dist=DIST_UNDEF; }
-    Base(const char *name, DISTYPE d=DIST_UNDEF, double m=0.0, double s=0.0):m_dist(d), m_mean(m), m_sigma(s) { if (name) m_name=name; }
-    Base(const Base & other) { copy(other); }
-    virtual ~Base() {};
+    Base() { m_dist=DIST_UNDEF; m_statNraw = 0; m_statNtot=0; m_statNtab=0; }
+    Base(const char *name, DISTYPE d=DIST_UNDEF, double m=0.0, double s=0.0)
+      :m_dist(d), m_mean(m), m_sigma(s), m_statNraw(0), m_statNtot(0), m_statNtab(0)
+    { if (name) m_name=name; setDist(d); }
+    Base(const Base & other) { copy(other); m_statNraw=0; m_statNtot=0; m_statNtab=0; }
+    virtual ~Base() { printStat(); }
     //
     virtual void setMean(double m)  { m_mean  = m; }
     virtual void setSigma(double s) { m_sigma = s; }
@@ -96,7 +106,16 @@ namespace PDF {
     const DISTYPE getDist()      const { return m_dist;}
     const double  getMean()      const { return m_mean;}
     const double  getSigma()     const { return m_sigma;}
-    
+
+    virtual void printStat() const {
+      if (gPrintStat) {
+        std::cout << "----- " << getName() << " -----" << std::endl;
+        std::cout << " PDF called                    : " << m_statNtot << std::endl;
+        std::cout << " PDF called using raw function : " << m_statNraw << std::endl;
+        std::cout << " PDF called using table        : " << m_statNtab << std::endl;
+        std::cout << "--------------------------------------------------" << std::endl;
+      }
+    }
   protected:
     void copy(const Base & other) {
       if (this != &other) {
@@ -106,12 +125,16 @@ namespace PDF {
 	m_sigma = other.getSigma();
       }
     }
-    void setDist(DISTYPE d) { m_dist = d; }
+    void setDist(DISTYPE d) { if (d>=DIST_LAST) d=DIST_UNDEF; m_dist = d; }
     void setName(std::string name) { m_name = name; }
     std::string m_name;
     DISTYPE     m_dist;
     double      m_mean;
     double      m_sigma;
+
+    mutable int m_statNraw;
+    mutable int m_statNtot;
+    mutable int m_statNtab;
   };
 
   template <typename T>
@@ -124,13 +147,13 @@ namespace PDF {
 	Base::copy(other);
       }
     }
-    virtual ~BaseType() {}
+    virtual ~BaseType() { }
     //
     virtual const double F(T x) const=0;
     virtual const double getVal(const T x, const double mean, const double sigma) const {std::cerr << "ERROR: Accessing getVal(T x,m,s) - NOT IMPLEMENTED for this class" << std::endl; exit(-1); return 0;}
     virtual const double getVal(const T x, const double mean) const {std::cerr << "ERROR: Accessing getVal(T x,m) - NOT IMPLEMENTED for this class" << std::endl; exit(-1); return 0;}
     inline const double operator()(T x) const { return F(x); }
-    
+
   };
 
   class Flat : public BaseType<double> {
@@ -223,10 +246,13 @@ namespace PDF {
 
     inline const double F(const double x) const {return (x>0.0 ? Gauss::getVal(log(x),m_logMean,m_logSigma)/x:0.0);}
     inline const double getVal(const double x, const double m, const double s) const {
+      m_statNtot++;
       if (x<=0) return 0.0;
+      m_statNraw++;
       return Gauss::getVal(log(x),calcLogMean(m,s), calcLogSigma(m,s))/x;
     }
     inline const double getValLogN(const double x, const double m, const double s) const {
+      m_statNraw++;
       return Gauss::getVal(x, m, s)/exp(x);
     }
   protected:
@@ -294,10 +320,10 @@ namespace PDF {
     virtual void setMean(double m)  { m_pdf->setMean(m);  Base::setMean(m_pdf->getMean());}
     virtual void setSigma(double s) { m_pdf->setSigma(s); Base::setMean(m_pdf->getSigma());}
     //
-    void setRangeX(     int npts, T      min, T      max) { m_nX     = npts; m_xmin = min; m_xmax = max; }
-    void setRangeMean(  int npts, double min, double max) { m_nMean  = npts; m_mmin = min; m_mmax = max; }
-    void setRangeSigma( int npts, double min, double max) { m_nSigma = npts; m_smin = min; m_smax = max; }
-    void setBasePdf( BaseType<T> * pdf ) {
+    virtual void setRangeX(     int npts, T      min, T      max) { m_nX     = npts; m_xmin = min; m_xmax = max; }
+    virtual void setRangeMean(  int npts, double min, double max) { m_nMean  = npts; m_mmin = min; m_mmax = max; }
+    virtual void setRangeSigma( int npts, double min, double max) { m_nSigma = npts; m_smin = min; m_smax = max; }
+    virtual void setBasePdf( BaseType<T> * pdf ) {
       m_pdf = pdf;
       Base::setMean(m_pdf->getMean());
       Base::setSigma(m_pdf->getSigma());
@@ -307,6 +333,19 @@ namespace PDF {
     
     void initTab() {
       if ((m_nX<1) || (m_nMean<1) || (m_nSigma<1)) return;
+      std::cout << "---------------------------------------------------------------------" << std::endl;
+      std::cout << "--- Tabulating pdf <" << m_pdf->getName() << ">" << std::endl;
+      std::cout << "--- N(X)      = " << m_nX << std::endl;
+      std::cout << "---   min      = " << m_xmin << std::endl;
+      std::cout << "---   max      = " << m_xmax << std::endl;
+      std::cout << "--- N(mean)     = " << m_nMean << std::endl;
+      std::cout << "---   min      = " << m_mmin << std::endl;
+      std::cout << "---   max      = " << m_mmax << std::endl;
+      std::cout << "--- N(sigma)   = " << m_nSigma << std::endl;
+      std::cout << "---   min      = " << m_smin << std::endl;
+      std::cout << "---   max      = " << m_smax << std::endl;
+      std::cout << "---------------------------------------------------------------------" << std::endl;
+      
       m_nTotal = m_nX*m_nMean*m_nSigma;
       m_table = new double[m_nTotal];
       m_dx=0;
@@ -322,6 +361,7 @@ namespace PDF {
       initTab();
       if (m_table==0) return;
       int ind=0;
+      std::cout << "--- Tabulating ... be patient" << std::endl;
       for (int ns=0; ns<m_nSigma; ns++) {
 	double s = double(ns)*m_ds+m_smin;
 	if (m_pdf->getDist()!=DIST_POIS)
@@ -336,6 +376,7 @@ namespace PDF {
 	  }
 	}
       }
+      std::cout << "--- Tabulating DONE!" << std::endl;
     }
 
     virtual const double F(T x) const {
@@ -352,8 +393,10 @@ namespace PDF {
 	mind = int(m_dm>0 ? (m-m_mmin)/m_dm : 0);
 	xind = int(m_dx>0 ? (x-m_xmin)/m_dx : 0);
 	ind = xind + mind*m_nX + sind*m_nX*m_nMean;
-	if (ind<m_nTotal)
+	if (ind<m_nTotal) {
+          m_statNtab++;
 	  return m_table[ind];
+        }
       }
       //
       if (m_pdf==0) {
@@ -392,18 +435,24 @@ namespace PDF {
     double m_smin, m_smax, m_ds;
 
     double *m_table;
+
+    mutable int m_statNtab;
   };
 
   class PoisTab : public Tabulated<int> {
   public:
     PoisTab():Tabulated<int>() {};
     PoisTab(Poisson *pdf):Tabulated<int>() {
-      this->m_pdf = pdf;
-      m_dist = DIST_POIS;
-      this->m_mean  = pdf->getMean();
-      this->m_sigma = pdf->getSigma();
+      setBasePdf(pdf);
+//       this->m_pdf = pdf;
+//       m_dist = DIST_POIS;
+//       this->m_mean  = pdf->getMean();
+//       this->m_sigma = pdf->getSigma();
+      m_nSigma = 1;
     }
-    virtual ~PoisTab() {};
+    virtual ~PoisTab() {}
+    //
+    virtual void setRangeSigma( int npts, double min, double max) { m_nSigma = 1; }
     //
     void tabulate() {
       if (this->m_pdf==0) return;
@@ -411,6 +460,7 @@ namespace PDF {
       if (m_table==0) return;
       double mean;
       int ind0;
+      std::cout << "--- Tabulating ... be patient" << std::endl;
       for (int m=0; m<m_nMean; m++) {
 	mean = m*m_dm+m_mmin;
 	ind0 = m*m_nX + 0;
@@ -419,12 +469,14 @@ namespace PDF {
 	  m_table[ind0+n] = m_table[ind0+n-1]*mean/static_cast<double>(n);
 	}
       }
+      std::cout << "--- Tabulating DONE!" << std::endl;
     }
     //
     void setMean(double mean)   { this->m_pdf->setMean(mean);   this->m_mean = mean;   this->m_sigma = this->m_pdf->getSigma(); }
     void setSigma(double sigma) { this->m_pdf->setSigma(sigma); this->m_sigma = sigma; this->m_mean  = this->m_pdf->getMean(); }
 
     virtual const double getVal(int x, double m) const {
+      m_statNtot++;
       if ((m_table!=0) &&
 	  (x>=m_xmin) && (x<=m_xmax) &&
 	  (m>=m_mmin) && (m<=m_mmax)) {
@@ -433,14 +485,17 @@ namespace PDF {
 	xind = int(m_dx>0 ? (x-m_xmin)/m_dx : 0);
 	//	ind = xind + sind*m_nX + mind*m_nX*m_nSigma;
 	ind = xind + mind*m_nX;
-	if (ind<m_nTotal)
+	if (ind<m_nTotal) {
+          m_statNtab++;
 	  return m_table[ind];
+        }
       }
       //
       if (this->m_pdf==0) {
 	std::cerr << "ERROR in PDF::PoisTab - no pdf defined!" << std::endl;
 	return 0;
       }
+      m_statNraw++;
       return this->m_pdf->getVal(x,m,0); // Poisson ignores sigma
     }
     //
@@ -477,16 +532,24 @@ namespace PDF {
     }
 
     virtual const double getVal(double x, double m, double s) const {
+      m_statNtot++;
       if (m_table!=0) {
 	double mu = fabs((x-m)/s);
 	if (mu>m_xmax)
 	  return static_cast<Gauss *>(this->m_pdf)->phi(mu)/s;
 	int muind = int(m_dx>0 ? (mu-m_xmin)/m_dx : 0);
-	if (muind<m_nTotal)
+	if (muind<m_nTotal) {
+          m_statNtab++;
 	  return m_table[muind];
+        }
       }
       //
-      if (this->m_pdf==0) return 0;
+      if (this->m_pdf==0) {
+        std::cout << "FATAL: undefined PDF!" << std::endl;
+        exit(-1);
+        return 0;
+      }
+      m_statNraw++;
       return this->m_pdf->getVal(x,m,s);
     }
   };
@@ -520,6 +583,7 @@ namespace PDF {
     return phi(mu)/this->m_sigma;
   }
   inline const double Gauss::getVal(const double x, const double mean, const double sigma) const {
+    m_statNraw++;
     double mu = fabs((x-mean)/sigma); // symmetric around mu0
     return phi(mu)/sigma;
   }
@@ -564,6 +628,8 @@ namespace PDF {
   }
 
   inline const double Poisson::raw(const int n, const double s) const {
+    m_statNtot++;
+    m_statNraw++;
     double prob;
     double nlnl,lnn,lnf;
     prob = 0.0;
@@ -596,10 +662,12 @@ namespace PDF {
   }
 
   inline const double Flat::raw(const double x, const double f) const {
+    m_statNraw++;
     return (((x>=m_min) && (x<=m_max)) ? f:0);
   }
 
   inline const double Flat::raw(const double x, const double f, const double xmin, const double xmax) const {
+    m_statNraw++;
     return (((x>=xmin) && (x<=xmax)) ? f:0);
   }
 //   template <typename T>

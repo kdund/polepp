@@ -578,7 +578,7 @@ namespace OBS {
       break;
     case PDF::DIST_POIS:
       obs=new ObservablePois();
-      obs->setPdf(&PDF::gPoisson);
+      obs->setPdf(&PDF::gPoisTab);
       break;
     case PDF::DIST_GAUS:
       obs=new ObservableGauss();
