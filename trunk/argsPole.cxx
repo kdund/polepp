@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <string>
 #include <tclap/CmdLine.h> // Command line parser
 #include "Pole.h"
 
@@ -27,7 +28,6 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> effSigma(  "", "effsigma","sigma of efficiency",false,0.2,"float",cmd);
     ValueArg<double> effMeas(   "", "effmeas",  "measured efficiency",false,1.0,"float",cmd);
     ValueArg<int>    effDist(   "", "effdist",  "Efficiency distribution",false,2,"int",cmd);
-
     //
     ValueArg<double> bkgSigma(  "", "bkgsigma", "sigma of background",false,0.0,"float",cmd);
     ValueArg<double> bkgMeas(   "", "bkgmeas",  "measured background",false,0.0,"float",cmd);
@@ -48,7 +48,14 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> bkgIntScale( "","bscale",  "bkg num sigma in integral", false,5.0,"float",cmd);
     ValueArg<int>    bkgIntN(     "","bkgn",    "bkg: N points in integral", false,21, "int",cmd);
 
+    ValueArg<double> tabPoisMin( "","poismin",  "minimum mean value in table", false,0.0,"float",cmd);
+    ValueArg<double> tabPoisMax( "","poismax",  "maximum mean value in table", false,100.0,"float",cmd);
+    ValueArg<int>    tabPoisNM(  "","poisnm",   "number of mean value in table", false,100000,"int",cmd);
+    ValueArg<int>    tabPoisNX(  "","poisnx",   "maximum value of N in table", false,200,"int",cmd);
     ValueArg<int>    doVerbose(   "V","verbose", "verbose pole",    false,0,"int",cmd);
+
+    ValueArg<std::string> inputFile( "f" ,"infile", "input file with tabulated data: n eff(dist,mean,sigma) bkg(dist,mean,sigma)", false,"","string",cmd);
+    ValueArg<int>    fileLines( "l", "infilelines", "max number of lines to be read, read all if < 1", false,0,"int",cmd);
     //
     cmd.parse(argc,argv);
     //
@@ -58,6 +65,8 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     pole->setGauss2D(&PDF::gGauss2D);
     pole->setLogNormal(&PDF::gLogNormal);
 
+    pole->setInputFile(inputFile.getValue().c_str());
+    pole->setInputFileLines(fileLines.getValue());
     pole->setMethod(method.getValue());
     pole->setCL(confLevel.getValue());
     pole->setNObserved(nObs.getValue());
@@ -84,14 +93,10 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     pole->setMinMuProb(minProb.getValue());
     //
     if (useTabulated.getValue()) {
-      PDF::gPoisTab.setRangeMean(100000,0,100);
-      PDF::gPoisTab.setRangeX(61,0,60);
+      PDF::gPoisTab.setRangeMean( tabPoisNM.getValue(), tabPoisMin.getValue(), tabPoisMax.getValue() );
+      PDF::gPoisTab.setRangeX(tabPoisNX.getValue()+1,0,tabPoisNX.getValue());
       PDF::gPoisTab.tabulate();
     }
-
-    pole->initAnalysis();
-    //
-
   }
   catch (ArgException e) {
     std::cout << "ERROR: " << e.error() << " " << e.argId() << std::endl;

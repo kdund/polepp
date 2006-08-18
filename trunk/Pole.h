@@ -38,14 +38,18 @@
 #include <map>
 #include <string>
 #include <list>
+#include <fstream>
+#include <sstream>
 
 #if __GNUC__ < 3
 #include <cstdio>
 #endif
 
+#include "Tools.h"
 #include "Range.h"
 #include "BeltEstimator.h"
 #include "Measurement.h"
+
 
 
 /*! @class Pole
@@ -169,11 +173,21 @@ class Pole {
 public:
   Pole();
  ~Pole();
+
+  //! running with the current setup
+  void execute();
+  void exeEvent(bool first);
+  void exeFromFile();
+
   //! Main parameters
   void setCL(double cl)    { m_cl = cl; if ((cl>1.0)||(cl<0.0)) m_cl=0.9;}
 
   void setMethod( RLMETHOD m ) { m_method = m; }
   void setMethod( int m ) { m_method = RLMETHOD(m); }
+
+  //! Set input file
+  void setInputFile( const char *s ) { m_inputFile = s; }
+  void setInputFileLines( int nmax ) { m_inputFileLines = nmax; }
 
   //! Set measurement
   void setMeasurement( const MeasPoisEB & m ) { m_measurement.copy(m); }
@@ -360,6 +374,9 @@ public:
   const double getUpperLimitNorm() const { return m_upperLimitNorm; }
   const int    getNuppLim() const    { return m_nUppLim; }
 
+  const std::string & getInputFile() const { return m_inputFile; }
+  const int getInputFileLines() const { return m_inputFileLines; }
+
 private:
 
   const PDF::PoisTab   *m_poisson;
@@ -398,6 +415,7 @@ private:
   bool    m_suggestBelt;// if true, always call suggestBelt(); set to true if setBelt(v) is called with v<1
   int     m_nBeltMinUsed; // the minimum nBelt used for the calculation
   int     m_nBeltMaxUsed; // the maximum nBelt used for the calculation
+  int     m_nBeltMinLast; // the minimum nBelt used in previous call to calcLhRatio()
   //  std::vector<int> m_nBeltList; // list of suggested nBelt - filled in constructor
   bool    m_validBestMu;//
   std::vector<double> m_bestMuProb; // prob. of best mu=e*s+b, index == (N observed)
@@ -415,6 +433,9 @@ private:
   double m_maxNorm;  // max probability sum (should be very near 1)
   double m_normMaxDiff; // max(norm-1.0) allowed before giving a warning
   int    m_nUppLim;  // number of points to scan the hypothesis after the first upper limit is found
+
+  std::string m_inputFile; // input file with data
+  int         m_inputFileLines; // number of lines to read; if < 1 => read ALL lines
   //
 };
 

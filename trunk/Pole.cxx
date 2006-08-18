@@ -29,6 +29,8 @@ inline char *yesNo(bool var) {
  */
 // HERE: Should have a truly empty with NO initiation of variables -> SPEED!
 Pole::Pole() {
+  m_inputFile="";
+  m_inputFileLines=0;
   m_printLimStyle=0; // computer readable
   m_verbose=0;
   m_coverage = false;
@@ -78,24 +80,84 @@ Pole::Pole() {
   m_nBeltMinUsed = m_nBelt;
   m_nBeltMaxUsed = 0;
   m_suggestBelt = (m_nBelt<1);
-  //
-  // init list of suggested nBelt
-  //
-//   m_nBeltList.push_back(18); //0
-//   m_nBeltList.push_back(20);
-//   m_nBeltList.push_back(20);
-//   m_nBeltList.push_back(22);
-//   m_nBeltList.push_back(22);
-//   m_nBeltList.push_back(23); //5
-//   m_nBeltList.push_back(25);
-//   m_nBeltList.push_back(32);
-//   m_nBeltList.push_back(38);
-//   m_nBeltList.push_back(38);
-//   m_nBeltList.push_back(40); //10
-  //
 }
 
 Pole::~Pole() {
+}
+
+void Pole::execute() {
+  if (m_inputFile.size()>0) {
+    exeFromFile();
+  } else {
+    exeEvent(true);
+  }
+}
+
+void Pole::exeEvent(bool first) {
+  initAnalysis();
+  //
+  if (first) printSetup();
+  if (analyseExperiment()) {
+    printLimit(first);
+  } else {
+    printFailureMsg();
+  }
+}
+
+void Pole::exeFromFile() {
+  std::ifstream inpf( m_inputFile.c_str() );
+  if ( ! inpf.is_open() ) {
+    std::cout << "ERROR: File <" << m_inputFile << "> could not be found/opened" << std::endl;
+    return;
+  }
+  std::cout << "--- Reading data from input file: " << m_inputFile << std::endl;
+  int nch;
+  std::string dataLine;
+  int nskipped = 0;
+  int nread    = 0;
+  int n;
+  double em,es,bm,bs;
+  int ed,bd;
+  bool first=true;
+  int nlines=0;
+  TOOLS::Timer loopTime;
+  loopTime.start();
+  bool notDone=true;
+  while (notDone && ((nch=inpf.peek())>-1)) {
+    getline(inpf,dataLine);
+    if (dataLine.size()>0) {
+      std::istringstream sstr(dataLine);
+      sstr >> n >> ed >> em >> es >> bd >> bm >> bs;
+      if (sstr) {
+        if ((m_verbose>0) && (nlines<10)) {
+          std::cout << "LINE: ";
+          std::cout << n << "\t" << ed << "\t" << em << "\t" << es << "\t" << bd << "\t" << bm << "\t" << bs << std::endl;
+        }
+        nread++;
+        setNObserved(n);
+        setEffPdf( em, es, PDF::DISTYPE(ed) );
+        setEffObs();
+        setBkgPdf( bm, bs, PDF::DISTYPE(bd) );
+        setBkgObs();
+        //      
+        exeEvent(first);
+        first=false;
+        nlines++;
+        if ((m_inputFileLines>0) && (nlines>=m_inputFileLines)) notDone = false; // enough lines read
+      } else {
+        if (nskipped<10) {
+          std::cout << "Skipped line " <<  nskipped+1 << " in input file" << std::endl;
+        }
+        nskipped++;
+      }
+    }
+  }
+  loopTime.stop();
+  loopTime.printUsedTime();
+  loopTime.printUsedClock(nlines);
+  if (first) {
+    std::cout << "Failed processing any lines in the given input file." << std::endl;
+  }
 }
 
 bool Pole::checkEffBkgDists() {
@@ -381,21 +443,27 @@ double Pole::calcLhRatio(double s, int & nbMin, int & nbMax) { //, double minMuP
   int  nInBelt   = 0;
   int n=0;
   //
-  nbMin = 0;
+  nbMin = 0; // m_nBeltMinLast; // NOTE if using nBeltMinLast -> have to be able to approx prob for s in the range 0...nminlast
   nbMax = m_nBelt-1;
+  double norm_p_low=0;// m_sumPlowLast; // approx
+  double norm_p_up=0;
   //
   //
+  double sumPmin=0.0;
+  double sumPtot=0.0;
+  // find lower and upper 
   while ((n<m_nBelt) && (!upNfound)) {
     m_muProb[n] =  m_measurement.calcProb(n, s);
     lhSbest = getLsbest(n);
     m_lhRatio[n]  = m_muProb[n]/lhSbest;
     norm_p += m_muProb[n]; // needs to be renormalised
     //
-    if ((!lowNfound) && (m_muProb[n]>m_minMuProb)) {
+    if ((!lowNfound) && (norm_p>m_minMuProb)) {
       lowNfound=true;
       nbMin = n;
+      norm_p_low = norm_p;
     } else {
-      if ((nInBelt>1) && lowNfound && (m_muProb[n]<m_minMuProb)) {
+      if ((nInBelt>1) && lowNfound && (norm_p>1.0-m_minMuProb)) {
 	upNfound = true;
 	nbMax = n-1;
       }
@@ -405,10 +473,11 @@ double Pole::calcLhRatio(double s, int & nbMin, int & nbMax) { //, double minMuP
     //    std::cout << "calcLhRatio: " << n << ", p = " << m_muProb[n] << ", lhSbest = " << lhSbest << std::endl;
   }
   //
+  m_nBeltMinLast = nbMin;
   if (nbMin<m_nBeltMinUsed) m_nBeltMinUsed = nbMin;
   if (nbMax>m_nBeltMaxUsed) m_nBeltMaxUsed = nbMax;
   //
-  return norm_p;
+  return norm_p;//-norm_p_min;
 }
 
 
@@ -430,8 +499,12 @@ double Pole::calcLimit(double s) {
     }
   }
   //
+  // Get N(obs)
+  //
   k = getNObserved();
-
+  //
+  // If k is outside the belt obtained above, the likelihood ratio is ~ 0 -> set it to 0
+  //
   if ((k>nBeltMaxUsed) || (k<nBeltMinUsed)) m_lhRatio[k] = 0.0;
 
   if (k>=m_nBelt) {
@@ -448,6 +521,8 @@ double Pole::calcLimit(double s) {
   // matches the searched CL.
   // Below, the loop sums the probabilities for a given s and for all n with R>R0.
   // R0 is the likelihood ratio for n_observed.
+  // When N(obs)=k lies on a confidencebelt curve (upper or lower), the likelihood ratio will be minimum.
+  // If so, m_sumProb> m_cl
   i=nBeltMinUsed;
   bool done=false;
   m_sumProb = 0;
@@ -772,6 +847,7 @@ void Pole::findPower() {
   int n1,n2;
   int nhyp = m_hypTest.n();
   double sumP;
+  m_nBeltMinLast = 0;
   if (m_verbose>-1) std::cout << "Make full construct" << std::endl;
   for (int i=0; i<nhyp; i++) {
     muTest = m_hypTest.min() + i*m_hypTest.step();
@@ -867,6 +943,7 @@ void Pole::findConstruct() {
   double mu_test;
   int i = 0;
   bool done = (i==m_hypTest.n());
+  m_nBeltMinLast = 0;
   //
   while (!done) {
     mu_test = m_hypTest.min() + i*m_hypTest.step();
@@ -878,9 +955,12 @@ void Pole::findConstruct() {
 
 int Pole::findNMin() { // calculates the minimum N rejecting s = 0.0
   int n1,n2;
-  double sumP = calcBelt(0.0,n1,n2,true);//,-1.0);
+  m_nBeltMinLast = 0;
+  double sumP = calcBelt(0.0,n1,n2,false);//,-1.0);
+  if (sumP) n2=n2;
   //
-  std::cout << "NMIN0:\t" << n2 << "\t" << sumP << std::endl;
+  //  std::cout << "-------------------------------------------------------------------------------------" << std::endl;
+  //  std::cout << "# Min N(obs) rejecting s = 0.0 : " << n2 << "\tSum(P) = " << sumP << std::endl;
   return n2;
 }
 
@@ -889,6 +969,7 @@ void Pole::findBelt() {
   int i = 0;
   bool done = (i==m_hypTest.n());
   //
+  m_nBeltMinLast = 0;
   int n1,n2;
   while (!done) {
     mu_test = m_hypTest.min() + i*m_hypTest.step();
@@ -907,6 +988,7 @@ bool Pole::findLimits() {
   m_upperLimit = 0;
   m_lowerLimitNorm = 0;
   m_upperLimitNorm = 0;
+  m_nBeltMinLast=0;
   //
   findNMin();
   if (getNObserved()>=m_nBelt) return false;
@@ -979,6 +1061,7 @@ bool Pole::findLimits() {
 	printFailureMsg();
 	printSetup();
 	i=0;
+        m_nBeltMinLast=0;
 	while (i<m_hypTest.n()) {
 	  mu_test = m_hypTest.min() + i*m_hypTest.step();
 	  p=calcLimit(mu_test);
@@ -1004,6 +1087,7 @@ bool Pole::findCoverageLimits() {
   m_foundUpper = false;
   m_lowerLimit = 0;
   m_upperLimit = 0;
+  m_nBeltMinLast=0;
   //
   if (getNObserved()>=m_nBelt) return false;
   //
@@ -1129,6 +1213,7 @@ void Pole::printLimit(bool doTitle) {
     std::cout << cmtPre << "-------------------------------------------------------------------------------------" << std::endl;
     std::cout << cmtPre << " Max N(belt) set  : " << m_nBelt << std::endl;
     std::cout << cmtPre << " Max N(belt) used : " << m_nBeltMaxUsed << std::endl;
+    std::cout << cmtPre << " Min N(belt) used : " << m_nBeltMinUsed << std::endl;
     std::cout << cmtPre << "-------------------------------------------------------------------------------------" << std::endl;
     std::cout << cmtPre << " N(obs)  eff(mean)     eff(sigma)      bkg(mean)       bkg(sigma)      low     up" << std::endl;
     std::cout << cmtPre << "-------------------------------------------------------------------------------------" << std::endl;
