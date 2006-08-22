@@ -1,19 +1,23 @@
 ROOTCFLAGS = $(shell root-config --cflags)
 ROOTLIBS   = $(shell root-config --libs)
-LDOBJS     =  Pdf.o Random.o Pole.o Combination.o
+LDOBJS     =  Pdf.o Random.o Pole.o Combination.o Tools.o
+LDVERSION  = .1
 ###LDOBJS     =  Pdf.o Random.o Coverage.o Pole.o Combination.o Combine.o
 #### Power.o
-LDSMOBJS    =  Pdf.o Random.o
-LDFLAGS    = -g -fPIC -shared
+LDSMOBJS     =  Pdf.o Random.o
+###LDFLAGS      = -fPIC -shared
+LDFLAGS      = -shared
 ###CFLAGS     = -O
 # Use -g to include debug info
 # Use -pg for profiling info
-CFLAGS     = -g
+# Use -O3 for optimizing
+CFLAGS       = -g -O0
+CFLAGSARG    = -g -O0
 SRCTOOLS     = polelim.cxx polecov.cxx argsPole.cxx argsCoverage.cxx
 SRCEXTRAS    = exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx poleconst.cxx polepow.cxx
 INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h Measurement.h \
-	       Power.h Observable.h Combine.h PseudoExperiment.h
-SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Pdf.cxx Combination.cxx Power.cxx Combine.cxx PseudoExperiment.cxx
+	       Power.h Observable.h Combine.h Tools.h
+SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Pdf.cxx Combination.cxx Power.cxx Combine.cxx Tools.cxx
 LDFILE	     = libPole++.so
 LDSMFILE     = libPoleSM++.so
 LIBS         = -L./ -lPole++
@@ -30,9 +34,9 @@ $(LDSMFILE):	$(LDSMOBJS)
 		g++ $(LDFLAGS) $(LDSMOBJS) -o $(LDSMFILE)
 
 argsPole.o:	argsPole.cxx
-		g++ $(CFLAGS) -Wall -c $<
+		g++ $(CFLAGSARG) -Wall -c $<
 argsCoverage.o:	argsCoverage.cxx
-		g++ $(CFLAGS) -Wall -c $<
+		g++ $(CFLAGSARG) -Wall -c $<
 
 polepow:	polepow.o
 		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
@@ -84,9 +88,9 @@ obstest:	obstest.o
 obstest.o:	obstest.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
-pdftst:		pdftst.o PdfNew.o
+pdftst:		pdftst.o
 		g++ $(CFLAGS) -Wall $^ $(LIBS)  -o $@
-pdftst.o:	pdftst.cxx PdfNew.h
+pdftst.o:	pdftst.cxx
 		g++ $(CFLAGS) -Wall -c $<
 
 pdftstold:	pdftstold.o
@@ -113,6 +117,8 @@ Pdf.o:		Pdf.cxx Pdf.h
 Combination.o:	Combination.cxx Combination.h
 		g++ $(CFLAGS) -Wall -c $<
 Power.o:	Power.cxx Power.h
+		g++ $(CFLAGS) -Wall -c $<
+Tools.o:	Tools.cxx Tools.h
 		g++ $(CFLAGS) -Wall -c $<
 
 package:	$(SRCLIB) $(SRCTOOLS) Makefile
