@@ -177,7 +177,13 @@ namespace OBS {
               exit(-1);
             }
           }
-          m_intNpts = nhigh-nlow+1;
+          if (m_intNpts<1) {
+            m_intNpts = nhigh-nlow+1;
+          } else {
+            if (m_intNpts>nhigh-nlow+1) {
+              m_intNpts = nhigh-nlow+1;
+            }
+          }
           low  = static_cast<double>(nlow);
           high = static_cast<double>(nhigh);
           break;
