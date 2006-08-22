@@ -77,7 +77,7 @@ namespace PDF {
       :m_dist(d), m_mean(m), m_sigma(s), m_statNraw(0), m_statNtot(0), m_statNtab(0)
     { if (name) m_name=name; setDist(d); }
     Base(const Base & other) { copy(other); m_statNraw=0; m_statNtot=0; m_statNtab=0; }
-    virtual ~Base() { printStat(); }
+    virtual ~Base() { this->printStat(); }
     //
     virtual void setMean(double m)  { m_mean  = m; }
     virtual void setSigma(double s) { m_sigma = s; }
@@ -109,10 +109,10 @@ namespace PDF {
 
     virtual void printStat() const {
       if (gPrintStat) {
-        std::cout << "----- " << getName() << " -----" << std::endl;
-        std::cout << " PDF called                    : " << m_statNtot << std::endl;
-        std::cout << " PDF called using raw function : " << m_statNraw << std::endl;
-        std::cout << " PDF called using table        : " << m_statNtab << std::endl;
+        std::cout << "----- " << this->getName() << " -----" << std::endl;
+        std::cout << " PDF called                    : " << this->m_statNtot << std::endl;
+        std::cout << " PDF called using raw function : " << this->m_statNraw << std::endl;
+        std::cout << " PDF called using table        : " << this->m_statNtab << std::endl;
         std::cout << "--------------------------------------------------" << std::endl;
       }
     }
@@ -315,7 +315,7 @@ namespace PDF {
 	}
       }
     }
-    virtual ~Tabulated() {if (m_table) delete [] m_table;};
+    virtual ~Tabulated() { if (m_table) delete [] m_table;};
     //
     virtual void setMean(double m)  { m_pdf->setMean(m);  Base::setMean(m_pdf->getMean());}
     virtual void setSigma(double s) { m_pdf->setSigma(s); Base::setMean(m_pdf->getSigma());}
@@ -338,7 +338,7 @@ namespace PDF {
       std::cout << "--- N(X)      = " << m_nX << std::endl;
       std::cout << "---   min      = " << m_xmin << std::endl;
       std::cout << "---   max      = " << m_xmax << std::endl;
-      std::cout << "--- N(mean)     = " << m_nMean << std::endl;
+      std::cout << "--- N(mean)    = " << m_nMean << std::endl;
       std::cout << "---   min      = " << m_mmin << std::endl;
       std::cout << "---   max      = " << m_mmax << std::endl;
       std::cout << "--- N(sigma)   = " << m_nSigma << std::endl;
@@ -436,7 +436,6 @@ namespace PDF {
 
     double *m_table;
 
-    mutable int m_statNtab;
   };
 
   class PoisTab : public Tabulated<int> {
@@ -450,8 +449,16 @@ namespace PDF {
 //       this->m_sigma = pdf->getSigma();
       m_nSigma = 1;
     }
-    virtual ~PoisTab() {}
+    virtual ~PoisTab() { }
     //
+    // X range for poisson is integer -> force one point per integer -> xmax = xmin + npts - 1
+    //
+    virtual void setRangeX( int npts, int min, int max=0) {
+      if (npts<1) npts=0;
+      m_nX = npts;
+      m_xmin = min;
+      m_xmax = min+npts-1;
+    }
     virtual void setRangeSigma( int npts, double min, double max) { m_nSigma = 1; }
     //
     void tabulate() {
@@ -459,15 +466,29 @@ namespace PDF {
       initTab();
       if (m_table==0) return;
       double mean;
+      int n0;
+      int indn0;
       int ind0;
       std::cout << "--- Tabulating ... be patient" << std::endl;
       for (int m=0; m<m_nMean; m++) {
 	mean = m*m_dm+m_mmin;
-	ind0 = m*m_nX + 0;
-	m_table[ind0] = static_cast<Poisson *>(this->m_pdf)->raw(0,mean);
-	for (int n=1; n<m_nX; n++) {
-	  m_table[ind0+n] = m_table[ind0+n-1]*mean/static_cast<double>(n);
+        // start at n0 = int(mean) -> important if mean is very large
+        n0 = static_cast<int>(mean);
+        if (n0<m_xmin) n0=m_xmin;
+        if (n0>m_xmax) n0=m_xmax;
+        indn0 = n0-m_xmin;
+	ind0 = m*m_nX;
+        // set reference point at maximum
+	m_table[ind0+indn0] = static_cast<Poisson *>(this->m_pdf)->raw(n0,mean);
+
+        // set for all n>n0
+	for (int n=indn0+1; n<m_nX; n++) {
+	  m_table[ind0+n] = m_table[ind0+n-1]*mean/static_cast<double>(n+m_xmin);
 	}
+        // set for all n<n0
+	for (int n=indn0-1; n>=0; n--) {
+	  m_table[ind0+n] = m_table[ind0+n+1]*static_cast<double>(n+m_xmin+1)/mean;
+        }
       }
       std::cout << "--- Tabulating DONE!" << std::endl;
     }
@@ -476,34 +497,64 @@ namespace PDF {
     void setSigma(double sigma) { this->m_pdf->setSigma(sigma); this->m_sigma = sigma; this->m_mean  = this->m_pdf->getMean(); }
 
     virtual const double getVal(int x, double m) const {
-      m_statNtot++;
+      this->m_statNtot++;
+      //
+      // check if table is created and that the requested values are within the table
+      // if not, the value will be calculated using raw()
+      //
       if ((m_table!=0) &&
-	  (x>=m_xmin) && (x<=m_xmax) &&
-	  (m>=m_mmin) && (m<=m_mmax)) {
+	  (x>=this->m_xmin) && (x<=this->m_xmax) &&
+	  (m>=this->m_mmin) && (m<=this->m_mmax)) {
+        //
+        // calculate index in table
+        //
 	int  mind, xind, ind;
-	mind = int(m_dm>0 ? (m-m_mmin)/m_dm : 0);
-	xind = int(m_dx>0 ? (x-m_xmin)/m_dx : 0);
-	//	ind = xind + sind*m_nX + mind*m_nX*m_nSigma;
-	ind = xind + mind*m_nX;
-	if (ind<m_nTotal) {
-          m_statNtab++;
-	  return m_table[ind];
+	mind = int(this->m_dm>0 ? (m-this->m_mmin)/this->m_dm : 0);
+	xind = x-m_xmin;
+	ind = xind + mind*this->m_nX;
+        //
+        // Make sure index is OK (should always be or else BUG!
+        //
+	if (ind<this->m_nTotal) {
+          double lmb0 = double(mind)*this->m_dm + m_mmin;
+          double dlmb = m - lmb0;
+          double f0   = this->m_table[ind];
+          //
+          // Do Taylor expansion around lmb0 to second order
+          //
+          double alpha=0.0;
+          double beta=0.0;
+          if (lmb0>0.0) {
+            alpha = (double(x)/lmb0)-1.0;
+            beta  = double(x)/(lmb0*lmb0);
+          }
+          double corr1 = f0*alpha*dlmb;
+          double corr2 = 0.5*f0*(alpha*alpha - beta)*dlmb*dlmb;
+          this->m_statNtab++;
+	  return f0 + corr1 + corr2;
         }
+        // This line should never be called - a BUG trap
+        std::cout << "PoisTab::Failed for whatever reason! BUG! mean = " << m << " and x = " << x << std::endl;
       }
+      //
+      // OK. Call the pdf, but first check if it's defined
       //
       if (this->m_pdf==0) {
 	std::cerr << "ERROR in PDF::PoisTab - no pdf defined!" << std::endl;
 	return 0;
       }
-      m_statNraw++;
+      //
+      // Call the raw() function
+      //
+      this->m_statNraw++;
       return this->m_pdf->getVal(x,m,0); // Poisson ignores sigma
     }
     //
     virtual const double getVal(int x, double m, double s) const {
-      return getVal(x,m);
+      return this->getVal(x,m);
     }
     virtual const double getVal(double x, double m, double s) const {
-      return getVal(int(x+0.5),m);
+      return this->getVal(int(x+0.5),m);
     }
   };
     
