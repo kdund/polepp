@@ -122,10 +122,12 @@ class Measurement {
       dx.push_back((*it)->getIntdX());
       jj.push_back(0);
     }
+    //    std::cout << "--> initNuisanceWeights(); nnpar = " << nnpar << std::endl;
     //
     // Loop over all volume elements (dxdydz...)
     // and calculate the weight per volume element: f(x)g(y)h(z)...dxdydz
     //
+    //    std::cout << "--> initNuisanceWeights(): loop over all volume elements" << std::endl;
     m_nuisanceWeights.clear();
     double w;
     m_nuisanceIntNorm = 0;
@@ -137,6 +139,7 @@ class Measurement {
     //
     std::list< OBS::Base * >::iterator itnp = m_nuisancePars.begin();
     //
+    //    std::cout << "--> initNuisanceWeights(); nind = " << m_nuisanceIndecis.size() << std::endl;
     for ( unsigned int i=0; i<m_nuisanceIndecis.size(); i++) {
       w = 1.0;
       itnp = m_nuisancePars.begin();
@@ -148,6 +151,7 @@ class Measurement {
       m_nuisanceWeights.push_back(w);
       m_nuisanceIntNorm += w;
     }
+    //    std::cout << "--> initNuisanceWeights(); norm = " << m_nuisanceIntNorm << std::endl;
   }
   //
   void dump() const {
@@ -488,7 +492,8 @@ const double getBkgObs() const { return (m_bkg ? m_bkg->getObservedValue():0); }
       ixeff = m_nuisanceIndecis[i][m_effIndex];
       ixbkg = m_nuisanceIndecis[i][m_bkgIndex];
       g = getM(s, m_eff->getIntX(ixeff), m_bkg->getIntX(ixbkg));
-      //    std::cout << "== s(true), e, b, mu = " << s << ", " << m_eff->getIntX(ixeff) << ", " << m_bkg->getIntX(ixbkg) << ", " << g << std::endl;
+      //      if ((s>4.01) && (s<4.03)) 
+      //        std::cout << "== s(true), e, b, mu = " << s << ", " << m_eff->getIntX(ixeff) << ", " << m_bkg->getIntX(ixbkg) << ", " << g << std::endl;
       p += m_nuisanceWeights[i]*pdf->getVal(x,g);
     }
 
