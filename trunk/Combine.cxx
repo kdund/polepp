@@ -1225,7 +1225,7 @@ double Combine::calcLimit(double s) {
 //   }
   //
   double dCL = sumProb-m_poleRef->getCL();
-  //  std::cout << "findLimits(): " << s << " norm = " << normProb << " sump = " << sumProb << std::endl;
+  //  std::cout << "calcLimits(): " << s << " norm = " << normProb << " sump = " << sumProb << std::endl;
   if (dCL<0.0) {
     if (m_foundLower) {
       m_upperLimit = s;
@@ -1249,7 +1249,7 @@ double Combine::calcLimit(double s) {
   return normProb;
 }
 
-void Combine::findLimits() {
+void Combine::calcLimits() {
   std::cout << "- Finding limits..." << std::endl;
   m_foundLower = false;
   m_foundUpper = false;
@@ -1341,5 +1341,5 @@ void Combine::initCorr() {
 
 void Combine::doIt() {
   findBestMu();
-  findLimits();
+  calcLimits();
 }

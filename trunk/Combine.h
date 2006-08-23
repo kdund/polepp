@@ -186,7 +186,7 @@ class Combine {
   void findBestMu();
 
   double calcLimit(double s);
-  void findLimits();
+  void calcLimits();
 
 };
 
