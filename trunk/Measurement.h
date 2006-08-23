@@ -400,8 +400,7 @@ class MeasPoisEB : public MeasPois {
   const double getBEcorr() const { return 0.0; } // TODO
 
 const double getEffObs() const { return (m_eff ? m_eff->getObservedValue():0); }
-    //; return val; }// return (m_eff ? m_eff->getObservedValue():0); }
-//const double getBkgObs() const { double val=0.0; if (m_bkg) m_bkg->getObservedValue(val); return val; }// return (m_bkg ? m_bkg->getObservedValue():0); }
+
 const double getBkgObs() const { return (m_bkg ? m_bkg->getObservedValue():0); }
 
 //   const OBS::BaseType<double> *getEff() const {
@@ -434,8 +433,8 @@ const double getBkgObs() const { return (m_bkg ? m_bkg->getObservedValue():0); }
 
   const double getM(double s) const {
     double e,b;
-    m_eff->getObservedValue(e);
-    m_bkg->getObservedValue(b);
+    e = m_eff->getObservedValue();
+    b = m_bkg->getObservedValue();
     return e*s + b;
   }
 
@@ -445,8 +444,8 @@ const double getBkgObs() const { return (m_bkg ? m_bkg->getObservedValue():0); }
 
   const double getSignal() const {
     double e,b;
-    m_eff->getObservedValue(e);
-    m_bkg->getObservedValue(b);
+    e = m_eff->getObservedValue();
+    b = m_bkg->getObservedValue();
     double dn = m_observable->getObservedValue() - b;
     return (e>0 ? dn/e : 0);
   }
