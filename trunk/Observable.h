@@ -105,7 +105,8 @@ namespace OBS {
     virtual void   setObservedValue()             { std::cout << "4MUST BE OVERLOADED!" << std::endl; }
     //
     virtual const void   getObservedValue(int & val)    const { std::cout << "5MUST BE OVERLOADED!" << std::endl; val=0; }
-    virtual const void   getObservedValue(double & val) const { std::cout << "6MUST BE OVERLOADED!" << std::endl; val=0.0; }
+    virtual const void   getObservedValue(double & val) const { std::cout << "6MUST BE OVERLOADED! "
+                                                                          << getName() << std::endl; val=0.0; }
     virtual const double getObservedValue()             const { std::cout << "7MUST BE OVERLOADED!" << std::endl; return 0.0;}
 
     /////////////////////////////////////////////////////
@@ -417,8 +418,8 @@ namespace OBS {
     void setObservedValue(T val)   { setObsVal(val); }
     void setObservedValue()        { setObsVal(static_cast<T>(getPdfMean())); }
     //
-    const double getObservedValue()        const { return static_cast<double>(m_observedValue); }
-    const void   getObservedValue(T & val) const { val = m_observedValue; }
+    virtual const double getObservedValue()        const { return static_cast<double>(m_observedValue); }
+    virtual const void   getObservedValue(T & val) const { val = m_observedValue; }
 
     virtual void dump() const {
       //      std::cout << "OBS::Base::dump(): observable dump not yet implemented" << std::endl;
@@ -428,7 +429,7 @@ namespace OBS {
       std::cout << "Mean : " << getPdfMean() << std::endl;
       std::cout << "Sigma: " << getPdfSigma() << std::endl;
       std::cout << "Dist : " << PDF::distTypeStr(getPdfDist()) << std::endl;
-      std::cout << "Obs  : " << getObservedValue() << std::endl;
+      std::cout << "Obs  : " << this->getObservedValue() << std::endl;
       std::cout << "--------------------------------------------" << std::endl;
     }
 
@@ -478,10 +479,10 @@ namespace OBS {
     //
   };
 
-  class ObservableGauss : public Observable<double> {
+  class ObservableGauss : public BaseType<double> {
   public:
-    ObservableGauss():Observable<double>("gauss","Gaussian observable") {this->m_dist=PDF::DIST_GAUS;};
-    ObservableGauss(PDF::Gauss *pdf, RND::Random *rndGen, const char *name, const char *desc=0):Observable<double>(pdf,rndGen,name,desc) {};
+    ObservableGauss():BaseType<double>("gauss","Gaussian observable") {this->m_dist=PDF::DIST_GAUS;};
+    ObservableGauss(PDF::Gauss *pdf, RND::Random *rndGen, const char *name, const char *desc=0):BaseType<double>(pdf,rndGen,name,desc) {};
     ObservableGauss(const ObservableGauss & other) {
       copy(other);
     }
@@ -500,10 +501,10 @@ namespace OBS {
     }
   };
 
-  class ObservableLogN : public Observable<double> {
+  class ObservableLogN : public BaseType<double> {
   public:
-    ObservableLogN():Observable<double>("gauss","Gaussian observable") {m_dist=PDF::DIST_LOGN;};
-    ObservableLogN(PDF::LogNormal *pdf, RND::Random *rndGen, const char *name, const char *desc=0):Observable<double>(pdf,rndGen,name,desc) {};
+    ObservableLogN():BaseType<double>("gauss","Gaussian observable") {m_dist=PDF::DIST_LOGN;};
+    ObservableLogN(PDF::LogNormal *pdf, RND::Random *rndGen, const char *name, const char *desc=0):BaseType<double>(pdf,rndGen,name,desc) {};
     ObservableLogN(const ObservableLogN & other) {
       copy(other);
     }
@@ -527,11 +528,11 @@ namespace OBS {
     double transIntX(double x) { return exp(x); }
   };
 
-  class ObservablePois : public Observable<int> {
+  class ObservablePois : public BaseType<int> {
   public:
-    ObservablePois():Observable<int>("poisson","Poisson observable") {this->m_dist=PDF::DIST_POIS;};
-    ObservablePois(PDF::Poisson *pdf, RND::Random *rndGen, const char *name, const char *desc=0):Observable<int>(pdf,rndGen,name,desc) {};
-    ObservablePois(PDF::PoisTab *pdf, RND::Random *rndGen, const char *name, const char *desc=0):Observable<int>(pdf,rndGen,name,desc) {};
+    ObservablePois():BaseType<int>("poisson","Poisson observable") {this->m_dist=PDF::DIST_POIS;};
+    ObservablePois(PDF::Poisson *pdf, RND::Random *rndGen, const char *name, const char *desc=0):BaseType<int>(pdf,rndGen,name,desc) {};
+    ObservablePois(PDF::PoisTab *pdf, RND::Random *rndGen, const char *name, const char *desc=0):BaseType<int>(pdf,rndGen,name,desc) {};
     ObservablePois(const ObservablePois & other) {
       copy(other);
     }
@@ -552,10 +553,10 @@ namespace OBS {
     }
   };
 
-  class ObservableFlat : public Observable<double> {
+  class ObservableFlat : public BaseType<double> {
   public:
-    ObservableFlat():Observable<double>("flat","Flat observable") {m_dist=PDF::DIST_FLAT;};
-    ObservableFlat(PDF::Flat *pdf, RND::Random *rndGen, const char *name, const char *desc=0):Observable<double>(pdf,rndGen,name,desc) {};
+    ObservableFlat():BaseType<double>("flat","Flat observable") {m_dist=PDF::DIST_FLAT;};
+    ObservableFlat(PDF::Flat *pdf, RND::Random *rndGen, const char *name, const char *desc=0):BaseType<double>(pdf,rndGen,name,desc) {};
     ObservableFlat(const ObservableFlat & other) {
       copy(other);
     }
@@ -579,7 +580,7 @@ namespace OBS {
     switch (dist) {
     case PDF::DIST_UNDEF:
     case PDF::DIST_NONE:
-      obs=new Observable<double>();
+      obs=new BaseType<double>();
       obs->setPdf(0);
       break;
     case PDF::DIST_POIS:
