@@ -119,11 +119,11 @@
  *  - setBelt() : Set the maximum n in the belt construction\n
  *    For large signals and/or events, this value might be increased. 
  *    If the nBelt < 1, then this is automatically selected (see suggestBelt()).
- *  - findBelt() : Calculates the confidence belt [n1(s,b),n2(s,b)] for all (s,b).
- *  - calcBelt() : Dito but for a specific (s,b)
+ *  - calcBelt() : Calculates the confidence belt [n1(s,b),n2(s,b)] for all (s,b).
+ *  - calcBelt(s,n1,n2,v) : Dito but for a specific (s,b)
  *
  *  Finding \f$s_{best}\f$
- *  - setDmus() : Sets the precision in findBestMu().\n
+ *  - setBestMuStep() : Sets the precision in findBestMu().\n
  *    Default = 0.01 and it should normally be fine.
  *  - setMethod() : sets the Likelihood ratio method (MBT or FHC2)
  *
@@ -193,7 +193,7 @@ public:
   //! Set measurement
   void setMeasurement( const MeasPoisEB & m ) { m_measurement.copy(m); }
   //
-  void setNObserved(int nobs) { m_measurement.setObsVal(nobs); }
+  void setNObserved(int nobs) { m_nBeltUsed = nobs; m_measurement.setObsVal(nobs); }
   //  {m_measurement.setNObserved(nobs); }
   //! distribution info on eff and bkg
   void setEffPdf(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
@@ -238,10 +238,12 @@ public:
   //////////  bool checkParams();
 
   // Set belt max value
-  void setBelt(int v)    { m_nBeltMaxUsed = 0; m_nBeltMinUsed = v; m_nBelt = v; m_suggestBelt = (v<1); }
+  void setBelt(int v)    { m_nBeltMaxUsed = 0; m_nBeltMinUsed = v; m_nBelt = v; }
   int  suggestBelt();                // will suggest a m_nBelt based on no. observed
-  void setDmus(double dmus) { m_dmus = (dmus > 0.0 ? dmus:m_stepMin); }
-  void setNmusMax(int n) { m_nmusMax = n; }
+
+  // scan parameters for the search for s_best
+  void setBestMuStep(double dmus,double stepmin=0.001) { m_bestMuStep = (dmus > 0.0 ? dmus:stepmin); }
+  void setBestMuNmax(int n)                            { m_bestMuNmax = n; }
 
   // set minimum probability considered - TODO: need to check this against precision in hypothesis testing
   void setMinMuProb(double m=-1) {
@@ -253,8 +255,9 @@ public:
     }
   }
   // POLE test hypothesis range
+  void setLimitHypStep(double step=0.001) { m_limitHypStep=(step>0 ? step:0.001); } // set the hypothesis step size when scanning for limits
   void setTestHyp(double step=-1.0); // set test range based on the input measurement
-  void setTestHyp(double low, double high, double step); // test mu=s+b for likelihood ratio
+  void setTestHyp(double low, double high, double step); // test mu=s+b for belt construction etc (NOT for limit scan)
   void setNuppLim(int n=-1) { m_nUppLim = n; }
 
   // POLE true signal, used only if coverage run
@@ -276,24 +279,26 @@ public:
   void initIntegral();    // calculates double integral kernal (eff*bkg*db*de) according to setup (7)
   void initIntegral(std::vector<double> & eff, std::vector<double> & bkg, std::vector<double> & weight);
 
+  //
+  double getObservedSignal() { return m_measurement.getSignal(); }
   // POLE
   void findBestMu(int n); // finds the best fit (mu=s+b) for a given n. Fills m_bestMu[n] and m_bestMuProb[n].
   void findAllBestMu();   // dito for all n (loop n=0; n<m_nMuUsed)
   void calcConstruct(double s, bool verb);
   double calcBelt(double s, int & n1, int & n2,bool verb);//,double muMinProb=1e-5); // calculate (4) and find confidence belt
-  double calcLimit(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
-  double calcLimitOLD(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
+  int  calcLimit(double s); // calculate (4) and find limits
+  bool calcLimit(double s, bool scanDown); // calculate (4) and find limits
   void   calcLh(double s); // fills the likelihood array
   double calcLhRatio(double s, int & nb1, int & nb2);//, double minMuProb=1e-6); // fills the likelihood ratio array
   bool limitsOK(); // check if calculated limit is OK using the sum of probs.
   inline const bool normOK(double p) const;
   void setNormMaxDiff(double dpmax=0.001) { m_normMaxDiff=dpmax; }
-  void findPower();
-  void findConstruct();
-  int  findNMin();
-  void findBelt();
-  bool findLimits();        // finds CL limits
-  bool findCoverageLimits();//  same as previous but stop if it's obvious that initial true mean is inside or outside
+  void calcPower();
+  void calcConstruct();
+  void calcNMin();
+  void calcBelt();
+  bool calcLimits();        // finds CL limits
+  bool calcCoverageLimits();//  same as previous but stop if it's obvious that initial true mean is inside or outside
   void setPrintLimitStyle( int style ) { m_printLimStyle = style; }
   void printLimit(bool doTitle=false);
   // 
@@ -312,7 +317,6 @@ public:
   const bool usesFHC2()  const { return (m_method==RL_FHC2); }
 
   const int    getVerbose() const    { return m_verbose; }
-  const double getStepMin() const    { return m_stepMin; }
   const double getCL() const         { return m_cl; }
   const double getSTrue() const      { return m_sTrue; }
   const bool   getCoverage() const   { return m_coverage; }
@@ -355,12 +359,14 @@ public:
   double getIntNorm() const { return m_measurement.getNuisanceIntNorm(); }
   //
   const double  getLsbest(int n) const;
-  const double  getDmus() const { return m_dmus; }
-  const int     getNmusMax() const { return m_nmusMax; }
   const int     getNBelt() const { return m_nBelt; }
+  const int     getNBeltUsed() const { return m_nBeltUsed; }
   const int     getNBeltMinUsed() const { return m_nBeltMinUsed; }
   const int     getNBeltMaxUsed() const { return m_nBeltMaxUsed; }
   const bool    isValidBestMu() const  { return m_validBestMu; }
+  //
+  const double  getBestMuStep() const { return m_bestMuStep; }
+  const int     getBestMuNmax() const { return m_bestMuNmax; }
   const std::vector<double> & getBestMuProb() const { return m_bestMuProb; }
   const std::vector<double> & getBestMu() const { return m_bestMu; }
   const std::vector<double> & getMuProb() const { return m_muProb; }
@@ -368,12 +374,16 @@ public:
   const double getMinMuProb() const { return m_minMuProb; }
   const double getMuProb(int n) const { if ((n>m_nBeltMaxUsed)||(n<m_nBeltMinUsed)) return 0.0; return m_muProb[n];}
   //
+  const double getLimitHypStep() const { return m_limitHypStep; }
   const double getSumProb() const    { return m_sumProb; }
   const double getLowerLimit() const { return m_lowerLimit; }
   const double getUpperLimit() const { return m_upperLimit; }
   const double getLowerLimitNorm() const { return m_lowerLimitNorm; }
   const double getUpperLimitNorm() const { return m_upperLimitNorm; }
   const int    getNuppLim() const    { return m_nUppLim; }
+  const double getRejS0P()  const { return m_rejs0P; }
+  const int    getRejS0N1() const { return m_rejs0N1; }
+  const int    getRejS0N2() const { return m_rejs0N2; }
 
   const std::string & getInputFile() const { return m_inputFile; }
   const int getInputFileLines() const { return m_inputFileLines; }
@@ -388,7 +398,6 @@ private:
   int    m_verbose;
   int    m_printLimStyle;
   //
-  double m_stepMin;
   // CL, confidence limit
   double m_cl;
 
@@ -404,40 +413,55 @@ private:
   double  m_beCorr;
   ////////////////////////////////////////////////////
   //
-  // Test range for the likelihood ratio calculation (4)
+  // Test range for belt construction (calcBelt()), power calculation (calcPower()) and construction (calcConstruct())
   Range<double>  m_hypTest;
   //
   // Arrays of best fit and limits
   //
   // POLE
-  double  m_dmus;       // step size in search for s_best (LHR)
-  int     m_nmusMax;   // maximum N in search for s_best (will locally nodify dmus)
-  int     m_nBelt;      // how many Nobs are tested to find R (likelihood ratio)
-  bool    m_suggestBelt;// if true, always call suggestBelt(); set to true if setBelt(v) is called with v<1
+  int     m_nBelt;        // beltsize used for explicit construction of conf. belt (calcBelt() etc)
+  int     m_nBeltUsed;    // dynamic beltsize determined in calcLhRatio() - default = max(2,N(obs))
   int     m_nBeltMinUsed; // the minimum nBelt used for the calculation
   int     m_nBeltMaxUsed; // the maximum nBelt used for the calculation
   int     m_nBeltMinLast; // the minimum nBelt used in previous call to calcLhRatio()
   //  std::vector<int> m_nBeltList; // list of suggested nBelt - filled in constructor
+  //
   bool    m_validBestMu;//
+  double  m_bestMuStep;       // step size in search for s_best (LHR)
+  int     m_bestMuNmax;   // maximum N in search for s_best (will locally nodify dmus)
   std::vector<double> m_bestMuProb; // prob. of best mu=e*s+b, index == (N observed)
   std::vector<double> m_bestMu;     // best mu=e*s+b
   std::vector<double> m_muProb;     // prob for mu
   std::vector<double> m_lhRatio;    // likelihood ratio
   double m_minMuProb;  // minimum probability accepted
-  double m_sumProb;    // sum of probs for conf.belt construction
-  bool   m_foundLower; // true if lower limit is found
-  bool   m_foundUpper; // true if an upper limit is found
+  //
+  double m_limitHypStep; // step size when searching for the limits (see calcLimits())
+  double m_sumProb;    // sum of probs for conf.belt construction - set by calcLimit()
+  double m_prevSumProb;// ditto from previous scan - idem
+  double m_scanBeltNorm; // sum(p) for all n used in belt at the current s - idem
+  bool   m_lowerLimitFound; // true if lower limit is found
+  bool   m_upperLimitFound; // true if an upper limit is found
   double m_lowerLimit; // lowerlimit obtained from ordering (4)
   double m_upperLimit; // upperlimit
   double m_lowerLimitNorm; // sum of the probabilities in the belt given by the lower limit
   double m_upperLimitNorm; // dito upper limit (useful to check whether nbelt was enough or not)
+  //
   double m_maxNorm;  // max probability sum (should be very near 1)
   double m_normMaxDiff; // max(norm-1.0) allowed before giving a warning
-  int    m_nUppLim;  // number of points to scan the hypothesis after the first upper limit is found
+  int    m_nUppLim;  // number of points to scan the hypothesis after the first upper limit is found REMOVE!!!!
+  double m_rejs0P;  // probability for belt at s=0
+  int    m_rejs0N1; // min N at s=0
+  int    m_rejs0N2; // ditto max N
 
   std::string m_inputFile; // input file with data
   int         m_inputFileLines; // number of lines to read; if < 1 => read ALL lines
   //
+
+
+  // TO BE REMOVED
+  double calcLimitOLD(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
+  bool calcLimitsOLD();        // finds CL limits
+  bool calcCoverageLimitsOLD();
 };
 
 inline const double Pole::getLsbest(int n) const {

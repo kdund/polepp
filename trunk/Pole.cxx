@@ -64,22 +64,23 @@ Pole::Pole() {
   //  m_measurement.setBkgObs();
   setEffPdfBkgCorr(0.0);
   //
-  m_stepMin = 0.001;
   m_minMuProb = 1e-6;
   //
-  m_dmus = 0.01;
-  m_nmusMax = 100;
+  m_bestMuStep = 0.01;
+  m_bestMuNmax = 100;
   //
   m_measurement.setEffInt(5.0,21);
   m_measurement.setBkgInt(5.0,21);
   //
+  m_limitHypStep = 0.01;
   setTestHyp(0.01);
   //
   m_validBestMu = false;
-  m_nBelt       = 50;
-  m_nBeltMinUsed = m_nBelt;
+  m_nBelt        = 50;
+  m_nBeltUsed    = 5; // not really needed to be set here - set in initBeltArrays()
+  m_nBeltMinUsed = m_nBeltUsed; // idem
   m_nBeltMaxUsed = 0;
-  m_suggestBelt = (m_nBelt<1);
+  m_suggestBelt  = false; // TODO: REMOVE!!!(m_nBeltUsed<1);
 }
 
 Pole::~Pole() {
@@ -305,19 +306,21 @@ int Pole::suggestBelt() {
 }
 
 void Pole::initBeltArrays() {
-  if (m_suggestBelt) m_nBelt = suggestBelt();
+  //  if (m_suggestBelt) m_nBeltUsed = suggestBelt();
   //
   // should not be initiated here
   //
-  m_nBeltMinUsed = m_nBelt;
+  m_nBeltUsed = getNObserved();
+  if (m_nBeltUsed<2) m_nBeltUsed=2;
+  m_nBeltMinUsed = m_nBeltUsed;
   m_nBeltMaxUsed = 0;
 
   //  unsigned int nbs = static_cast<unsigned int>(m_nBelt);
   //  if (m_muProb.size()!=nbs) {
-  m_muProb.resize(m_nBelt,0.0);
-  m_bestMuProb.resize(m_nBelt,0.0);
-  m_bestMu.resize(m_nBelt,0.0);
-  m_lhRatio.resize(m_nBelt,0.0);
+  m_muProb.resize(m_nBeltUsed,0.0);
+  m_bestMuProb.resize(m_nBeltUsed,0.0);
+  m_bestMu.resize(m_nBeltUsed,0.0);
+  m_lhRatio.resize(m_nBeltUsed,0.0);
     //  }
 }
 
@@ -344,15 +347,15 @@ void Pole::findBestMu(int n) {
     if(sMin<0) {sMin = 0.0;}
     sMin = (sMax-sMin)*0.6 + sMin;
     //    dmu_s = 0.01; // HARDCODED:: Change!
-    int ntst = 1+int((sMax-sMin)/m_dmus);
-    double dmus=m_dmus;
-    if (ntst>m_nmusMax) {
-      ntst=m_nmusMax;
+    int ntst = 1+int((sMax-sMin)/m_bestMuStep);
+    double dmus=m_bestMuStep;
+    if (ntst>m_bestMuNmax) {
+      ntst=m_bestMuNmax;
       dmus=(sMax-sMin)/double(ntst-1);
     }
     //// TEMPORARY CODE - REMOVE /////
     //    ntst = 1000;
-    //    m_dmus = (sMax-sMin)/double(ntst);
+    //    m_bestMuStep = (sMax-sMin)/double(ntst);
     //////////////////////////////////
     if (m_verbose>1) std::cout << "FindBestMu range: " << " I " << getBkgIntMax() << " " << getEffIntMax() << " "
 			       << n << " " << m_measurement.getBkgObs() << " " << ntst << " [" << sMin << "," << sMax << "] => ";
@@ -414,7 +417,7 @@ void Pole::findBestMu(int n) {
 void Pole::findAllBestMu() {
   if (m_validBestMu) return;
   // fills m_bestMuProb and m_bestMu (L(s_best + b)[n])
-  for (int n=0; n<m_nBelt; n++) {
+  for (int n=0; n<m_nBeltUsed; n++) {
     findBestMu(n);
   }
   if (m_verbose>2) {
@@ -429,7 +432,7 @@ void Pole::findAllBestMu() {
 
 void Pole::calcLh(double s) { // TODO: Need this one????
   //  double norm_p=0.0;
-  for (int n=0; n<m_nBelt; n++) {
+  for (int n=0; n<m_nBeltUsed; n++) {
     m_muProb[n] = m_measurement.calcProb(n, s);
     //    norm_p += m_muProb[n]; // needs to be renormalised - NO!! 
   }
@@ -444,15 +447,28 @@ double Pole::calcLhRatio(double s, int & nbMin, int & nbMax) { //, double minMuP
   int n=0;
   //
   nbMin = 0; // m_nBeltMinLast; // NOTE if using nBeltMinLast -> have to be able to approx prob for s in the range 0...nminlast
-  nbMax = m_nBelt-1;
+  nbMax = m_nBeltUsed-1;
   double norm_p_low=0;// m_sumPlowLast; // approx
   //  double norm_p_up=0;
   //
   //
   //  double sumPmin=0.0;
   //  double sumPtot=0.0;
-  // find lower and upper 
-  while ((n<m_nBelt) && (!upNfound)) {
+  // find lower and upper
+  bool expandedBelt=false;
+  while (!upNfound) {
+    if (n==m_nBeltUsed) { // expand nBelt
+      expandedBelt=true;
+      m_nBeltUsed++;
+      nbMax++;
+      m_muProb.push_back(0.0);
+      m_lhRatio.push_back(0.0);
+      if (usesFHC2()) {
+        m_bestMu.push_back(0.0);
+        m_bestMuProb.push_back(0.0);
+        findBestMu(n);
+      }
+    }
     m_muProb[n] =  m_measurement.calcProb(n, s);
     if (m_verbose>0) {
       //      if ((s<5.02) &&(m_muProb[n]>0.00001)) std::cout << "s = " << s << "     : m_muProb[" << n << "] = " << m_muProb[n] << std::endl;
@@ -483,16 +499,25 @@ double Pole::calcLhRatio(double s, int & nbMin, int & nbMax) { //, double minMuP
   if (nbMin<m_nBeltMinUsed) m_nBeltMinUsed = nbMin;
   if (nbMax>m_nBeltMaxUsed) m_nBeltMaxUsed = nbMax;
   //
+  if (m_verbose>2) {
+    if (expandedBelt) {
+      std::cout << "calcLhRatio() : expanded belt to " << m_nBeltUsed << std::endl;
+      std::cout << "                new size = " << m_muProb.size() << std::endl;
+    }
+  }
   return norm_p;//-norm_p_min;
 }
 
 
-double Pole::calcLimit(double s) {
+int Pole::calcLimit(double s) {
   int k,i;
   int nBeltMinUsed;
   int nBeltMaxUsed;
   //
-  m_sumProb = 0;
+  // Reset belt probabilities
+  //
+  m_prevSumProb = m_sumProb;
+  m_sumProb     = 0.0;
   //
   // Get RL(n,s)
   //
@@ -500,11 +525,11 @@ double Pole::calcLimit(double s) {
     std::cout << std::endl;
     std::cout << "=== calcLimit( s = " << s << " )" << std::endl;
   }
-  double norm_p = calcLhRatio(s,nBeltMinUsed,nBeltMaxUsed);
+  m_scanBeltNorm = calcLhRatio(s,nBeltMinUsed,nBeltMaxUsed);
   if (m_verbose>3) {
-    std::cout << "--- Normalisation over n for s = " << s << " is " << norm_p << std::endl;
-    if ((norm_p>1.5) || (norm_p<0.5)) {
-      std::cout << "--- Normalisation off (" << norm_p << ") for s= " << s << std::endl;
+    std::cout << "--- Normalisation over n for s = " << s << " is " << m_scanBeltNorm << std::endl;
+    if ((m_scanBeltNorm>1.5) || (m_scanBeltNorm<0.5)) {
+      std::cout << "--- Normalisation off (" << m_scanBeltNorm << ") for s= " << s << std::endl;
       for (int n=0; n<nBeltMaxUsed; n++) {
 	std::cout << "--- muProb[" << n << "] = " << m_muProb[n] << std::endl;
       }
@@ -522,17 +547,21 @@ double Pole::calcLimit(double s) {
       std::cout << "--- Belt used for RL does not contain N(obs) - skip. Belt = [ "
                 << nBeltMinUsed << " : " << nBeltMaxUsed << " ]" << std::endl;
     }
-    m_lhRatio[k] = 0.0;
-    return 1.0; // N(observed) outside beltregion -> cannot  contain N(obs)
+    m_lhRatio[k]   = 0.0;
+    m_sumProb      = 1.0; // should always be >CL
+    m_scanBeltNorm = 1.0;
+    return 1; 
   }
 
-  if (k>=m_nBelt) {
-    k=m_nBelt; // WARNING::
-    std::cout << "--- WARNING:: n_observed is larger than the maximum n used for R(n,s)!!" << std::endl;
+  if (k>=m_nBeltUsed) {
+    k=m_nBeltUsed; // WARNING::
+    std::cout << "--- FATAL :: n_observed is larger than the maximum n used for R(n,s)!!" << std::endl;
     std::cout << "             -> increase nbelt such that it is more than n_obs = " << getNObserved() << std::endl;
+    std::cout << "             *** IF THIS MESSAGE IS SEEN, IT'S A BUG!!! ***" << std::endl;
+    exit(-1);
   }									\
   if (m_verbose>2) {
-    std::cout << "--- Got nBelt range: " << nBeltMinUsed << ":" << nBeltMaxUsed << "( max = " << m_nBelt-1 << " )" << std::endl;
+    std::cout << "--- Got nBelt range: " << nBeltMinUsed << ":" << nBeltMaxUsed << "( max = " << m_nBeltUsed-1 << " )" << std::endl;
     std::cout << "--- Will now make the likelihood-ratio ordering and calculate a probability" << std::endl;
   }
 
@@ -556,150 +585,91 @@ double Pole::calcLimit(double s) {
 	m_sumProb  +=  m_muProb[i];
       }
       if (m_verbose>9) {
-	std::cout << "RL[" << i << "] = " << m_lhRatio[i] << ", RLmax[" << k << "] = " << m_lhRatio[k] << ", sumP = " << m_sumProb << std::endl;
+	std::cout << "RL[" << i << "] = " << m_lhRatio[i]
+                  << ", RLmax[" << k << "] = " << m_lhRatio[k]
+                  << ", sumP = " << m_sumProb << std::endl;
       }
     }
     i++;
     done = ((i>nBeltMaxUsed) || m_sumProb>m_cl); // CHANGE 11/8
   }
   //
-  // Check if limit is reached.
-  // For a given n_observed, we should have
-  //   Sum(p) > cl for s < s_low
-  //   Sum(p) < cl for s_low < s < s_upp
-  //   Sum(p) > cl for s_upp < s
+  // Return:
+  //  0 : if |diff|<0.001
+  // +1 : if diff>0.001
+  // -1 : if diff<-0.001
   //
-  if (m_sumProb<m_cl) {
-    if (m_foundLower) {
-      m_upperLimit = s;
-      m_upperLimitNorm = norm_p;
-      //      m_foundUpper = true;
-    } else {
-      m_lowerLimit = s;
-      m_lowerLimitNorm = norm_p;
-      m_foundLower = true;
-      m_foundUpper = false;
-    }
-  } else {
-    if (m_foundLower) {
-      m_foundUpper = true;
-    }
-  }
+  double diff  = (m_sumProb-m_cl)/(m_sumProb+m_cl);
+  int rval;
+  if (fabs(diff)<0.001) rval = 0;                // match!
+  else                  rval = (diff>0 ? +1:-1); // need still more precision
   if (m_verbose>2) {
     std::cout << "--- Done. Results:" << std::endl;
-    std::cout << "---    Normalisation  : " << norm_p << std::endl;
+    std::cout << "---    Normalisation  : " << m_scanBeltNorm << std::endl;
     std::cout << "---    Sum(prob)      : " << m_sumProb << std::endl;
-    std::cout << "---    Lower limit OK : " << yesNo(m_foundLower) << std::endl;
-    std::cout << "---    Lower limit    : " << m_lowerLimit << std::endl;
-    std::cout << "---    Upper limit OK : " << yesNo(m_foundUpper) << std::endl;
-    std::cout << "---    Upper limit    : " << m_upperLimit << std::endl;
+    std::cout << "---    Direction      : " << rval      << std::endl;
     std::cout << "=== calcLimit() DONE!" << std::endl;
   }
-  return norm_p;
+  return rval;
 }
 
-double Pole::calcLimitOLD(double s) {
+bool Pole::calcLimit(double s, bool scanDown) {
   int k,i;
+  int nBeltMinUsed;
+  int nBeltMaxUsed;
   //
-  double norm_p = 0;
-  m_sumProb = 0;
-  bool lowNfound=false;
-  bool upNfound=false;
-  int nInBelt=0;
-
-  int nBeltMaxUsed = m_nBelt;
-  int nBeltMinUsed = 0;
-  //  const double minMuProb = 1e-5;
+  // Reset belt probabilities
   //
-  //  std::cout << "calcLimit for " << s << std::endl;
-  if (usesMBT()) { // use method by Gary Hill
-    double g,pbf;
-    int n=0;
-    while ((n<m_nBelt) && (!upNfound)) {
-      //    for (int n=0; n<m_nBelt; n++) {
-      if (!upNfound) {
-	m_muProb[n] =  m_measurement.calcProb(n, s);
-	if ((!lowNfound) && (m_muProb[n]>m_minMuProb)) {
-	  lowNfound=true;
-	  nBeltMinUsed = n;
-	} else {
-	  if ((nInBelt>1) && lowNfound && (m_muProb[n]<m_minMuProb)) {
-	    upNfound = true;
-	    nBeltMaxUsed = n-1;
-	  }
-	}
-	if (lowNfound && (!upNfound)) nInBelt++;
-      } else {
-	m_muProb[n] =  0.0;
-	m_lhRatio[n] = 0.0;
+  m_prevSumProb = m_sumProb;
+  m_sumProb     = 0.0;
+  //
+  // Get RL(n,s)
+  //
+  if (m_verbose>2) {
+    std::cout << std::endl;
+    std::cout << "=== calcLimit( s = " << s << " )" << std::endl;
+    std::cout << "=== scan direction : " << (scanDown ? "DOWN":"UP") << std::endl;
+  }
+  m_scanBeltNorm = calcLhRatio(s,nBeltMinUsed,nBeltMaxUsed);
+  if (m_verbose>3) {
+    std::cout << "--- Normalisation over n for s = " << s << " is " << m_scanBeltNorm << std::endl;
+    if ((m_scanBeltNorm>1.5) || (m_scanBeltNorm<0.5)) {
+      std::cout << "--- Normalisation off (" << m_scanBeltNorm << ") for s= " << s << std::endl;
+      for (int n=0; n<nBeltMaxUsed; n++) {
+	std::cout << "--- muProb[" << n << "] = " << m_muProb[n] << std::endl;
       }
-      //      std::cout << "m_muProb[" << n << "] = " << m_muProb[n] << ", s = " << s << std::endl;
-      if (!upNfound) {
-	if (n>m_measurement.getBkgObs()) {
-	  g = static_cast<double>(n);
-	} else {
-	  g = m_measurement.getBkgObs();
-	}
-	pbf = m_poisson->getVal(n,g);
-	if (g==0) {
-	  pbf=1.0;
-	}
-	m_lhRatio[n]  = m_muProb[n]/pbf;
-	norm_p += m_muProb[n]; // check norm
-      }
-      n++;
-    }
-    if (m_verbose>2) {
-      if ((norm_p>1.5) || (norm_p<0.5)) {
-	std::cout << "Normalisation off (" << norm_p << ") for s= " << s << std::endl;
-	for (int n=0; n<nBeltMaxUsed; n++) {
-	  std::cout << "muProb[" << n << "] = " << m_muProb[n] << std::endl;
-	}
-      }
-    }
-  } else {
-    int n=0;
-    while ((n<m_nBelt) && (!upNfound)) {
-      //    for (int n=0; n<m_nBelt; n++) {
-      if (!upNfound) {
-	m_muProb[n] =  m_measurement.calcProb(n, s);
-	if ((!lowNfound) && (m_muProb[n]>m_minMuProb)) {
-	  lowNfound=true;
-	  nBeltMinUsed = n;
-	} else {
-	  if ((nInBelt>1) && lowNfound && (m_muProb[n]<m_minMuProb)) {
-	    upNfound = true;
-	    nBeltMaxUsed = n-1;
-	  }
-	}
-	if (lowNfound && (!upNfound)) nInBelt++;
-      } else {
-	m_muProb[n] =  0.0;
-	m_lhRatio[n] = 0.0;
-      }
-      if (!upNfound) {
-	m_lhRatio[n]  = m_muProb[n]/m_bestMuProb[n];
-	norm_p += m_muProb[n];
-      }
-      n++;
     }
   }
-  if (norm_p>m_maxNorm) m_maxNorm=norm_p;
   //
-  if (nBeltMinUsed<m_nBeltMinUsed) m_nBeltMinUsed = nBeltMinUsed;
-  if (nBeltMaxUsed>m_nBeltMaxUsed) m_nBeltMaxUsed = nBeltMaxUsed;
+  // Get N(obs)
   //
-  //  if (m_verbose>1) std::cout << "Used max NBelt = " << m_nBeltMaxUsed << " ( " << m_nBelt << " )" << std::endl;
   k = getNObserved();
+  //
+  // If k is outside the belt obtained above, the likelihood ratio is ~ 0 -> set it to 0
+  // NOTE: In the new scan, this should not happen! If so -> BUG
+  //
+  if ((k>nBeltMaxUsed) || (k<nBeltMinUsed)) {
+    if (m_verbose>2) {
+      std::cout << "--- Belt used for RL does not contain N(obs) - skip. Belt = [ "
+                << nBeltMinUsed << " : " << nBeltMaxUsed << " ]" << std::endl;
+    }
+    m_lhRatio[k]   = 0.0;
+    m_sumProb      = 1.0;
+    m_scanBeltNorm = 1.0;
+    return false; // N(observed) outside beltregion -> cannot  contain N(obs)
+  }
 
-  if ((k>nBeltMaxUsed) || (k<=nBeltMinUsed)) m_lhRatio[k] = 0.0;
-
-  if (k>=m_nBelt) {
+  if (k>=m_nBeltUsed) {
     k=m_nBelt; // WARNING::
-    std::cout << "WARNING:: n_observed is larger than the maximum n used for R(n,s)!!" << std::endl;
-    std::cout << "          -> increase nbelt such that it is more than n_obs = " << getNObserved() << std::endl;
+    std::cout << "--- WARNING:: n_observed is larger than the maximum n used for R(n,s)!!" << std::endl;
+    std::cout << "             -> increase nbelt such that it is more than n_obs = " << getNObserved() << std::endl;
   }									\
-  if (m_verbose>2) std::cout << "Got nBelt range: " << nBeltMinUsed << ":" << nBeltMaxUsed << "( max = " << m_nBelt << " )" << std::endl;
+  if (m_verbose>2) {
+    std::cout << "--- Got nBelt range: " << nBeltMinUsed << ":" << nBeltMaxUsed << "( max = " << m_nBeltUsed-1 << " )" << std::endl;
+    std::cout << "--- Will now make the likelihood-ratio ordering and calculate a probability" << std::endl;
+  }
+
+
   // Calculate the probability for all n and the given s.
   // The Feldman-Cousins method dictates that for each n a
   // likelihood ratio (R) is calculated. The n's are ranked according
@@ -708,24 +678,21 @@ double Pole::calcLimitOLD(double s) {
   // matches the searched CL.
   // Below, the loop sums the probabilities for a given s and for all n with R>R0.
   // R0 is the likelihood ratio for n_observed.
+  // When N(obs)=k lies on a confidencebelt curve (upper or lower), the likelihood ratio will be minimum.
+  // If so, m_sumProb> m_cl
   i=nBeltMinUsed;
   bool done=false;
-  //  std::cout << "Norm_p = " << norm_p << std::endl;
+  if (m_verbose>9) std::cout << "\nSearch s: = " <<  s << std::endl;
   while (!done) {
-    //  for(i=0;i<m_nBelt;i++) {
-    //    m_muProb[i] = m_muProb[i]/norm_p; DO NOT NORMALISE - NOT NEEDED AS THEY ARE ALL 1
-    //    for(k=0;k<m_nBelt;k++) {
     if(i != k) { 
-      //      std::cout << "LHratio: s= " << s << "   i:k " << i << ":" << k << "    RL(i:k) = " << m_lhRatio[i] << ":" << m_lhRatio[k]
-      //		<< "   prob = " << m_sumProb << std::endl;
-      //    }
       if(m_lhRatio[i] > m_lhRatio[k])  {
 	m_sumProb  +=  m_muProb[i];
       }
       if (m_verbose>9) {
-	std::cout << "RL[" << i << "] = " << m_lhRatio[i] << ", RLmax[" << k << "] = " << m_lhRatio[k] << ", sumP = " << m_sumProb << std::endl;
+	std::cout << "RL[" << i << "] = " << m_lhRatio[i]
+                  << ", RLmax[" << k << "] = " << m_lhRatio[k]
+                  << ", sumP = " << m_sumProb << std::endl;
       }
-      //    }
     }
     i++;
     done = ((i>nBeltMaxUsed) || m_sumProb>m_cl); // CHANGE 11/8
@@ -737,28 +704,41 @@ double Pole::calcLimitOLD(double s) {
   //   Sum(p) < cl for s_low < s < s_upp
   //   Sum(p) > cl for s_upp < s
   //
-  if (m_sumProb<m_cl) {
-    if (m_foundLower) {
-      m_upperLimit = s;
-      m_upperLimitNorm = norm_p;
-      //      m_foundUpper = true;
+  if ((m_prevSumProb<=m_cl) && (m_sumProb>m_cl)) { // just crossed a border -> a limit is found!
+    if (scanDown) { // scanning for lower limit
+      m_lowerLimit      = s;
+      m_lowerLimitNorm  = m_scanBeltNorm;
+      m_lowerLimitFound = true;
+      m_upperLimitFound = false;
     } else {
-      m_lowerLimit = s;
-      m_lowerLimitNorm = norm_p;
-      m_foundLower = true;
-      m_foundUpper = false;
-    }
-  } else {
-    if (m_foundLower) {
-      m_foundUpper = true;
+      if (!m_lowerLimitFound) {
+        std::cerr << "FATAL: invalid limit scan - found an upper limit without having a lower - BUG!!!" << std::endl;
+        exit(-1);
+      }
+      m_upperLimit      = s;
+      m_upperLimitNorm  = m_scanBeltNorm;
+      m_lowerLimitFound = true;
+      m_upperLimitFound = true;
     }
   }
-  return norm_p;
+  if (m_verbose>2) {
+    std::cout << "--- Done. Results:" << std::endl;
+    std::cout << "---    Normalisation  : " << m_scanBeltNorm << std::endl;
+    std::cout << "---    Sum(prob)      : " << m_sumProb << std::endl;
+    std::cout << "---    Lower limit OK : " << yesNo(m_lowerLimitFound) << std::endl;
+    std::cout << "---    Lower limit    : " << m_lowerLimit << std::endl;
+    std::cout << "---    Upper limit OK : " << yesNo(m_upperLimitFound) << std::endl;
+    std::cout << "---    Upper limit    : " << m_upperLimit << std::endl;
+    std::cout << "=== calcLimit() DONE!" << std::endl;
+  }
+  return true;
 }
+
+
 
 bool Pole::limitsOK() {
   bool rval=false;
-  if (m_foundLower && m_foundUpper) {
+  if (m_lowerLimitFound && m_upperLimitFound) {
     rval = (normOK(m_lowerLimitNorm) && normOK(m_upperLimitNorm));
   }
   return rval;
@@ -871,7 +851,7 @@ double Pole::calcBelt(double s, int & n1, int & n2, bool verb) { //, double muMi
 //*********************************************************************//
 //*********************************************************************//
 
-void Pole::findPower() {
+void Pole::calcPower() {
   double muTest;
   std::vector< std::vector<double> > fullConstruct;
   std::vector< double > probVec;
@@ -972,7 +952,7 @@ void Pole::findPower() {
   }
 }
 
-void Pole::findConstruct() {
+void Pole::calcConstruct() {
   double mu_test;
   int i = 0;
   bool done = (i==m_hypTest.n());
@@ -986,18 +966,12 @@ void Pole::findConstruct() {
   }
 }
 
-int Pole::findNMin() { // calculates the minimum N rejecting s = 0.0
-  int n1,n2;
+void Pole::calcNMin() { // calculates the minimum N rejecting s = 0.0
   m_nBeltMinLast = 0;
-  double sumP = calcBelt(0.0,n1,n2,false);//,-1.0);
-  if (sumP) n2=n2;
-  //
-  //  std::cout << "-------------------------------------------------------------------------------------" << std::endl;
-  //  std::cout << "# Min N(obs) rejecting s = 0.0 : " << n2 << "\tSum(P) = " << sumP << std::endl;
-  return n2;
+  m_rejs0P = calcBelt(0.0,m_rejs0N1,m_rejs0N2,false);//,-1.0);
 }
 
-void Pole::findBelt() {
+void Pole::calcBelt() {
   double mu_test;
   int i = 0;
   bool done = (i==m_hypTest.n());
@@ -1012,11 +986,194 @@ void Pole::findBelt() {
   }
 }
 
-bool Pole::findLimits() {
+bool Pole::calcLimits() {
   //  static bool heavyDBG=false;
   m_maxNorm = -1.0;
-  m_foundLower = false;
-  m_foundUpper = false;
+  m_lowerLimitFound = false;
+  m_upperLimitFound = false;
+  m_lowerLimit = 0;
+  m_upperLimit = 0;
+  m_lowerLimitNorm = 0;
+  m_upperLimitNorm = 0;
+  m_nBeltUsed = getNObserved();
+  if (m_nBeltUsed<2) m_nBeltUsed=2;
+  m_nBeltMinLast=0;
+  m_nBeltMinUsed=m_nBeltUsed;
+  m_nBeltMaxUsed=0;
+  m_sumProb=0;
+  m_prevSumProb=0;
+  m_scanBeltNorm=0;
+  //
+  //
+  //
+  //
+  // Obtain belt for s=0 - useful since lower limit is 0 if N(obs)<N2
+  //
+  calcNMin();
+  //
+  // If N(obs) is outside belt, fail.
+  //
+
+  double mutest;
+  int    i;
+  double p0;
+  bool done = false;
+  //
+  if (m_verbose>0) std::cout << "   Scanning over all hypothesis" << std::endl;
+
+  //
+  // Find hypothesis start - s = (Nobs-bkg)/eff - should be in ~the middle of the belt
+  //
+  double mustart = getObservedSignal();
+  double muhigh  = mustart;
+  double mulow   = 0.0;
+  double dmu;
+  int dir;
+  //
+  calcLimit(mustart);
+  p0 = m_sumProb;
+
+  // check if N(obs) < N2(s=0.0)
+  // if so, the lower limit is 0.0
+  if (getNObserved()<m_rejs0N2) {
+    m_lowerLimitFound = true;
+    m_lowerLimitNorm  = 1.0;
+    m_lowerLimit      = 0;
+  } else {
+    // First scan for lower limit
+    done = false;
+    m_prevSumProb = p0;
+    i = 1;
+    while (!done) {
+      mutest = (muhigh+mulow)/2.0;
+      dmu = fabs(muhigh-mulow)/(muhigh+mulow);
+      //
+      dir = calcLimit(mutest);
+      if ((dir==0) || (dmu<0.001)) { // hardcoded precision CHANGE! same as the one deciding for dir==0
+        done = true;
+        m_lowerLimitFound = true;
+        m_lowerLimitNorm  = m_scanBeltNorm;
+        m_lowerLimit      = mutest;
+      } if (dir==1) {
+        mulow = mutest;
+      } else {
+        muhigh = mutest;
+      }
+      i++;
+    }
+  }
+
+  // Scan for upper limit
+  done = false;
+  m_prevSumProb = p0;
+  i = 1;
+
+  // find a rough range guaranteed to cover the upper limit
+  dir = -1;
+  mulow  = mustart;
+  muhigh = 2.0*(mustart+1.0)-m_lowerLimit; // pick an initial upper limit
+  // loop
+  while (dir==-1) {
+    dir = calcLimit(muhigh); // what if out of reach for nbelt???? CHECK
+    if (dir==-1) muhigh *= 1.1; // scale up
+  }
+  // found a rough upper limit, now go down
+  while (!done) {
+    mutest = (mulow+muhigh)/2.0;
+    dmu = fabs(muhigh-mulow)/(muhigh+mulow);
+    dir = calcLimit(mutest);
+    if ((dir==0) || (dmu<0.001)) { // see comment above for lower limit
+      done = true;
+      m_upperLimitFound = true;
+      m_upperLimitNorm  = m_scanBeltNorm;
+      m_upperLimit      = mutest;
+    } if (dir==1) {
+      muhigh = mutest;
+    } else {
+      mulow = mutest;
+    }
+    i++;
+  }
+  //
+  return limitsOK();
+}
+
+// bool Pole::calcLimits() {
+//   //  static bool heavyDBG=false;
+//   m_maxNorm = -1.0;
+//   m_lowerLimitFound = false;
+//   m_upperLimitFound = false;
+//   m_lowerLimit = 0;
+//   m_upperLimit = 0;
+//   m_lowerLimitNorm = 0;
+//   m_upperLimitNorm = 0;
+//   m_nBeltMinLast=0;
+//   m_nBeltMinUsed=m_nBelt;
+//   m_nBeltMaxUsed=0;
+//   m_sumProb=0;
+//   m_prevSumProb=0;
+//   m_scanBeltNorm=0;
+//   //
+//   // Obtain belt for s=0
+//   //
+//   calcNMin();
+//   //
+//   // If N(obs) is outside belt, fail.
+//   //
+//   if (getNObserved()>=m_nBelt) return false;
+//   double mutest;
+//   int    i;
+//   double p0;
+//   bool done = false;
+//   //
+//   if (m_verbose>0) std::cout << "   Scanning over all hypothesis" << std::endl;
+
+//   //
+//   // Find hypothesis start - s = (Nobs-bkg)/eff - should be in ~the middle of the belt
+//   //
+//   double mustart = getObservedSignal();
+
+//   if (calcLimit(mustart,true)) {
+//     p0 = m_sumProb;
+//   } else {
+//     std::cerr << "FATAL: scan with default s0 failed! BUG!?!" << std::endl;
+//     return false;
+//   }
+
+//   // First scan for lower limit
+//   done = false;
+//   m_prevSumProb = p0;
+//   i = 1;
+//   while (!done) {
+//     mutest = mustart - i*m_limitHypStep;
+//     if (calcLimit(mutest,true)) {
+//       done = m_lowerLimitFound;
+//     } else {
+//       done = true;
+//     }
+//     i++;
+//   }
+
+//   // Scan for upper limit
+//   done = false;
+//   m_prevSumProb = p0;
+//   i = 1;
+//   while (!done) {
+//     mutest = mustart + i*m_limitHypStep;
+//     if (calcLimit(mutest,false)) {
+//       done = m_upperLimitFound;
+//     } else {
+//       done = true;
+//     }
+//     i++;
+//   }
+//   return limitsOK();
+// }
+
+bool Pole::calcCoverageLimits() {
+  m_maxNorm = -1.0;
+  m_lowerLimitFound = false;
+  m_upperLimitFound = false;
   m_lowerLimit = 0;
   m_upperLimit = 0;
   m_lowerLimitNorm = 0;
@@ -1025,179 +1182,99 @@ bool Pole::findLimits() {
   m_nBeltMinUsed=m_nBelt;
   m_nBeltMaxUsed=0;
   m_sumProb=0;
-  //
-  findNMin();
-  if (getNObserved()>=m_nBelt) return false;
-  double mu_test;
-  int i = 0;
-  bool done = (i==m_hypTest.n());
-  //  bool nuppOK = false;
-  //  int nupp=0;
-  //
-  //
-  double p;
-  //  int n1,n2;
-  bool firstLower=true;
-  int nAfterFirstLow=0;
-  //
-  if (m_verbose>0) std::cout << "   Scanning over all hypothesis" << std::endl;
-  while (!done) {
-    mu_test = m_hypTest.min() + i*m_hypTest.step();
-//     if (heavyDBG) {
-//       savedVerb = m_verbose;
-//       m_verbose=10;
-//     }
-//     if ((m_verbose>0) && (i<10)) {
-//       std::cout << "   Calculating limits for s0 = ";
-//       TOOLS::coutFixed(4,mu_test);
-//       std::cout << std::endl;
-//     }
-    p=calcLimit(mu_test);
-//     if ((m_verbose>0) && (i<10)) {
-//       std::cout << "   Got norm = ";
-//       TOOLS::coutFixed(4,p);
-//       std::cout << " and sum(prob) = ";
-//       TOOLS::coutFixed(4,m_sumProb);
-//       std::cout << std::endl;
-//     }
-    //    calcBelt(mu_test,n1,n2);
-    if (m_foundLower) {
-      if (firstLower) {
-	firstLower = false;
-      }
-      if (!m_foundUpper) nAfterFirstLow++;
-    }
-    if (m_foundUpper) {
-      if (nAfterFirstLow==5) {
-	m_foundLower=false;
-	m_lowerLimit=0;
-	m_lowerLimitNorm=0;
-	m_foundUpper=false;
-	m_upperLimit=0;
-	m_upperLimitNorm=0;
-	//
-	nAfterFirstLow=0;
-	firstLower = true;
-      }
-    }
-    i++;
-//    if (m_foundUpper) { // sample a few afterwards just to make sure we get the last one
-//       nupp++;
-//       nuppOK = ((nupp>=m_nUppLim) || (m_nUppLim<1));
-//      nuppOK = true; // SKIP THE SCAN...
-//    }
-    done = ((i==m_hypTest.n()) || // Done if last hypothesis reached
-	    //	    (nuppOK)           || //
-	    (m_foundUpper) ||
-	    (!normOK(p)));        // normalisation not OK
-  }
-  if (m_verbose>1) {
-    if (limitsOK()) {
-      // && (!heavyDBG)) {
-//       std::cout << "LIMITS(N,e,b,l,u): ";
-//       TOOLS::coutFixed(4,getNObserved());  std::cout << "\t";
-//       TOOLS::coutFixed(4,getEffObs());    std::cout << "\t";
-//       TOOLS::coutFixed(4,getBkgObs());    std::cout << "\t";
-//       TOOLS::coutFixed(4,m_lowerLimit); std::cout << "\t";
-//       TOOLS::coutFixed(4,m_upperLimit); std::cout << std::endl;
-      //      heavyDBG = false;
-      //      findLimits();
-      //      heavyDBG = false;
-      if (m_upperLimit-m_lowerLimit<1.0) { // DEBUG! Sometimes limits are accepted for large s when the range is too small
-	std::cout << "\n<************* WARNING **************>" << std::endl;
-	std::cout << "n points in belt = " << nAfterFirstLow << std::endl;
-	printFailureMsg();
-	printSetup();
-	i=0;
-        m_nBeltMinLast=0;
-	while (i<m_hypTest.n()) {
-	  mu_test = m_hypTest.min() + i*m_hypTest.step();
-	  p=calcLimit(mu_test);
-	  std::cout << "findLimitsDEBUG(): " << mu_test << " norm = " << p << " sump = " << m_sumProb << std::endl;
-	  std::cout << std::endl;
-	  i++;
-	}
-      }
-    } else {
-      std::cout << "Limits NOT OK!" << std::endl;
-    }
-  }
-  return limitsOK();
+  m_prevSumProb=0;
+  m_scanBeltNorm=0;
+
+  int dir = calcLimit(m_sTrue);
+  return (dir==-1); // s(true) inside belt - p(s)<cl
 }
 
-bool Pole::findCoverageLimits() {
+bool Pole::calcCoverageLimitsOLD() {
   //
-  // Same as findLimits() but it will stop the scan as soon it is clear
+  // Same as calcLimits() but it will stop the scan as soon it is clear
   // that the true s (m_sTrueMean) is inside or outside the range.
   //
+  bool decided = false;
   m_maxNorm = -1.0;
-  m_foundLower = false;
-  m_foundUpper = false;
+  m_lowerLimitFound = false;
+  m_upperLimitFound = false;
   m_lowerLimit = 0;
   m_upperLimit = 0;
+  m_lowerLimitNorm = 0;
+  m_upperLimitNorm = 0;
   m_nBeltMinLast=0;
+  m_nBeltMinUsed=m_nBelt;
+  m_nBeltMaxUsed=0;
+  m_sumProb=0;
+  m_prevSumProb=0;
+  m_scanBeltNorm=0;
+
+  //
+  // If N(obs) is outside belt, fail.
   //
   if (getNObserved()>=m_nBelt) return false;
+  double mutest;
+  int    i;
+  double p0;
+  bool done = false;
   //
-  double mu_test;
-  int i = 0;
-  bool done = (i==m_hypTest.n());
-  bool decided = false;
-  //  bool nuppOK = false;
-  //  int  nupp=0;
+  if (m_verbose>0) std::cout << "   Scanning over all hypothesis" << std::endl;
+
   //
-  double p;
-  while (!done) {
-    mu_test = m_hypTest.min() + i*m_hypTest.step();
-    p=calcLimit(mu_test);
-    if (m_verbose>2) std::cout << "findCoverageLimits():"
-			       << " low,up = " << m_foundLower << ":" << m_foundUpper
-			       << " s_true = " << m_sTrue
-			       << " s_test = " << mu_test
-			       << " norm = " << p
-			       << " sump = " << m_sumProb << std::endl;
-    i++;
-    if (mu_test>m_sTrue) {
-      //    if ((!m_foundLower) && (mu_test>m_sTrue)) { // for sure outside
-      if (!m_foundLower) { // outside, below
-	decided = true;
-	m_lowerLimit = mu_test;     // create a fake set of limits
-	m_upperLimit = mu_test+0.1;
-	m_lowerLimitNorm = p; // not really needed
-	m_upperLimitNorm = p; // not exactly true - only the lower limit norm is relevant
-	m_foundLower = true;
-	m_foundUpper = true;
-      } else if (m_foundLower && (!m_foundUpper)) { // inside
-	decided = true;
-	m_upperLimit = mu_test+0.1;
-      }
-    } else if (m_foundUpper) {
-      if (m_upperLimit>m_sTrue) { // for sure inside
-	decided = true; // ...skip limitsOK()
-      } else { // m_sTrue is above - wait a bit before deciding
-	// SKIP THIS WAITING AS IT CAUSES PROBLEMS!
-// 	nupp++;
-// 	nuppOK = ((nupp>=m_nUppLim) || (m_nUppLim<1));
-// 	if (nuppOK) decided = true;
-	decided = true;
-      }
-    }
-    done = ((decided) ||
-	    (i==m_hypTest.n()));
+  // Find hypothesis start - s = (Nobs-bkg)/eff - should be in ~the middle of the belt
+  //
+  double mustart = getObservedSignal();
+
+  if (calcLimit(mustart,true)) {
+    p0 = m_sumProb;
+  } else {
+    std::cerr << "FATAL: scan with default s0 failed! BUG!?!" << std::endl;
+    return false;
   }
-  if (m_verbose>1) {
-    if (limitsOK()) {
-      std::cout << "COVLIMITS(N,s,e,b,l,u): ";
-      TOOLS::coutFixed(4,getNObserved());  std::cout << "\t";
-      TOOLS::coutFixed(4,m_sTrue);      std::cout << "\t";
-      TOOLS::coutFixed(4,getEffObs());    std::cout << "\t";
-      TOOLS::coutFixed(4,getBkgObs());    std::cout << "\t";
-      TOOLS::coutFixed(4,m_lowerLimit); std::cout << "\t";
-      TOOLS::coutFixed(4,m_upperLimit); std::cout << std::endl;;
-    } else {
-      std::cout << "Limits NOT OK!" << std::endl;
+
+  //
+  // Decide where to scan - below or above mustart
+  //
+  bool inLowerHalf = (m_sTrue<=mustart);
+
+  if (inLowerHalf) {
+    // The truth is in the lower half - scan for lower limit
+    done = false;
+    m_prevSumProb = p0;
+    i = 1;
+    while (!done) {
+      mutest = mustart - i*m_limitHypStep;
+      if (calcLimit(mutest,true)) {
+        done = m_lowerLimitFound;
+        if (mutest<m_sTrue) { // test if s(true) is within the range
+          decided = true;
+          done    = true;
+        }
+      } else {
+        done = true;
+      }
+      i++;
+    }
+  } else {
+    // The truth is in the upper half - scan for upper limit
+    done = false;
+    m_prevSumProb = p0;
+    i = 1;
+    while (!done) {
+      mutest = mustart + i*m_limitHypStep;
+      if (calcLimit(mutest,false)) {
+        done = m_upperLimitFound;
+        if (mutest>m_sTrue) { // test if s(true) is within the range
+          decided = true;
+          done    = true;
+        }
+      } else {
+        done = true;
+      }
+      i++;
     }
   }
+
   return decided;
 }
 
@@ -1218,13 +1295,13 @@ bool Pole::analyseExperiment() {
     findAllBestMu(); // loops
   }
   if (m_verbose>3 && m_verbose<10) {
-    findBelt();
+    calcBelt();
   }
   if (m_verbose>0) std::cout << "Calculating limit" << std::endl;
   if (m_coverage) {
-    rval=findCoverageLimits();
+    rval=calcCoverageLimits();
   } else {
-    rval=findLimits();
+    rval=calcLimits();
   }
   // Should not do this - if probability is OK then the belt is also OK...?
   // The max N(Belt) is defined by a cutoff in probability (very small)
@@ -1262,6 +1339,10 @@ void Pole::printLimit(bool doTitle) {
     std::cout << cmtPre << " Max N(belt) set  : " << m_nBelt << std::endl;
     std::cout << cmtPre << " Max N(belt) used : " << m_nBeltMaxUsed << std::endl;
     std::cout << cmtPre << " Min N(belt) used : " << m_nBeltMinUsed << std::endl;
+    std::cout << cmtPre << " Prob(belt s=0)   : " << m_rejs0P << std::endl;
+    std::cout << cmtPre << " N1(belt s=0)     : " << m_rejs0N1 << std::endl;
+    std::cout << cmtPre << " N2(belt s=0)     : " << m_rejs0N2 << std::endl;
+    
     std::cout << cmtPre << "-------------------------------------------------------------------------------------" << std::endl;
     std::cout << cmtPre << " N(obs)  eff(mean)     eff(sigma)      bkg(mean)       bkg(sigma)      low     up" << std::endl;
     std::cout << cmtPre << "-------------------------------------------------------------------------------------" << std::endl;
@@ -1311,6 +1392,8 @@ void Pole::printSetup() {
   std::cout << " Int. bkg. max      : " << getBkgIntMax() << std::endl;
   std::cout << " Int. bkg. N pts    : " << getBkgIntN() << std::endl;
   std::cout << "----------------------------------------------\n";
+  std::cout << " Limit hyp. step    : " << m_limitHypStep << std::endl;
+  std::cout << "----------------------------------------------\n";
   std::cout << " Test hyp. min      : " << m_hypTest.min() << std::endl;
   std::cout << " Test hyp. max      : " << m_hypTest.max() << std::endl;
   std::cout << " Test hyp. step     : " << m_hypTest.step() << std::endl;
@@ -1322,8 +1405,8 @@ void Pole::printSetup() {
   } else {
     std::cout << " Belt N max         : " << m_nBelt << std::endl;
   }
-  std::cout << " Step mu_best       : " << m_dmus << std::endl;
-  std::cout << " Max N, mu_best     : " << m_nmusMax << std::endl;
+  std::cout << " Step mu_best       : " << m_bestMuStep << std::endl;
+  std::cout << " Max N, mu_best     : " << m_bestMuNmax << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Method             : ";
   switch (m_method) {
@@ -1348,7 +1431,7 @@ void Pole::printFailureMsg() {
   std::cout << "ERROR: limit calculation failed. Possible causes:" << std::endl;
   std::cout << "1. nbelt is too small (set nbelt = " << getNBelt() << ", max used = " << getNBeltMaxUsed() << ")" << std::endl;
   std::cout << "2. precision in integrations (eff,bkg) not sufficient" << std::endl;
-  std::cout << "3. hypethesis test range too small ( max = " << m_hypTest.max() << " )" << std::endl;
+  std::cout << "3. limit hypothesis step size too large ( step = " << m_limitHypStep << " )" << std::endl;
   std::cout << "4. Symptom: probability of lower/upper limit diverges from unity." << std::endl;
   std::cout << "   -> if Poisson table is used, insufficient precision." << std::endl;
   std::cout << "   -> minimum probability too large; min = " << m_minMuProb << std::endl;
@@ -1361,3 +1444,240 @@ void Pole::printFailureMsg() {
   std::cout << "   lower lim                     = " << getLowerLimit() << std::endl;
   std::cout << "   upper lim                     = " << getUpperLimit() << std::endl;
 }
+
+/////////////////////////////////////////////////////////////
+/////////////// OLD STUFF TO BE REMOVED /////////////////////
+/////////////////////////////////////////////////////////////
+
+bool Pole::calcLimitsOLD() {
+  //  static bool heavyDBG=false;
+  m_maxNorm = -1.0;
+  m_lowerLimitFound = false;
+  m_upperLimitFound = false;
+  m_lowerLimit = 0;
+  m_upperLimit = 0;
+  m_lowerLimitNorm = 0;
+  m_upperLimitNorm = 0;
+  m_nBeltMinLast=0;
+  m_nBeltMinUsed=m_nBelt;
+  m_nBeltMaxUsed=0;
+  m_sumProb=0;
+  m_prevSumProb=0;
+  m_scanBeltNorm=0;
+  //
+  calcNMin();
+  if (getNObserved()>=m_nBelt) return false;
+  double mu_test;
+  int i = 0;
+  bool done = (i==m_hypTest.n());
+  //  bool nuppOK = false;
+  //  int nupp=0;
+  //
+  //
+  double p;
+  //  int n1,n2;
+  bool firstLower=true;
+  int nAfterFirstLow=0;
+  //
+  if (m_verbose>0) std::cout << "   Scanning over all hypothesis" << std::endl;
+  while (!done) {
+    mu_test = m_hypTest.min() + i*m_hypTest.step();
+//     if (heavyDBG) {
+//       savedVerb = m_verbose;
+//       m_verbose=10;
+//     }
+//     if ((m_verbose>0) && (i<10)) {
+//       std::cout << "   Calculating limits for s0 = ";
+//       TOOLS::coutFixed(4,mu_test);
+//       std::cout << std::endl;
+//     }
+    p=calcLimitOLD(mu_test);
+//     if ((m_verbose>0) && (i<10)) {
+//       std::cout << "   Got norm = ";
+//       TOOLS::coutFixed(4,p);
+//       std::cout << " and sum(prob) = ";
+//       TOOLS::coutFixed(4,m_sumProb);
+//       std::cout << std::endl;
+//     }
+    //    calcBelt(mu_test,n1,n2);
+    if (m_lowerLimitFound) {
+      if (firstLower) {
+	firstLower = false;
+      }
+      if (!m_upperLimitFound) nAfterFirstLow++;
+    }
+    if (m_upperLimitFound) {
+      if (nAfterFirstLow==5) {
+	m_lowerLimitFound=false;
+	m_lowerLimit=0;
+	m_lowerLimitNorm=0;
+	m_upperLimitFound=false;
+	m_upperLimit=0;
+	m_upperLimitNorm=0;
+	//
+	nAfterFirstLow=0;
+	firstLower = true;
+      }
+    }
+    i++;
+//    if (m_upperLimitFound) { // sample a few afterwards just to make sure we get the last one
+//       nupp++;
+//       nuppOK = ((nupp>=m_nUppLim) || (m_nUppLim<1));
+//      nuppOK = true; // SKIP THE SCAN...
+//    }
+    done = ((i==m_hypTest.n()) || // Done if last hypothesis reached
+	    //	    (nuppOK)           || //
+	    (m_upperLimitFound) ||
+	    (!normOK(p)));        // normalisation not OK
+  }
+  if (m_verbose>1) {
+    if (limitsOK()) {
+      // && (!heavyDBG)) {
+//       std::cout << "LIMITS(N,e,b,l,u): ";
+//       TOOLS::coutFixed(4,getNObserved());  std::cout << "\t";
+//       TOOLS::coutFixed(4,getEffObs());    std::cout << "\t";
+//       TOOLS::coutFixed(4,getBkgObs());    std::cout << "\t";
+//       TOOLS::coutFixed(4,m_lowerLimit); std::cout << "\t";
+//       TOOLS::coutFixed(4,m_upperLimit); std::cout << std::endl;
+      //      heavyDBG = false;
+      //      calcLimits();
+      //      heavyDBG = false;
+      if (m_upperLimit-m_lowerLimit<1.0) { // DEBUG! Sometimes limits are accepted for large s when the range is too small
+	std::cout << "\n<************* WARNING **************>" << std::endl;
+	std::cout << "n points in belt = " << nAfterFirstLow << std::endl;
+	printFailureMsg();
+	printSetup();
+	i=0;
+        m_nBeltMinLast=0;
+	while (i<m_hypTest.n()) {
+	  mu_test = m_hypTest.min() + i*m_hypTest.step();
+	  p=calcLimitOLD(mu_test);
+	  std::cout << "calcLimitsDEBUG(): " << mu_test << " norm = " << p << " sump = " << m_sumProb << std::endl;
+	  std::cout << std::endl;
+	  i++;
+	}
+      }
+    } else {
+      std::cout << "Limits NOT OK!" << std::endl;
+    }
+  }
+  return limitsOK();
+}
+
+double Pole::calcLimitOLD(double s) {
+  int k,i;
+  int nBeltMinUsed;
+  int nBeltMaxUsed;
+  //
+  double prevSumP = m_sumProb;
+
+  //
+  // Get RL(n,s)
+  //
+  if (m_verbose>2) {
+    std::cout << std::endl;
+    std::cout << "=== calcLimit( s = " << s << " )" << std::endl;
+  }
+  double norm_p = calcLhRatio(s,nBeltMinUsed,nBeltMaxUsed);
+  if (m_verbose>3) {
+    std::cout << "--- Normalisation over n for s = " << s << " is " << norm_p << std::endl;
+    if ((norm_p>1.5) || (norm_p<0.5)) {
+      std::cout << "--- Normalisation off (" << norm_p << ") for s= " << s << std::endl;
+      for (int n=0; n<nBeltMaxUsed; n++) {
+	std::cout << "--- muProb[" << n << "] = " << m_muProb[n] << std::endl;
+      }
+    }
+  }
+  //
+  // Get N(obs)
+  //
+  k = getNObserved();
+  //
+  // If k is outside the belt obtained above, the likelihood ratio is ~ 0 -> set it to 0
+  //
+  if ((k>nBeltMaxUsed) || (k<nBeltMinUsed)) {
+    if (m_verbose>2) {
+      std::cout << "--- Belt used for RL does not contain N(obs) - skip. Belt = [ "
+                << nBeltMinUsed << " : " << nBeltMaxUsed << " ]" << std::endl;
+    }
+    m_lhRatio[k] = 0.0;
+    m_sumProb = 1.0;
+    return 1.0; // N(observed) outside beltregion -> cannot  contain N(obs)
+  }
+
+  if (k>=m_nBelt) {
+    k=m_nBelt; // WARNING::
+    std::cout << "--- WARNING:: n_observed is larger than the maximum n used for R(n,s)!!" << std::endl;
+    std::cout << "             -> increase nbelt such that it is more than n_obs = " << getNObserved() << std::endl;
+  }									\
+  if (m_verbose>2) {
+    std::cout << "--- Got nBelt range: " << nBeltMinUsed << ":" << nBeltMaxUsed << "( max = " << m_nBelt-1 << " )" << std::endl;
+    std::cout << "--- Will now make the likelihood-ratio ordering and calculate a probability" << std::endl;
+  }
+
+
+  // Calculate the probability for all n and the given s.
+  // The Feldman-Cousins method dictates that for each n a
+  // likelihood ratio (R) is calculated. The n's are ranked according
+  // to this ratio. Values of n are included starting with that giving
+  // the highest R and continuing with decreasing R until the total probability
+  // matches the searched CL.
+  // Below, the loop sums the probabilities for a given s and for all n with R>R0.
+  // R0 is the likelihood ratio for n_observed.
+  // When N(obs)=k lies on a confidencebelt curve (upper or lower), the likelihood ratio will be minimum.
+  // If so, m_sumProb> m_cl
+  i=nBeltMinUsed;
+  bool done=false;
+  if (m_verbose>9) std::cout << "\nSearch s: = " <<  s << std::endl;
+  while (!done) {
+    if(i != k) { 
+      if(m_lhRatio[i] > m_lhRatio[k])  {
+	m_sumProb  +=  m_muProb[i];
+      }
+      if (m_verbose>9) {
+	std::cout << "RL[" << i << "] = " << m_lhRatio[i]
+                  << ", RLmax[" << k << "] = " << m_lhRatio[k]
+                  << ", sumP = " << m_sumProb << std::endl;
+      }
+    }
+    i++;
+    done = ((i>nBeltMaxUsed) || m_sumProb>m_cl); // CHANGE 11/8
+  }
+  //
+  // Check if limit is reached.
+  // For a given n_observed, we should have
+  //   Sum(p) > cl for s < s_low
+  //   Sum(p) < cl for s_low < s < s_upp
+  //   Sum(p) > cl for s_upp < s
+  //
+  if (m_sumProb<m_cl) {
+    if (m_lowerLimitFound) {
+      m_upperLimit = s;
+      m_upperLimitNorm = norm_p;
+      //      m_upperLimitFound = true;
+    } else {
+      if (prevSumP>=m_cl) {
+        m_lowerLimit = s;
+        m_lowerLimitNorm = norm_p;
+        m_lowerLimitFound = true;
+        m_upperLimitFound = false;
+      }
+    }
+  } else {
+    if (m_lowerLimitFound) {
+      m_upperLimitFound = true;
+    }
+  }
+  if (m_verbose>2) {
+    std::cout << "--- Done. Results:" << std::endl;
+    std::cout << "---    Normalisation  : " << norm_p << std::endl;
+    std::cout << "---    Sum(prob)      : " << m_sumProb << std::endl;
+    std::cout << "---    Lower limit OK : " << yesNo(m_lowerLimitFound) << std::endl;
+    std::cout << "---    Lower limit    : " << m_lowerLimit << std::endl;
+    std::cout << "---    Upper limit OK : " << yesNo(m_upperLimitFound) << std::endl;
+    std::cout << "---    Upper limit    : " << m_upperLimit << std::endl;
+    std::cout << "=== calcLimit() DONE!" << std::endl;
+  }
+  return norm_p;
+}
+
