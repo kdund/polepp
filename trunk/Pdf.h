@@ -335,7 +335,7 @@ namespace PDF {
       if ((m_nX<1) || (m_nMean<1) || (m_nSigma<1)) return;
       std::cout << "---------------------------------------------------------------------" << std::endl;
       std::cout << "--- Tabulating pdf <" << m_pdf->getName() << ">" << std::endl;
-      std::cout << "--- N(X)      = " << m_nX << std::endl;
+      std::cout << "--- N(X)       = " << m_nX << std::endl;
       std::cout << "---   min      = " << m_xmin << std::endl;
       std::cout << "---   max      = " << m_xmax << std::endl;
       std::cout << "--- N(mean)    = " << m_nMean << std::endl;
