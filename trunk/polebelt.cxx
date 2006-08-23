@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
   if (!pole.usesMBT()) {
     pole.findAllBestMu(); // loops
   }
-  pole.findBelt();
+  pole.calcBelt();
   //
   pole.printLimit(true);
 }

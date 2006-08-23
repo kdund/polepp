@@ -202,5 +202,5 @@ int main(int argc, char *argv[]) {
 //   if (pole.usesFHC2()) {
 //     pole.findAllBestMu();
 //   }
-//   pole.findPower();
+//   pole.calcPower();
 }
