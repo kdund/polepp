@@ -80,7 +80,6 @@ Pole::Pole() {
   m_nBeltUsed    = 5; // not really needed to be set here - set in initBeltArrays()
   m_nBeltMinUsed = m_nBeltUsed; // idem
   m_nBeltMaxUsed = 0;
-  m_suggestBelt  = false; // TODO: REMOVE!!!(m_nBeltUsed<1);
 }
 
 Pole::~Pole() {
@@ -306,9 +305,6 @@ int Pole::suggestBelt() {
 }
 
 void Pole::initBeltArrays() {
-  //  if (m_suggestBelt) m_nBeltUsed = suggestBelt();
-  //
-  // should not be initiated here
   //
   m_nBeltUsed = getNObserved();
   if (m_nBeltUsed<2) m_nBeltUsed=2;
@@ -1400,11 +1396,7 @@ void Pole::printSetup() {
   std::cout << "----------------------------------------------\n";
   std::cout << " Min. probability   : " << m_minMuProb << std::endl;
   std::cout << "----------------------------------------------\n";
-  if (m_suggestBelt) {
-    std::cout << " Belt N max         : variable" << std::endl;
-  } else {
-    std::cout << " Belt N max         : " << m_nBelt << std::endl;
-  }
+  std::cout << " Belt N max         : " << m_nBelt << std::endl;
   std::cout << " Step mu_best       : " << m_bestMuStep << std::endl;
   std::cout << " Max N, mu_best     : " << m_bestMuNmax << std::endl;
   std::cout << "----------------------------------------------\n";
