@@ -175,10 +175,7 @@ void Coverage::setBkgTrue(double low, double high, double step) {
 
 void Coverage::updateCoverage() {
   m_totalCount++;
-  double ll = m_pole->getLowerLimit();
-  double ul = m_pole->getUpperLimit();
-  double s  = m_pole->getTrueSignal();
-  if (s>=ll ? (s<=ul ? true:false) : false) {
+  if (m_pole->truthCovered()) {
     m_insideCount++;
     m_isInside = true;
   } else {
@@ -284,12 +281,12 @@ void Coverage::pushMeas(bool ok) {
   m_bkgStat.push_back(m_pole->getBkgObs());
   m_nobsStat.push_back(m_pole->getNObserved());
   if ((m_pole->getEffPdfSigma()>0) && (m_pole->getEffPdfDist() != PDF::DIST_NONE)) {
-    m_effFrac.push_back(m_pole->getEffObs()/m_pole->getEffPdfSigma());
+    m_effFrac.push_back(m_pole->getEffPdfSigma()/m_pole->getEffObs());
   } else {
     m_effFrac.push_back(-1.0);
   }
   if ((m_pole->getBkgPdfSigma()>0) && (m_pole->getBkgPdfDist() != PDF::DIST_NONE)) {
-    m_bkgFrac.push_back(m_pole->getBkgObs()/m_pole->getBkgPdfSigma());
+    m_bkgFrac.push_back(m_pole->getBkgPdfSigma()/m_pole->getBkgObs());
   } else {
     m_bkgFrac.push_back(-1.0);
   }
@@ -445,7 +442,7 @@ void Coverage::dumpExperiments(std::string name, bool limits) {
 	<< std::setprecision(6)
 	<< m_effStat[i] << '\t'
 	<< m_effFrac[i] << '\t'
-        << m_bkgStat[i] << '\t'\
+        << m_bkgStat[i] << '\t'
         << m_bkgFrac[i] << '\t'
 	<< std::setprecision(0)
 	<< m_status[i] << '\t'
@@ -538,6 +535,7 @@ void Coverage::doLoop() {
     for (ie=0; ie<m_effTrue.n(); ie++) { // loop over eff true
       m_pole->setEffPdfMean( m_effTrue.getVal(ie) );
       for (ib=0; ib<m_bkgTrue.n(); ib++) { // loop over bkg true
+      m_pole->setEffPdfMean( m_effTrue.getVal(ie) );
         m_pole->setBkgPdfMean( m_bkgTrue.getVal(ib) );
         //
         // Reset various counters
@@ -555,6 +553,11 @@ void Coverage::doLoop() {
 	  }
           // generate pseudoexperiment using given ditributions of signal,bkg and eff.
 	  m_pole->generatePseudoExperiment();
+          // set the truth to the observed value since the construction done on the assumed truth
+          // this will be reset after the loop
+          m_pole->setEffPdfMean( m_pole->getEffObs() );
+          m_pole->setBkgPdfMean( m_pole->getBkgObs() );
+          m_pole->initAnalysis();
           // calculate the limit of the given experiment
 	  if (!m_pole->analyseExperiment()) {
 	    updateStatistics(false);          // statistics (only if activated)
@@ -581,6 +584,8 @@ void Coverage::doLoop() {
 	      }
 	    }
 	  }
+          m_pole->setEffPdfMean( m_effTrue.getVal(ie) );
+          m_pole->setBkgPdfMean( m_bkgTrue.getVal(ib) );
 	}
 	calcCoverage();         // calculate coverage and its uncertainty
         etimer.stopClock();
@@ -705,6 +710,7 @@ void Coverage::doLoop() {
 
 void Coverage::doExpTest() {
   //
+  if (m_pole==0) return;
   int is,ie,ib,j;
   //
   for (is=0; is<m_sTrue.n(); is++) { // loop over all s_true
@@ -717,7 +723,7 @@ void Coverage::doExpTest() {
 	resetStatistics(); // reset statistics
 	//
 	for (j=0; j<m_nLoops; j++) {  // get stats
-	  generateExperiment(); // generate pseudoexperiment using given ditributions of signal,bkg and eff.
+	  m_pole->generatePseudoExperiment(); // generate pseudoexperiment using given ditributions of signal,bkg and eff.
 	  pushMeas();           // save 'measured' data
 	}
 	calcStatistics();       // 

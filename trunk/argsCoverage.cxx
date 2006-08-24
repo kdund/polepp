@@ -42,19 +42,19 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     ValueArg<double> sMax(      "","smax",    "max s_true",         false,1.0,"float",cmd);
     ValueArg<double> sStep(     "","sstep",   "step s_true",        false,1.0,"float",cmd);
 
-    ValueArg<int>    effDist(   "", "effdist",  "Efficiency distribution",false,2,"int",cmd);
-    ValueArg<double> effSigma(  "","esigma",  "sigma of efficiency",false,0.2,"float",cmd);
-    ValueArg<double> effMin(    "","emin",    "min eff true",       false,1.0,"float",cmd);
-    ValueArg<double> effMax(    "","emax",    "max eff true",       false,1.0,"float",cmd);
-    ValueArg<double> effStep(   "","estep",   "step eff true",      false,1.0,"float",cmd);
+    ValueArg<int>    effDist(   "","effdist", "Efficiency distribution",false,2,"int",cmd);
+    ValueArg<double> effSigma(  "","effsigma",  "sigma of efficiency",false,0.2,"float",cmd);
+    ValueArg<double> effMin(    "","effmin",    "min eff true",       false,1.0,"float",cmd);
+    ValueArg<double> effMax(    "","effmax",    "max eff true",       false,1.0,"float",cmd);
+    ValueArg<double> effStep(   "","effstep",   "step eff true",      false,1.0,"float",cmd);
 
-    ValueArg<int>    bkgDist(   "", "bkgdist",  "Background distribution",false,0,"int",cmd);
-    ValueArg<double> bkgSigma(  "","bsigma",  "sigma of background",false,0.2,"float",cmd);
-    ValueArg<double> bkgMin(    "","bmin",    "min bkg true",false,0.0,"float",cmd);
-    ValueArg<double> bkgMax(    "","bmax",    "max bkg true",false,0.0,"float",cmd);
-    ValueArg<double> bkgStep(   "","bstep",   "step bkg true",false,1.0,"float",cmd);
+    ValueArg<int>    bkgDist(   "","bkgdist", "Background distribution",false,0,"int",cmd);
+    ValueArg<double> bkgSigma(  "","bkgsigma",  "sigma of background",false,0.2,"float",cmd);
+    ValueArg<double> bkgMin(    "","bkgmin",    "min bkg true",false,0.0,"float",cmd);
+    ValueArg<double> bkgMax(    "","bkgmax",    "max bkg true",false,0.0,"float",cmd);
+    ValueArg<double> bkgStep(   "","bkgstep",   "step bkg true",false,1.0,"float",cmd);
     //
-    ValueArg<double> beCorr(    "", "corr",     "corr(bkg,eff)",false,0.0,"float",cmd);
+    ValueArg<double> beCorr(    "", "corr",   "corr(bkg,eff)",false,0.0,"float",cmd);
    //
     ValueArg<double> dMus(      "", "dmus",     "step size in findBestMu",false,0.002,"float",cmd);
     ValueArg<int>    nMus(      "", "nmus",     "maximum number of steps in findBestMu",false,100,"float",cmd);
@@ -69,6 +69,11 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     ValueArg<int>    effIntN(     "","effn",    "eff: N points in integral", false,21, "int",cmd);
     ValueArg<double> bkgIntScale( "","bscale",  "bkg num sigma in integral", false,5.0,"float",cmd);
     ValueArg<int>    bkgIntN(     "","bkgn",    "bkg: N points in integral", false,21, "int",cmd);
+    //
+    ValueArg<double> tabPoisMin( "","poismin",  "minimum mean value in table", false,0.0,"float",cmd);
+    ValueArg<double> tabPoisMax( "","poismax",  "maximum mean value in table", false,100.0,"float",cmd);
+    ValueArg<int>    tabPoisNM(  "","poisnm",   "number of mean value in table", false,100000,"int",cmd);
+    ValueArg<int>    tabPoisNX(  "","poisnx",   "maximum value of N in table", false,200,"int",cmd);
     //
     cmd.parse(argc,argv);
     //
@@ -88,15 +93,17 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     pole->setBestMuStep(dMus.getValue());
     pole->setBestMuNmax(nMus.getValue());
     //
-    pole->setEffMeas( effMin.getValue(), effSigma.getValue(), static_cast<PDF::DISTYPE>(effDist.getValue()) );
-    pole->setBkgMeas( bkgMin.getValue(), bkgSigma.getValue(), static_cast<PDF::DISTYPE>(bkgDist.getValue()) );
+    pole->setEffPdf( effMin.getValue(), effSigma.getValue(), static_cast<PDF::DISTYPE>(effDist.getValue()) );
+    pole->setEffObs();
+    pole->setBkgPdf( bkgMin.getValue(), bkgSigma.getValue(), static_cast<PDF::DISTYPE>(bkgDist.getValue()) );
+    pole->setBkgObs();
     pole->checkEffBkgDists();
-    pole->setEffBkgCorr(beCorr.getValue());
+    pole->setEffPdfBkgCorr(beCorr.getValue());
 
     pole->setTrueSignal(sMin.getValue());
 
-    pole->setEffInt(effIntScale.getValue(),effIntN.getValue());
-    pole->setBkgInt(bkgIntScale.getValue(),bkgIntN.getValue());
+    pole->getMeasurement().setEffInt(effIntScale.getValue(),effIntN.getValue());
+    pole->getMeasurement().setBkgInt(bkgIntScale.getValue(),bkgIntN.getValue());
     //
     pole->setLimitHypStep(limitHypStep.getValue());
     pole->setBelt(belt.getValue());
@@ -105,9 +112,8 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     pole->setMinMuProb(minProb.getValue());
     //
     if (!noTabulated.getValue()) {
-      PDF::gPoisTab.setRangeMean(100000,0,100);
-      PDF::gPoisTab.setRangeSigma(1,0,0);
-      PDF::gPoisTab.setRangeX(61,0,60);
+      PDF::gPoisTab.setRangeMean( tabPoisNM.getValue(), tabPoisMin.getValue(), tabPoisMax.getValue() );
+      PDF::gPoisTab.setRangeX(tabPoisNX.getValue()+1,0,tabPoisNX.getValue());
       PDF::gPoisTab.tabulate();
     }
     pole->initAnalysis();
@@ -115,22 +121,15 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     //
     // Now coverage
     //
-    coverage->setDumpBase(dump.getValue().c_str());
-    coverage->setFixedSig(doFixSig.getValue());
-    coverage->setEffDist( effMin.getValue(), effSigma.getValue(), static_cast<PDF::DISTYPE>(effDist.getValue()));
-    coverage->setBkgDist( bkgMin.getValue(), bkgSigma.getValue(), static_cast<PDF::DISTYPE>(bkgDist.getValue()));
-    coverage->setEffBkgCorr(beCorr.getValue());
-    coverage->checkEffBkgDists(); // will make sure the settings above are OK - it will update pole if changes are made
-    //
-    coverage->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
-    //
-    coverage->setVerbose(verboseCov.getValue());
     coverage->setPole(pole);
+    coverage->setDumpBase(dump.getValue().c_str());
+    coverage->setVerbose(verboseCov.getValue());
     //
     coverage->collectStats(doStats.getValue());
     coverage->setNloops(nLoops.getValue());
     coverage->setSeed(rSeed.getValue()+rSeedOfs.getValue());
     //
+    coverage->setFixedSig(doFixSig.getValue());
     coverage->setSTrue(sMin.getValue(), sMax.getValue(), sStep.getValue());
     coverage->setEffTrue(effMin.getValue(), effMax.getValue(), effStep.getValue());
     coverage->setBkgTrue(bkgMin.getValue(), bkgMax.getValue(), bkgStep.getValue());

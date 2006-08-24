@@ -28,7 +28,6 @@ public:
   void setFixedSig(bool flag)  { m_fixedSig  = flag;}
   //
   void printSetup();
-  void generateExperiment();   // creates a set of observables (eff,bkg,s)
   void doLoop();               // loops over all requested 'experiments'
   void doExpTest();            // loops over all requested 'experiments', no limit calc
   //
