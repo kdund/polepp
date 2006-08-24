@@ -447,6 +447,7 @@ const double getBkgObs() const { return (m_bkg ? m_bkg->getObservedValue():0); }
     e = m_eff->getObservedValue();
     b = m_bkg->getObservedValue();
     double dn = m_observable->getObservedValue() - b;
+    if (dn<0.0) dn=0.0;
     return (e>0 ? dn/e : 0);
   }
 
