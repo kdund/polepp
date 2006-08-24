@@ -21,7 +21,7 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> sTrue(     "","strue",   "s_true, only used if -C is active",false,1.0,"float",cmd);
     //    SwitchArg        coverage(  "C","coverage", "For coverage studies",false,cmd);
     ValueArg<int>    method(    "m","method",     "method (1 - FHC2 (def), 2 - MBT)",false,1,"int",cmd);
-    SwitchArg        useTabulated("T","tab","Use tabulated poisson",false,cmd);
+    SwitchArg        noTabulated("K","tab","Do not use tabulated poisson",false,cmd);
     //
     ValueArg<double> minProb( "","minp",       "minimum probability",false,-1.0,"float",cmd);
     //
@@ -94,7 +94,7 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
 
     pole->setMinMuProb(minProb.getValue());
     //
-    if (useTabulated.getValue()) {
+    if (!noTabulated.getValue()) {
       PDF::gPoisTab.setRangeMean( tabPoisNM.getValue(), tabPoisMin.getValue(), tabPoisMax.getValue() );
       PDF::gPoisTab.setRangeX(tabPoisNX.getValue()+1,0,tabPoisNX.getValue());
       PDF::gPoisTab.tabulate();
