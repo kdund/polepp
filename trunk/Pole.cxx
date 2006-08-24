@@ -12,18 +12,7 @@
 
 #include "Pole.h"
 
-/////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
 
-inline char *yesNo(bool var) {
-  static char yes[4] = {'Y','e','s',char(0)};
-  static char no[3] = {'N','o',char(0)};
-  return (var ? &yes[0]:&no[0]);
-}
-
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
 /*!
   Main constructor.
  */
@@ -40,8 +29,6 @@ Pole::Pole() {
   m_normMaxDiff = 0.01;
   m_lowerLimitNorm = -1.0;
   m_upperLimitNorm = -1.0;
-  //
-  m_sTrue = 1;
   //
   m_poisson = &PDF::gPoisTab;
   m_gauss   = &PDF::gGauss;
@@ -139,7 +126,7 @@ void Pole::exeFromFile() {
           std::cout << n << "\t" << y << "\t" << z << "\t" << t << "\t" << u  << std::endl;
         }
         nread++;
-        setNObserved(n*t);
+        setNObserved(static_cast<int>(n*t+0.5));
         setEffPdf( z, z, PDF::DIST_POIS );
         setEffObs();
         setBkgPdf( y, y, PDF::DIST_POIS );
@@ -529,13 +516,13 @@ int Pole::calcLimit(double s) {
   //
   // Get RL(n,s)
   //
+  m_scanBeltNorm = calcLhRatio(s,nBeltMinUsed,nBeltMaxUsed);
   if (m_verbose>2) {
     std::cout << std::endl;
     std::cout << "=== calcLimit( s = " << s << " )" << std::endl;
+    std::cout << "--- Normalisation over n for s  is " << m_scanBeltNorm << std::endl;
   }
-  m_scanBeltNorm = calcLhRatio(s,nBeltMinUsed,nBeltMaxUsed);
   if (m_verbose>3) {
-    std::cout << "--- Normalisation over n for s = " << s << " is " << m_scanBeltNorm << std::endl;
     if ((m_scanBeltNorm>1.5) || (m_scanBeltNorm<0.5)) {
       std::cout << "--- Normalisation off (" << m_scanBeltNorm << ") for s= " << s << std::endl;
       for (int n=0; n<nBeltMaxUsed; n++) {
@@ -765,7 +752,7 @@ void Pole::calcPower() {
   bool usepp;
   int np,nm;
   //  int npTot;
-  int i1 = int(m_sTrue/m_hypTest.step());
+  int i1 = int(getTrueSignal()/m_hypTest.step());
   int i2 = i1+1;
   for (int i=i1; i<i2; i++) { // loop over all H0
     //    std::cout << fullConstruct[i].size() << std::endl;
@@ -872,8 +859,8 @@ void Pole::calcBelt() {
   }
 }
 
-bool Pole::calcLimits() {
-  //  static bool heavyDBG=false;
+bool Pole::calcLimit() {
+  resetCalcLimit();
   m_maxNorm = -1.0;
   m_lowerLimitFound = false;
   m_upperLimitFound = false;
@@ -889,6 +876,7 @@ bool Pole::calcLimits() {
   m_sumProb=0;
   m_prevSumProb=0;
   m_scanBeltNorm=0;
+  m_coversTruth=false;
   //
   //
   //
@@ -907,6 +895,7 @@ bool Pole::calcLimits() {
     m_upperLimitNorm  = 1.0;
     m_upperLimit      = 0;
     m_sumProb         = 0.0;
+    m_coversTruth     = false; // SHOULD THIS BE TRUE IF s=0??? (getTrueSignal()==0);
     return true;
   }
   double mutest;
@@ -990,6 +979,17 @@ bool Pole::calcLimits() {
     i++;
   }
   //
+  bool rval=limitsOK();
+  if (rval) {
+    m_coversTruth = ((getTrueSignal()>=m_lowerLimit) && (getTrueSignal()<=m_upperLimit));
+    //    calcLimit(getTrueSignal());
+//     std::cout << "COV: ";
+//     TOOLS::coutFixed("s = ",4,getTrueSignal()); std::cout << "   ";
+//     TOOLS::coutFixed("p = ",4,m_sumProb); std::cout << "   ";
+//     TOOLS::coutFixed("l = ",4,m_lowerLimit); std::cout << "   ";
+//     TOOLS::coutFixed("u = ",4,m_upperLimit); std::cout << "   ";
+//     std::cout << "c = " << TOOLS::yesNo(m_coversTruth) << std::endl;
+  }
   return limitsOK();
 }
 
@@ -1065,7 +1065,19 @@ bool Pole::calcLimits() {
 //   return limitsOK();
 // }
 
-bool Pole::calcCoverageLimits() {
+bool Pole::calcCoverageLimit() {
+  resetCalcLimit();
+  calcNMin();
+  if (getNObserved()<=m_rejs0N1) {
+    m_coversTruth = false;
+  } else {
+    calcLimit(getTrueSignal());
+    m_coversTruth = (m_sumProb<m_cl); // s(true) inside belt - p(s)<cl
+  }
+  return true;
+}
+
+void Pole::resetCalcLimit() {
   m_maxNorm = -1.0;
   m_lowerLimitFound = false;
   m_upperLimitFound = false;
@@ -1073,17 +1085,16 @@ bool Pole::calcCoverageLimits() {
   m_upperLimit = 0;
   m_lowerLimitNorm = 0;
   m_upperLimitNorm = 0;
+  m_nBeltUsed = getNObserved();
+  if (m_nBeltUsed<2) m_nBeltUsed=2;
   m_nBeltMinLast=0;
-  m_nBeltMinUsed=m_nBelt;
+  m_nBeltMinUsed=m_nBeltUsed;
   m_nBeltMaxUsed=0;
   m_sumProb=0;
   m_prevSumProb=0;
   m_scanBeltNorm=0;
-
-  int dir = calcLimit(m_sTrue);
-  return (dir==-1); // s(true) inside belt - p(s)<cl
+  m_coversTruth=false;
 }
-
 // bool Pole::calcCoverageLimitsOLD() {
 //   //
 //   // Same as calcLimits() but it will stop the scan as soon it is clear
@@ -1194,9 +1205,9 @@ bool Pole::analyseExperiment() {
   }
   if (m_verbose>0) std::cout << "Calculating limit" << std::endl;
   if (m_coverage) {
-    rval=calcCoverageLimits();
+    rval=calcCoverageLimit();
   } else {
-    rval=calcLimits();
+    rval=calcLimit();
   }
   // Should not do this - if probability is OK then the belt is also OK...?
   // The max N(Belt) is defined by a cutoff in probability (very small)
@@ -1238,9 +1249,12 @@ void Pole::printLimit(bool doTitle) {
     std::cout << cmtPre << " N1(belt s=0)     : " << m_rejs0N1 << std::endl;
     std::cout << cmtPre << " N2(belt s=0)     : " << m_rejs0N2 << std::endl;
     
-    std::cout << cmtPre << "-------------------------------------------------------------------------------------" << std::endl;
-    std::cout << cmtPre << " N(obs)  eff(mean)     eff(sigma)      bkg(mean)       bkg(sigma)      low     up" << std::endl;
-    std::cout << cmtPre << "-------------------------------------------------------------------------------------" << std::endl;
+    std::cout << cmtPre << "-----------------------------------------------------------------------------------------"
+              << std::endl;
+    std::cout << cmtPre << " N(obs)  eff(mean)     eff(sigma)      bkg(mean)       bkg(sigma)      low         up"
+              << std::endl;
+    std::cout << cmtPre << "-----------------------------------------------------------------------------------------"
+              << std::endl;
   }
   std::cout << linePre;
   if (!simple) {
@@ -1249,13 +1263,13 @@ void Pole::printLimit(bool doTitle) {
     TOOLS::coutFixed(6,getEffPdfSigma()); std::cout << "\t";
     TOOLS::coutFixed(6,getBkgObs());      std::cout << "\t";
     TOOLS::coutFixed(6,getBkgPdfSigma()); std::cout << "\t";
-    TOOLS::coutFixed(2,m_scaleLimit*m_lowerLimit);     std::cout << "\t";
-    TOOLS::coutFixed(2,m_scaleLimit*m_upperLimit);     std::cout << std::endl;
+    TOOLS::coutFixed(6,m_scaleLimit*m_lowerLimit);     std::cout << "\t";
+    TOOLS::coutFixed(6,m_scaleLimit*m_upperLimit);     std::cout << std::endl;
   }
   if (simple) {
     std::cout << "Limits = [ ";
-    TOOLS::coutFixed(2,m_scaleLimit*m_lowerLimit); std::cout << ", ";
-    TOOLS::coutFixed(2,m_scaleLimit*m_upperLimit); std::cout << " ]";
+    TOOLS::coutFixed(6,m_scaleLimit*m_lowerLimit); std::cout << ", ";
+    TOOLS::coutFixed(6,m_scaleLimit*m_upperLimit); std::cout << " ]";
     std::cout << std::endl;
   }
 }
@@ -1263,11 +1277,11 @@ void Pole::printLimit(bool doTitle) {
 void Pole::printSetup() {
   std::cout << "\n";
   std::cout << "================ P O L E ==================\n";
-  std::cout << " Confidence level   : " << m_cl << std::endl;
+  std::cout << " 1.0 - conf. level  : " << 1.0-m_cl << std::endl;
   std::cout << " N observed         : " << getNObserved() << std::endl;
   std::cout << "----------------------------------------------\n";
-  std::cout << " Coverage friendly  : " << yesNo(m_coverage) << std::endl;
-  std::cout << " True signal        : " << m_sTrue << std::endl;
+  std::cout << " Coverage friendly  : " << TOOLS::yesNo(m_coverage) << std::endl;
+  std::cout << " True signal        : " << getTrueSignal() << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Efficiency meas    : " << getEffObs() << std::endl;
   std::cout << " Efficiency sigma   : " << getEffPdfSigma() << std::endl;

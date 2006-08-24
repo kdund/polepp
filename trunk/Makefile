@@ -1,6 +1,6 @@
 ROOTCFLAGS = $(shell root-config --cflags)
 ROOTLIBS   = $(shell root-config --libs)
-LDOBJS     =  Pdf.o Random.o Pole.o Combination.o Tools.o
+LDOBJS     =  Pdf.o Random.o Pole.o Combination.o Tools.o Coverage.o
 LDVERSION  = .1
 ###LDOBJS     =  Pdf.o Random.o Coverage.o Pole.o Combination.o Combine.o
 #### Power.o

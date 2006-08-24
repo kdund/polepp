@@ -397,7 +397,7 @@ namespace OBS {
     BaseType(const BaseType<T> & other):Base() { copy(other);}
     virtual ~BaseType() {}
     //
-    virtual T rnd() { std::cout << "ERROR::Observable - EMPTY rnd() : " << this->m_rndGen << std::endl; return 0; }
+    virtual T rnd() { return m_observedValue; }
     //
     BaseType<T> const & operator=(BaseType<T> const & rh) {
       copy(rh);

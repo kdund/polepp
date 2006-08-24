@@ -1,12 +1,17 @@
 #ifndef POLE_TOOLS_H
+#define POLE_TOOLS_H
 #include <iostream>
 #include <iomanip>
 #include <ctime>
 #include <string>
 
 namespace TOOLS {
+  inline const char *yesNo(bool var);
+  inline const char *boolChar(bool var, const char *tch, const char *fch);
   inline void coutFixed(int precision, int val);
   inline void coutFixed(int precision, double val);
+  inline void coutFixed(const char *msg, int precision, int val);
+  inline void coutFixed(const char *msg, int precision, double val);
   void makeTimeStamp( std::string & stamp );
   void makeTimeStamp( std::string & stamp, time_t time );
   void makeTimeStamp( std::string & stamp, struct tm *time );
@@ -21,8 +26,8 @@ namespace TOOLS {
     void startTimer();
     bool checkTimer(int dt);
     void stopTimer();
-    void printTime(std::string & msg, time_t t );
-    void printCurrentTime(std::string & msg);
+    void printTime(const char *msg, time_t t );
+    void printCurrentTime(const char *msg);
     void printUsedTime();
     void printEstimatedTime(int nloops, int ntotal );
     void startClock();
@@ -39,6 +44,16 @@ namespace TOOLS {
   };
 };
 
+
+const char * TOOLS::yesNo(bool var) {
+  static char yes[4] = {'Y','e','s',char(0)};
+  static char no[3] = {'N','o',char(0)};
+  return (var ? &yes[0]:&no[0]);
+}
+
+const char * TOOLS::boolChar(bool var, const char *tch, const char *fch) {
+  return (var ? tch:fch);
+}
 //
 // allow for gcc 2.96 fix
 //
@@ -53,6 +68,19 @@ void TOOLS::coutFixed(int precision, int val) {
   std::cout << std::fixed << std::setprecision(precision) << val;
   std::cout.flags(old);
 }
+
+void TOOLS::coutFixed(const char *msg, int precision, double val) {
+  std::cout << msg;
+  std::ios_base::fmtflags old = std::cout.flags();
+  std::cout << std::fixed << std::setprecision(precision) << val;
+  std::cout.flags(old);
+}
+void TOOLS::coutFixed(const char *msg, int precision, int val) {
+  std::cout << msg;
+  std::ios_base::fmtflags old = std::cout.flags();
+  std::cout << std::fixed << std::setprecision(precision) << val;
+  std::cout.flags(old);
+}
 # else
 void TOOLS::coutFixed(int precision, double val) {
   static char fmt[32];
@@ -60,7 +88,7 @@ void TOOLS::coutFixed(int precision, double val) {
   printf(fmt,val);
 }
 
-void coutFixed(int precision, int val) {
+void TOOLS::coutFixed(int precision, int val) {
   static char fmt[32];
   sprintf(&fmt[0],"%%%dd",precision);
   printf(fmt,val);

@@ -41,13 +41,13 @@ namespace TOOLS {
     time(&m_stopTime);
   }
 
-  void Timer::printTime(std::string & msg, time_t t ) {
+  void Timer::printTime(const char *msg, time_t t ) {
     std::string tstamp;
     makeTimeStamp( tstamp, t );
     std::cout << msg << tstamp << std::endl;
   }
 
-  void Timer::printCurrentTime(std::string & msg) {
+  void Timer::printCurrentTime(const char *msg) {
     std::string tstamp;
     makeTimeStamp( tstamp );
     std::cout << msg << tstamp << std::endl;

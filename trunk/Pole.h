@@ -196,6 +196,22 @@ public:
   void setNObserved(int nobs) { m_nBeltUsed = nobs; m_measurement.setObsVal(nobs); }
   //  {m_measurement.setNObserved(nobs); }
   //! distribution info on eff and bkg
+  void setEffPdfMean( double m ) {
+    m_measurement.setEffPdfMean(m);
+    m_validBestMu = false;
+  }
+  void setEffPdfSigma( double s ) {
+    m_measurement.setEffPdfSigma(s);
+    m_validBestMu = false;
+  }
+  void setBkgPdfMean( double m ) {
+    m_measurement.setBkgPdfMean(m);
+    m_validBestMu = false;
+  }
+  void setBkgPdfSigma( double s ) {
+    m_measurement.setBkgPdfSigma(s);
+    m_validBestMu = false;
+  }
   void setEffPdf(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
     m_measurement.setEffPdf(mean,sigma,dist);
     m_validBestMu = false;
@@ -261,7 +277,7 @@ public:
   void setNuppLim(int n=-1) { m_nUppLim = n; }
 
   // POLE true signal, used only if coverage run
-  void setTrueSignal(double s) { m_sTrue = s; } // true signal
+  void setTrueSignal(double s) { m_measurement.setTrueSignal(s); } // true signal
   void setCoverage(bool flag) {m_coverage = flag;} // true if coverage run
 
   // Debug
@@ -298,8 +314,9 @@ public:
   void calcConstruct();
   void calcNMin();
   void calcBelt();
-  bool calcLimits();        // finds CL limits
-  bool calcCoverageLimits();//  same as previous but stop if it's obvious that initial true mean is inside or outside
+  bool calcLimit();        // finds CL limits
+  bool calcCoverageLimit();//  same as previous but stop if it's obvious that initial true mean is inside or outside
+  void resetCalcLimit();
   void setPrintLimitStyle( int style ) { m_printLimStyle = style; }
   void printLimit(bool doTitle=false);
   // 
@@ -319,8 +336,9 @@ public:
 
   const int    getVerbose() const    { return m_verbose; }
   const double getCL() const         { return m_cl; }
-  const double getSTrue() const      { return m_sTrue; }
+  const double getTrueSignal() const { return m_measurement.getTrueSignal(); }
   const bool   getCoverage() const   { return m_coverage; }
+  const bool   truthCovered() const  { return m_coversTruth; }
   //
   const MeasPoisEB & getMeasurement() const  { return m_measurement; }
   MeasPoisEB & getMeasurement()              { return m_measurement; }
@@ -406,8 +424,8 @@ private:
   RLMETHOD m_method;
 
   // True signal - used in coverage studies
-  double m_sTrue;
   bool   m_coverage;
+  bool   m_coversTruth;
   // Measurement
   MeasPoisEB m_measurement;
   // correlation between eff and bkg [-1.0..1.0]

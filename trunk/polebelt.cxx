@@ -20,5 +20,4 @@ int main(int argc, char *argv[]) {
   }
   pole.calcBelt();
   //
-  pole.printLimit(true);
 }
