@@ -272,8 +272,9 @@ public:
   void setGauss(    const PDF::Gauss   *pdf) {m_gauss=pdf;}
   void setGauss2D(  const PDF::Gauss2D *pdf) {m_gauss2d=pdf;}
   void setLogNormal(const PDF::LogNormal   *pdf) {m_logNorm=pdf;}
-  ///////////////////////////////
   //
+  
+  void setScaleLimit(double s) { m_scaleLimit = (s>0.0 ? s:1.0); }
   void initIntArrays();   // will initialise integral arrays (if needed)
   void initBeltArrays();  // will initialise belt arrays (if needed)
   void initIntegral();    // calculates double integral kernal (eff*bkg*db*de) according to setup (7)
@@ -287,7 +288,7 @@ public:
   void calcConstruct(double s, bool verb);
   double calcBelt(double s, int & n1, int & n2,bool verb);//,double muMinProb=1e-5); // calculate (4) and find confidence belt
   int  calcLimit(double s); // calculate (4) and find limits
-  bool calcLimit(double s, bool scanDown); // calculate (4) and find limits
+  bool calcLimit(double s, bool scanDown) {return true;} // calculate (4) and find limits
   void   calcLh(double s); // fills the likelihood array
   double calcLhRatio(double s, int & nb1, int & nb2);//, double minMuProb=1e-6); // fills the likelihood ratio array
   bool limitsOK(); // check if calculated limit is OK using the sum of probs.
@@ -452,6 +453,8 @@ private:
   double m_rejs0P;  // probability for belt at s=0
   int    m_rejs0N1; // min N at s=0
   int    m_rejs0N2; // ditto max N
+
+  double m_scaleLimit; // a factor to scale the resulting limit (in printLimit() )
 
   std::string m_inputFile; // input file with data
   int         m_inputFileLines; // number of lines to read; if < 1 => read ALL lines
