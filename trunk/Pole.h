@@ -48,7 +48,6 @@
 
 #include "Tools.h"
 #include "Range.h"
-#include "BeltEstimator.h"
 #include "Measurement.h"
 
 
