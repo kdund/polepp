@@ -271,33 +271,33 @@ double Coverage::calcStatsCorr(std::vector<double> & x, std::vector<double> & y)
   return rval;
 }
 
-void Coverage::pushLimits() {
+void Coverage::pushLimits(bool ok) {
   m_UL.push_back(m_pole->getUpperLimit());
   m_LL.push_back(m_pole->getLowerLimit());
-}
-
-void Coverage::pushMeas(bool ok) {
-  m_effStat.push_back(m_pole->getEffObs());
-  m_bkgStat.push_back(m_pole->getBkgObs());
-  m_nobsStat.push_back(m_pole->getNObserved());
-  if ((m_pole->getEffPdfSigma()>0) && (m_pole->getEffPdfDist() != PDF::DIST_NONE)) {
-    m_effFrac.push_back(m_pole->getEffPdfSigma()/m_pole->getEffObs());
-  } else {
-    m_effFrac.push_back(-1.0);
-  }
-  if ((m_pole->getBkgPdfSigma()>0) && (m_pole->getBkgPdfDist() != PDF::DIST_NONE)) {
-    m_bkgFrac.push_back(m_pole->getBkgPdfSigma()/m_pole->getBkgObs());
-  } else {
-    m_bkgFrac.push_back(-1.0);
-  }
   m_sumProb.push_back(m_pole->getSumProb());
   m_status.push_back((ok ? 1.0:0.0));
 }
 
+void Coverage::pushMeas() {
+  m_effStat.push_back(m_pole->getEffObs());
+  m_bkgStat.push_back(m_pole->getBkgObs());
+  m_nobsStat.push_back(m_pole->getNObserved());
+//   if ((m_pole->getEffPdfSigma()>0) && (m_pole->getEffPdfDist() != PDF::DIST_NONE)) {
+//     m_effFrac.push_back(m_pole->getEffPdfSigma()/m_pole->getEffObs());
+//   } else {
+//     m_effFrac.push_back(-1.0);
+//   }
+//   if ((m_pole->getBkgPdfSigma()>0) && (m_pole->getBkgPdfDist() != PDF::DIST_NONE)) {
+//     m_bkgFrac.push_back(m_pole->getBkgPdfSigma()/m_pole->getBkgObs());
+//   } else {
+//     m_bkgFrac.push_back(-1.0);
+//   }
+}
+
 void Coverage::updateStatistics(bool ok) {
   if (m_collectStats) {
-    pushLimits();
-    pushMeas(ok);
+    pushLimits(ok);
+    pushMeas();
   }
 }
 
@@ -393,7 +393,7 @@ bool Coverage::makeDumpName(std::string base, std::string & name) {
   return rval;
 }
 
-void Coverage::dumpExperiments() {
+void Coverage::dumpExperiments(bool limits) {
   if (makeDumpName(m_dumpFileNameBase,m_dumpFileName)) {
     std::cout << "Dumping data to file : " << m_dumpFileName << std::endl;
     dumpExperiments(m_dumpFileName,true);
@@ -439,18 +439,24 @@ void Coverage::dumpExperiments(std::string name, bool limits) {
     *os << std::fixed
 	<< std::setprecision(0)
 	<< m_nobsStat[i] << '\t'
+	<< m_pole->getEffPdfDist() << '\t'
 	<< std::setprecision(6)
 	<< m_effStat[i] << '\t'
-	<< m_effFrac[i] << '\t'
-        << m_bkgStat[i] << '\t'
-        << m_bkgFrac[i] << '\t'
+	<< m_pole->getEffPdfSigma() << '\t'
 	<< std::setprecision(0)
-	<< m_status[i] << '\t'
-	<< std::setprecision(2)
-	<< m_LL[i] << '\t'
-	<< m_UL[i] << '\t'
-        << m_sumProb[i] << '\t'
-	<< std::endl;
+	<< m_pole->getBkgPdfDist() << '\t'
+	<< std::setprecision(6)
+        << m_bkgStat[i] << '\t'
+        << m_pole->getBkgPdfSigma() << '\t';
+    if (dumpLimits) {
+      *os << std::setprecision(0)
+          << m_status[i] << '\t'
+          << std::setprecision(2)
+          << m_LL[i] << '\t'
+          << m_UL[i] << '\t'
+          << m_sumProb[i] << '\t';
+    }
+    *os << std::endl;
   }
 #else
   for (i=0; i<sz; i++) {
@@ -523,7 +529,7 @@ void Coverage::doLoop() {
   // If we want to collect statistics, the full limit is required.
   // For just finding the coverage, a faster method is used.
   //
-  m_pole->setCoverage(!m_collectStats); // make full limits when collecting statistics
+  m_pole->setUseCoverage(!m_collectStats); // make full limits when collecting statistics
   //
   // Start timer
   //

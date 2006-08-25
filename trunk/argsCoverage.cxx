@@ -58,7 +58,6 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
    //
     ValueArg<double> dMus(      "", "dmus",     "step size in findBestMu",false,0.002,"float",cmd);
     ValueArg<int>    nMus(      "", "nmus",     "maximum number of steps in findBestMu",false,100,"float",cmd);
-    ValueArg<int>    belt(      "", "nbelt",    "maximum n for findBestMu" ,false,0,"int",cmd);
     //
     ValueArg<double> threshBS("","threshbs",  "binary search (limit) threshold" ,false,0.001,"float",cmd);
     ValueArg<double> threshAlpha("","threshalpha",  "threshold for accepting a cl in % of (1-cl)" ,false,0.01,"float",cmd);
@@ -89,7 +88,7 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     pole->setMethod(method.getValue());
     pole->setVerbose(verbosePol.getValue());
     pole->setNObserved(0);
-    pole->setCoverage(true);
+    pole->setUseCoverage(true);
     pole->setCL(confLevel.getValue());
     //
     pole->setBestMuStep(dMus.getValue());
@@ -110,7 +109,6 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     pole->setBSThreshold(threshBS.getValue());
     pole->setAlphaThreshold(threshAlpha.getValue());
     //
-    pole->setBelt(belt.getValue());
     pole->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
 
     pole->setMinMuProb(minProb.getValue());

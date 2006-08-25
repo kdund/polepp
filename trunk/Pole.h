@@ -102,12 +102,16 @@
  *  - setCL() : Confidence limit, default 0.9
  *    the requested confidence [0.0,1.0]
  *  - setNObserved() : Number of observed events
- *  - setEffMeas() : Measured efficiency\n
+ *  - setEffPdf() : Measured efficiency\n
  *    efficiency distribution (mean,sigma and distribution type ( DISTYPE ))
- *  - setBkgMeas() : Measured background\n
+ *  - setBkgPdf() : Measured background\n
  *    background distribution (mean,sigma and distribution type ( DISTYPE ))
  *  - setEffBkgCorr() : Correlation between eff and bkg (if applicable)
  *    correlation coefficient [-1.0,1.0]
+ *  - setEffObs( double m ) : Set the observed efficiency\n
+ *    if no argument is given, the mean of the pdf is used
+ *  - setBkgObs( double m ) : Set the observed background\n
+ *    see previous
  *
  *  Integration
  *  - setEffInt() : Integration range of efficiency\n
@@ -172,96 +176,140 @@ enum RLMETHOD {
 
 class Pole {
 public:
+  /*! @name Constructors/destructor */
+  //@{
+  //! main constructor
   Pole();
+
+  //! destructor
  ~Pole();
+  //@}
 
-  //! running with the current setup
-  void execute();
-  void exeEvent(bool first);
-  void exeFromFile();
+  /*! @name Main interfaces */
+  //@{
+  //! do the limit calculation or coverage determination
+  bool analyseExperiment();
 
-  //! Main parameters
-  void setCL(double cl)    { m_cl = cl; if ((cl>1.0)||(cl<0.0)) m_cl=0.9;}
-
-  void setMethod( RLMETHOD m ) { m_method = m; }
-  void setMethod( int m ) { m_method = RLMETHOD(m); }
-
-  //! Set input file
-  void setInputFile( const char *s ) { m_inputFile = s; }
-  void setInputFileLines( int nmax ) { m_inputFileLines = nmax; }
-
-  //! Set measurement
-  void setMeasurement( const MeasPoisEB & m ) { m_measurement.copy(m); }
-  //
-  void setNObserved(int nobs) { m_nBeltUsed = nobs; m_measurement.setObsVal(nobs); }
-  //  {m_measurement.setNObserved(nobs); }
-  //! distribution info on eff and bkg
-  void setEffPdfMean( double m ) {
-    m_measurement.setEffPdfMean(m);
-    m_validBestMu = false;
-  }
-  void setEffPdfSigma( double s ) {
-    m_measurement.setEffPdfSigma(s);
-    m_validBestMu = false;
-  }
-  void setBkgPdfMean( double m ) {
-    m_measurement.setBkgPdfMean(m);
-    m_validBestMu = false;
-  }
-  void setBkgPdfSigma( double s ) {
-    m_measurement.setBkgPdfSigma(s);
-    m_validBestMu = false;
-  }
-  void setEffPdf(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
-    m_measurement.setEffPdf(mean,sigma,dist);
-    m_validBestMu = false;
-  }
-  void setBkgPdf(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
-    m_measurement.setBkgPdf(mean,sigma,dist);
-    m_validBestMu = false;
-  }
-  // set observed eff and bkg, not changing the PDF def
-  void setEffObs(double mean) {
-    m_measurement.setEffObs(mean);
-    m_validBestMu = false;
-  }
-  void setBkgObs(double mean) {
-    m_measurement.setBkgObs(mean);
-    m_validBestMu = false;
-  }
-  // set ditto using the pdf mean
-  void setEffObs() {
-    m_measurement.setEffObs();
-    m_validBestMu = false;
-  }
-  void setBkgObs() {
-    m_measurement.setBkgObs();
-    m_validBestMu = false;
-  }
-  // generate a random observation (observable + nuisance parameters)
+  //! generate a random observation (observable + nuisance parameters)
   void generatePseudoExperiment() {
     m_measurement.generatePseudoExperiment();
     m_validBestMu = false;
   }
-  // eff,bkg correlation...
+
+  //! running with the current setup
+  void execute();
+
+  //! execute one event
+  void exeEvent(bool first);
+
+  //! execute events from an input file
+  void exeFromFile();
+  //@}
+
+
+  /*! @name Set parameters concerning the measurement */
+
+  //! Set input file
+  void setInputFile( const char *s ) { m_inputFile = s; }
+  //! Set the number of lines to read from the input file
+  void setInputFileLines( int nmax ) { m_inputFileLines = nmax; }
+
+  //! Set measurement
+  void setMeasurement( const MeasPoisEB & m ) { m_measurement.copy(m); }
+
+  //! set the confidence level
+  void setCL(double cl)    { m_cl = cl; if ((cl>1.0)||(cl<0.0)) m_cl=0.9;}
+
+  //! set the CL method to be used
+  void setMethod( RLMETHOD m ) { m_method = m; }
+  //! set the Cl method to be used (int input)
+  void setMethod( int m ) { m_method = RLMETHOD(m); }
+
+  //! set the number of observed events
+  void setNObserved(int nobs) { m_nBeltUsed = nobs; m_measurement.setObsVal(nobs); }
+
+  //! set pdf of efficiency
+  void setEffPdf(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
+    m_measurement.setEffPdf(mean,sigma,dist);
+    m_validBestMu = false;
+  }
+  //! set pdf of background
+  void setBkgPdf(double mean,double sigma, PDF::DISTYPE dist=PDF::DIST_GAUS) {
+    m_measurement.setBkgPdf(mean,sigma,dist);
+    m_validBestMu = false;
+  }
+  //! set pdf mean of efficiency
+  void setEffPdfMean( double m ) {
+    m_measurement.setEffPdfMean(m);
+    m_validBestMu = false;
+  }
+  //! set pdf sigma of efficiency
+  void setEffPdfSigma( double s ) {
+    m_measurement.setEffPdfSigma(s);
+    m_validBestMu = false;
+  }
+  //! set pdf mean of background
+  void setBkgPdfMean( double m ) {
+    m_measurement.setBkgPdfMean(m);
+    m_validBestMu = false;
+  }
+  //! set pdf sigma of background
+  void setBkgPdfSigma( double s ) {
+    m_measurement.setBkgPdfSigma(s);
+    m_validBestMu = false;
+  }
+  //! set the observed efficiency
+  void setEffObs(double mean) {
+    m_measurement.setEffObs(mean);
+    m_validBestMu = false;
+  }
+  //! set the observed background
+  void setBkgObs(double mean) {
+    m_measurement.setBkgObs(mean);
+    m_validBestMu = false;
+  }
+  //! set the observed efficiency using the pdf mean
+  void setEffObs() {
+    m_measurement.setEffObs();
+    m_validBestMu = false;
+  }
+  //! set the observed background using the pdf mean
+  void setBkgObs() {
+    m_measurement.setBkgObs();
+    m_validBestMu = false;
+  }
+  //! set eff,bkg correlation...
   void setEffPdfBkgCorr(double corr)    { m_measurement.setBEcorr(corr); }
-  ////////////////////////////////
-  //
-  bool checkEffBkgDists();
-  bool isFullyCorrelated() { return false; } //m_measurement.isFullyCorrelated(); } // { return (((fabs(fabs(m_beCorr)-1.0)) < 1e-16)); }
-  bool isNotCorrelated()   { return true;  } // m_measurement.isNotCorrelated(); }   // { return (fabs(m_beCorr) < 1e-16); }
- 
-  //////////  bool checkParams();
 
-  // Set belt max value
-  void setBelt(int v)    { m_nBeltMaxUsed = 0; m_nBeltMinUsed = v; m_nBelt = v; }
-  int  suggestBelt();                // will suggest a m_nBelt based on no. observed
+  //! set the integral range for efficiency
+  /*!
+    \param scale is the number of sigmas to cover
+    \param n is the number of steps in the integral
+   */
+  void setEffInt( double scale, int n ) { m_measurement.setEffInt(scale,n); }
+  //! set the integral range for background
+  /*!
+    \param scale is the number of sigmas to cover
+    \param n is the number of steps in the integral
+   */
+  void setBkgInt( double scale, int n ) { m_measurement.setBkgInt(scale,n); }
 
-  // scan parameters for the search for s_best
+  //! set a scaling number to scale the output limits
+  void setScaleLimit(double s) { m_scaleLimit = (s>0.0 ? s:1.0); }
+  //@}
+
+  /*! @name Set parameters concerning the precision of the calculations */
+  //@{
+  //! scan step size for finding s_best
   void setBestMuStep(double dmus,double stepmin=0.001) { m_bestMuStep = (dmus > 0.0 ? dmus:stepmin); }
+  //! maximum number of points allowed searching for s_best
   void setBestMuNmax(int n)                            { m_bestMuNmax = n; }
 
-  // set minimum probability considered - TODO: need to check this against precision in hypothesis testing
+  //! set the cutoff probability for the tails in calcLhRatio()
+  /*!
+    If the given limit is < 0, then it's calculated as floor(log10(1-CL))-2.0.
+   */
+  // TODO: need to check this against precision in hypothesis testing
   void setMinMuProb(double m=-1) {
     if (m<0.0) {
       double e=floor(log10(1-m_cl))-2.0;
@@ -270,116 +318,158 @@ public:
       m_minMuProb = m;
     }
   }
-  // POLE test hypothesis range
-  void setBSThreshold(double step=0.001)    { m_thresholdBS    = (step>0 ? step:0.001); } // set the limit for the binary search
+  //! binary search stopping threshold
+  /*!
+    The binary search in calcLimit() will stop when the change in mutest is below this value.
+    Default value is 0.001.
+  */
+  void setBSThreshold(double step=0.001)    { m_thresholdBS    = (step>0 ? step:0.001); }
+  //! set the threshold defining when a CL is close enough
+  /*!
+    This value defines when the probability for a signal is close enough to the CL.
+    The cutoff is $x = 1.0 - (\alpha_{est}/\alpha_{req})$.
+    Default value is 0.01.
+   */
   void setAlphaThreshold( double da=0.01)   { m_thresholdAlpha = (da>0 ? da:0.01); }
-  void setTestHyp(double step=-1.0); // set test range based on the input measurement
-  void setTestHyp(double low, double high, double step); // test mu=s+b for belt construction etc (NOT for limit scan)
-  void setNuppLim(int n=-1) { m_nUppLim = n; }
 
-  // POLE true signal, used only if coverage run
-  void setTrueSignal(double s) { m_measurement.setTrueSignal(s); } // true signal
-  void setCoverage(bool flag) {m_coverage = flag;} // true if coverage run
+  //! set range for mutest in calcBelt() etc (NOT used in the limit calculation)
+  void setTestHyp(double low, double high, double step);
 
-  // Debug
-  void setVerbose(int v=0) { m_verbose=v; }
-
-  // Tabulated PDF's
-  void setPoisson(  const PDF::PoisTab *pdf) {m_poisson=pdf;}
-  void setGauss(    const PDF::Gauss   *pdf) {m_gauss=pdf;}
-  void setGauss2D(  const PDF::Gauss2D *pdf) {m_gauss2d=pdf;}
-  void setLogNormal(const PDF::LogNormal   *pdf) {m_logNorm=pdf;}
-  //
-  
-  void setScaleLimit(double s) { m_scaleLimit = (s>0.0 ? s:1.0); }
-  void initIntArrays();   // will initialise integral arrays (if needed)
-  void initBeltArrays();  // will initialise belt arrays (if needed)
-  void initIntegral();    // calculates double integral kernal (eff*bkg*db*de) according to setup (7)
-  void initIntegral(std::vector<double> & eff, std::vector<double> & bkg, std::vector<double> & weight);
-
-  //
-  double getObservedSignal() { return m_measurement.getSignal(); }
-  // POLE
-  void findBestMu(int n); // finds the best fit (mu=s+b) for a given n. Fills m_bestMu[n] and m_bestMuProb[n].
-  void findAllBestMu();   // dito for all n (loop n=0; n<m_nMuUsed)
-  void calcConstruct(double s, bool verb);
-  double calcBelt(double s, int & n1, int & n2,bool verb);//,double muMinProb=1e-5); // calculate (4) and find confidence belt
-  int  calcLimit(double s); // calculate (4) and find limits
-  bool calcLimit(double s, bool scanDown) {return true;} // calculate (4) and find limits
-  void   calcLh(double s); // fills the likelihood array
-  double calcLhRatio(double s, int & nb1, int & nb2);//, double minMuProb=1e-6); // fills the likelihood ratio array
-  bool limitsOK(); // check if calculated limit is OK using the sum of probs.
-  inline const bool normOK(double p) const;
+  //! set maximum difference from unity in normOK()
   void setNormMaxDiff(double dpmax=0.001) { m_normMaxDiff=dpmax; }
-  void calcPower();
+  //@}
+
+
+  /*! @name Coverage specific setup */
+  //@{
+  //! set the true signal
+  void setTrueSignal(double s)   { m_measurement.setTrueSignal(s); }
+  //! set the 'use-coverage' flag
+  /*!
+    If this flag is set true, the calcLimitCoverage() is called instead of calcLimit().
+  */
+  void setUseCoverage(bool flag) {m_coverage = flag;}
+  //@}
+
+
+  /*! @name Consistency checks - THESE NEED WORK - NOT YET USED */
+  //@{
+  //! check that the distributions are ok
+  bool checkEffBkgDists();
+  //! check that all parameters are ok
+  bool checkParams() { return true; }
+  //@}
+
+  /*! @name Debugging */
+  //@{
+  //! set verbosity - 0 is no verbosity
+  void setVerbose(int v=0) { m_verbose=v; }
+  //@}
+
+  /*! @name PDF instances */
+  //@{
+  void setPoisson(  const PDF::PoisTab   *pdf)  {m_poisson=pdf;}
+  void setGauss(    const PDF::Gauss     *pdf)  {m_gauss=pdf;}
+  void setGauss2D(  const PDF::Gauss2D   *pdf)  {m_gauss2d=pdf;}
+  void setLogNormal(const PDF::LogNormal *pdf)  {m_logNorm=pdf;}
+  //@}
+
+  /*! @name Initialising the calculation */
+  //@{
+  //! initialises integrals etc, calls initIntArrays() among others
+  void initAnalysis();
+  //! will initialise belt arrays
+  void initBeltArrays();
+  //@}
+
+
+  /*! @name Calculation of belt, limits, likelihood ratios etc */
+  //@{
+  //! finds all mu_best - only used if the method is RLMETHOD::RL_FHC2
+  void findAllBestMu();   // dito for all n (loop n=0; n<m_nMuUsed)
+  //! finds the mu_best for the given N
+  void findBestMu(int n);
+  //! calculate the construct
   void calcConstruct();
-  void calcNMin();
+  //! calculate the construct for the given signal
+  void calcConstruct(double s, bool verb);
+  //! calculate the confidence belt
   void calcBelt();
-  bool calcLimit();        // finds CL limits
-  bool calcCoverageLimit();//  same as previous but stop if it's obvious that initial true mean is inside or outside
+  //! calculate the confidence belt for the given signal
+  double calcBelt(double s, int & n1, int & n2,bool verb);
+  //! calculate the confidence limits
+  bool calcLimit();
+  //! calculate the confidence limit probability for the given signal
+  int  calcLimit(double s);
+  //! check if s(true) lies within the limit
+  bool calcCoverageLimit();
+  //! calculate the likelihood ratio
+  double calcLhRatio(double s, int & nb1, int & nb2);
+  //! calculate the power
+  void calcPower();
+  //! calculate minimum N(obs) that will reject s=0
+  void calcNMin();
+  //! reset all variables pertaining to the limit calculation
   void resetCalcLimit();
+  //! checks if the limits are OK
+  bool limitsOK();
+  //@}
+
+  /*! @name Output */
+  //@{
+  //! set the print style - not very elaborate at the moment - can be 0 or 1
   void setPrintLimitStyle( int style ) { m_printLimStyle = style; }
+  //! print the result of the limit calculation
   void printLimit(bool doTitle=false);
-  // 
+  //! print setup
   void printSetup();
-  //
+  //! print failure message
   void printFailureMsg();
-  //
-  // POLE
-  void initAnalysis(); // inits the vectors and calculates the double integral weights
-  bool analyseExperiment();  // finds the limits/coverage
-  //
-  // Access functions
-  //
-  const bool getMethod() const { return m_method; }
-  const bool usesMBT()   const { return (m_method==RL_MBT); }
-  const bool usesFHC2()  const { return (m_method==RL_FHC2); }
+  //@}
 
-  const int    getVerbose() const    { return m_verbose; }
-  const double getCL() const         { return m_cl; }
-  const double getTrueSignal() const { return m_measurement.getTrueSignal(); }
-  const bool   getCoverage() const   { return m_coverage; }
-  const bool   truthCovered() const  { return m_coversTruth; }
-  //
-  const MeasPoisEB & getMeasurement() const  { return m_measurement; }
-  MeasPoisEB & getMeasurement()              { return m_measurement; }
-  const int    getNObserved() const          { return m_measurement.getObsVal(); }
-  // Efficiency
-  const double  getEffObs()   const          { return m_measurement.getEffObs(); }
-  const double  getEffPdfMean()  const       { return m_measurement.getEffPdfMean(); }
-  const double  getEffPdfSigma() const       { return m_measurement.getEffPdfSigma(); }
-  const PDF::DISTYPE getEffPdfDist()  const  { return m_measurement.getEffPdfDist(); }
-  // Background
-  const double  getBkgObs()  const  { return m_measurement.getBkgObs(); }
-  const double  getBkgPdfMean() const  { return m_measurement.getBkgPdfMean(); }
-  const double  getBkgPdfSigma() const  { return m_measurement.getBkgPdfSigma(); }
-  const PDF::DISTYPE getBkgPdfDist()  const  { return m_measurement.getBkgPdfDist(); }
-  const double  getEffPdfBkgCorr() const { return m_measurement.getBEcorr(); }
-  // Indep. variable
-//   const double  getSVar()     const  { return BeltEstimator::getT(m_measurement.getNObserved(),
-// 								  m_measurement.getEffObs(),
-// 								  m_measurement.getEffPdfSigma(),
-// 								  m_measurement.getBkgObs(),
-// 								  m_measurement.getBkgPdfSigma(),
-// 								  m_measurement.getNuisanceIntNorm());}
+  /*! @name Accessor functions */
+  //@{
+  const double getCL()                  const { return m_cl; }
+  const double getObservedSignal()      const { return m_measurement.getSignal(); }
+  const double getTrueSignal()          const { return m_measurement.getTrueSignal(); }
+  const bool   getMethod()              const { return m_method; }
+  const bool   usesMBT()                const { return (m_method==RL_MBT); }
+  const bool   usesFHC2()               const { return (m_method==RL_FHC2); }
 
-  const double  getSVar()     const  { std::cout << "BELTESTIMATOR not functional!" << std::endl; return 0.0; }
+  const MeasPoisEB & getMeasurement()   const { return m_measurement; }
+  MeasPoisEB &       getMeasurement()         { return m_measurement; }
+  const int          getNObserved()     const { return m_measurement.getObsVal(); }
 
-  // Test range for the likelihood ratio calculation (4)
-  const Range<double>  *getHypTest() const     { return &m_hypTest; }
+  const double       getEffObs()        const { return m_measurement.getEffObs(); }
+  const double       getEffPdfMean()    const { return m_measurement.getEffPdfMean(); }
+  const double       getEffPdfSigma()   const { return m_measurement.getEffPdfSigma(); }
+  const PDF::DISTYPE getEffPdfDist()    const { return m_measurement.getEffPdfDist(); }
+
+  const double       getBkgObs()        const { return m_measurement.getBkgObs(); }
+  const double       getBkgPdfMean()    const { return m_measurement.getBkgPdfMean(); }
+  const double       getBkgPdfSigma()   const { return m_measurement.getBkgPdfSigma(); }
+  const PDF::DISTYPE getBkgPdfDist()    const { return m_measurement.getBkgPdfDist(); }
+
+  const double       getEffPdfBkgCorr() const { return m_measurement.getBEcorr(); }
+
+  const bool         useCoverage()      const { return m_coverage; }
+  const bool         truthCovered()     const { return m_coversTruth; }
+
+  const int            getVerbose()       const { return m_verbose; }
+
+  const Range<double> *getHypTest()       const { return &m_hypTest; }
   //
-  double getEffIntMin() const { return m_measurement.getEff()->getIntXmin(); }
-  double getEffIntMax() const { return m_measurement.getEff()->getIntXmax(); }
-  double getEffIntN()   const { return m_measurement.getEff()->getIntN(); }
-  double getBkgIntMin() const { return m_measurement.getBkg()->getIntXmin(); }
-  double getBkgIntMax() const { return m_measurement.getBkg()->getIntXmax(); }
-  double getBkgIntN()   const { return m_measurement.getBkg()->getIntN(); }
-  double getEffIntNorm() const { return m_measurement.getEff()->getIntegral(); }
-  double getBkgIntNorm() const { return m_measurement.getBkg()->getIntegral(); }
-  double getIntNorm() const { return m_measurement.getNuisanceIntNorm(); }
+  const double getEffIntMin() const { return m_measurement.getEff()->getIntXmin(); }
+  const double getEffIntMax() const { return m_measurement.getEff()->getIntXmax(); }
+  const double getEffIntN()   const { return m_measurement.getEff()->getIntN(); }
+  const double getBkgIntMin() const { return m_measurement.getBkg()->getIntXmin(); }
+  const double getBkgIntMax() const { return m_measurement.getBkg()->getIntXmax(); }
+  const double getBkgIntN()   const { return m_measurement.getBkg()->getIntN(); }
+  const double getEffIntNorm() const { return m_measurement.getEff()->getIntegral(); }
+  const double getBkgIntNorm() const { return m_measurement.getBkg()->getIntegral(); }
+  const double getIntNorm() const { return m_measurement.getNuisanceIntNorm(); }
   //
   const double  getLsbest(int n) const;
-  const int     getNBelt() const { return m_nBelt; }
   const int     getNBeltUsed() const { return m_nBeltUsed; }
   const int     getNBeltMinUsed() const { return m_nBeltMinUsed; }
   const int     getNBeltMaxUsed() const { return m_nBeltMaxUsed; }
@@ -401,13 +491,21 @@ public:
   const double getUpperLimit() const { return m_upperLimit; }
   const double getLowerLimitNorm() const { return m_lowerLimitNorm; }
   const double getUpperLimitNorm() const { return m_upperLimitNorm; }
-  const int    getNuppLim() const    { return m_nUppLim; }
   const double getRejS0P()  const { return m_rejs0P; }
   const int    getRejS0N1() const { return m_rejs0N1; }
   const int    getRejS0N2() const { return m_rejs0N2; }
 
   const std::string & getInputFile() const { return m_inputFile; }
   const int getInputFileLines() const { return m_inputFileLines; }
+
+  //@}
+
+  /*! @name Some tools */
+  //@{
+  const bool isFullyCorrelated() const { return false; }
+  const bool isNotCorrelated()   const { return true;  }
+  const bool normOK(double p)    const { return (fabs(p-1.0)<m_normMaxDiff); }
+  //@}
 
 private:
 
@@ -470,7 +568,6 @@ private:
   //
   double m_maxNorm;  // max probability sum (should be very near 1)
   double m_normMaxDiff; // max(norm-1.0) allowed before giving a warning
-  int    m_nUppLim;  // number of points to scan the hypothesis after the first upper limit is found REMOVE!!!!
   double m_rejs0P;  // probability for belt at s=0
   int    m_rejs0N1; // min N at s=0
   int    m_rejs0N2; // ditto max N
@@ -480,14 +577,12 @@ private:
   std::string m_inputFile; // input file with data
   int         m_inputFileLines; // number of lines to read; if < 1 => read ALL lines
   //
-
-
-  // TO BE REMOVED
-  double calcLimitOLD(double s); // calculate (4) and find limits, returns probability for given signal hypothesis
-  bool calcLimitsOLD();        // finds CL limits
-  bool calcCoverageLimitsOLD();
 };
-
+/*!
+  Calculates the likelihood of the best fit signal to the given number of observations.
+  For RLMETHOD::RL_MBT it will use the result from findBestMu().
+  For RLMETHOD::RL_MBT it will use Poisson(n,g) where g = (n>bkg ? n : bkg ).
+ */
 inline const double Pole::getLsbest(int n) const {
   double rval = 0.0;
   if (usesMBT()) {
@@ -502,10 +597,6 @@ inline const double Pole::getLsbest(int n) const {
     rval = m_bestMuProb[n];
   }
   return rval;
-}
-
-inline const bool Pole::normOK(double p) const {
-  return (fabs(p-1.0)<m_normMaxDiff);
 }
 
 #endif

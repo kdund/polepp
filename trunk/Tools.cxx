@@ -4,7 +4,9 @@ namespace TOOLS {
   void makeTimeStamp( std::string & stamp ) {
     time_t curtime;
     time(&curtime);
-    makeTimeStamp( stamp, curtime );
+    struct tm *loctime;
+    loctime = localtime(&curtime);
+    makeTimeStamp( stamp, loctime );
   }
   void makeTimeStamp( std::string & stamp, time_t t ) {
     struct tm *timeStruct = localtime(&t);

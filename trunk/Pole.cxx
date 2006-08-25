@@ -14,7 +14,7 @@
 
 
 /*!
-  Main constructor.
+  Source Main constructor.
  */
 // HERE: Should have a truly empty with NO initiation of variables -> SPEED!
 Pole::Pole() {
@@ -27,7 +27,6 @@ Pole::Pole() {
   m_verbose=0;
   m_coverage = false;
   m_method = RL_FHC2;
-  m_nUppLim = 10;
   m_normMaxDiff = 0.01;
   m_lowerLimitNorm = -1.0;
   m_upperLimitNorm = -1.0;
@@ -62,10 +61,9 @@ Pole::Pole() {
   m_measurement.setEffInt(5.0,21);
   m_measurement.setBkgInt(5.0,21);
   //
-  setTestHyp(0.01);
+  setTestHyp(0.0,-1.0,0.01);
   //
   m_validBestMu = false;
-  m_nBelt        = 50;
   m_nBeltUsed    = 5; // not really needed to be set here - set in initBeltArrays()
   m_nBeltMinUsed = m_nBeltUsed; // idem
   m_nBeltMaxUsed = 0;
@@ -189,38 +187,39 @@ bool Pole::checkEffBkgDists() {
   return change;
 }
 
-void Pole::setTestHyp(double step) {
-  //
-  // Find hypothesis test range based on the input measurement
-  // MUST be called after the measurement is set.
-  //
-  if (step<=0) {
-    step = m_hypTest.step();
-    if (step<=0) step = 0.01;
-  }
+// void Pole::setTestHyp(double step) {
+//   std::cout << "ERROR: Should not be called! setTestHyp(step)" << std::endl;
+//   exit(-1);
+//   //
+//   // Find hypothesis test range based on the input measurement
+//   // MUST be called after the measurement is set.
+//   //
+//   if (step<=0) {
+//     step = m_hypTest.step();
+//     if (step<=0) step = 0.01;
+//   }
   
-  double low = BeltEstimator::getSigLow(getNObserved(),
-					getEffPdfDist(), getEffObs(), getEffPdfSigma(),
-					getBkgPdfDist(), getBkgObs(), getBkgPdfSigma(), m_measurement.getNuisanceIntNorm());
-  double up  = BeltEstimator::getSigUp( getNObserved(),
-					getEffPdfDist(), getEffObs(), getEffPdfSigma(),
-					getBkgPdfDist(), getBkgObs(), getBkgPdfSigma(), m_measurement.getNuisanceIntNorm());
-  m_hypTest.setRange(low,up,step);
-}
+//   double low = BeltEstimator::getSigLow(getNObserved(),
+// 					getEffPdfDist(), getEffObs(), getEffPdfSigma(),
+// 					getBkgPdfDist(), getBkgObs(), getBkgPdfSigma(), m_measurement.getNuisanceIntNorm());
+//   double up  = BeltEstimator::getSigUp( getNObserved(),
+// 					getEffPdfDist(), getEffObs(), getEffPdfSigma(),
+// 					getBkgPdfDist(), getBkgObs(), getBkgPdfSigma(), m_measurement.getNuisanceIntNorm());
+//   m_hypTest.setRange(low,up,step);
+// }
 
 void Pole::setTestHyp(double low, double high, double step) {
   //
   // Set explicitely the test range.
-  // * step<=0  => step = (high-low)/1000
-  // * high<low => call setTestHyp(step) [i.e, estimate the test range needed]
+  // * step<=0  => step = (high-low)/100
+  // * high<low => set high = max( observed signal, 1.0 )
   //
   if (high<low) {
-    setTestHyp(step);
-  } else {
-    if (step<=0) step = (high-low)/1000.0; // default 1000 pts
-    m_hypTest.setRange(low,high,step);
+    low = 0.0;
+    high = 1.0 + getObservedSignal();
   }
-  
+  if (step<=0) step = (high-low)/100.0; // default 100 pts
+  m_hypTest.setRange(low,high,step);
 }
 //
 // MAYBE REMOVE THIS // HERE
@@ -265,49 +264,6 @@ void Pole::setTestHyp(double low, double high, double step) {
 // }
 
 //
-// OBSOLETE - TODO: Remove
-// void Pole::initPoisson(int nlambda, int nn, double lmbmax) {
-//   //  if (m_poisson) m_poisson->init(nlambda, nn, lmbmax);
-// }
-
-// void Pole::initGauss(int ndata, double mumax) {
-//   //  if (m_gauss) m_gauss->init(ndata, mumax);
-// }
-
-
-// int Pole::suggestBelt() {
-//   int rval=50; // default value
-//   int nbelt = static_cast<int>(m_nBeltList.size());
-//   if (m_measurement.getNObserved()>=0) {
-//     if (m_measurement.getNObserved()<nbelt) {
-//       rval = m_nBeltList[m_measurement.getNObserved()];
-//     } else {
-//       rval = m_measurement.getNObserved()*4;
-//     }
-//   }
-//   return rval;
-// }
-
-
-int Pole::suggestBelt() {
-  int rval=50;
-  if ( getNObserved()>=0) {
-    rval = BeltEstimator::getBeltMin( getNObserved(),
-				      getEffPdfDist(),
-                                      getEffObs(),
-                                      getEffPdfSigma(),
-                                      getBkgPdfDist(),
-                                      getBkgObs(),
-                                      getBkgPdfSigma(),
-                                      getIntNorm());
-    if (rval<20) rval=20; // becomes less reliable for small n
-  }
-  if (m_verbose>1) {
-    std::cout << "Using max N(belt) = " << rval << std::endl;
-    std::cout << "t(test var) = " << getSVar() << std::endl;
-  }
-  return rval;
-}
 
 void Pole::initBeltArrays() {
   //
@@ -315,9 +271,7 @@ void Pole::initBeltArrays() {
   if (m_nBeltUsed<2) m_nBeltUsed=2;
   m_nBeltMinUsed = m_nBeltUsed;
   m_nBeltMaxUsed = 0;
-
-  //  unsigned int nbs = static_cast<unsigned int>(m_nBelt);
-  //  if (m_muProb.size()!=nbs) {
+  //
   m_muProb.resize(m_nBeltUsed,0.0);
   m_bestMuProb.resize(m_nBeltUsed,0.0);
   m_bestMu.resize(m_nBeltUsed,0.0);
@@ -431,15 +385,7 @@ void Pole::findAllBestMu() {
   m_validBestMu = true;
 }
 
-void Pole::calcLh(double s) { // TODO: Need this one????
-  //  double norm_p=0.0;
-  for (int n=0; n<m_nBeltUsed; n++) {
-    m_muProb[n] = m_measurement.calcProb(n, s);
-    //    norm_p += m_muProb[n]; // needs to be renormalised - NO!! 
-  }
-}
-
-double Pole::calcLhRatio(double s, int & nbMin, int & nbMax) { //, double minMuProb) {
+double Pole::calcLhRatio(double s, int & nbMin, int & nbMax) {
   double norm_p = 0;
   double lhSbest;
   bool upNfound  = false;
@@ -958,9 +904,10 @@ bool Pole::calcLimit() {
       if (m_verbose>1)
         std::cout << "*** Special case: N(obs) = N2(s=0), test for limit at s=0" << std::endl;
       dir = calcLimit(0);
-      std::cout << "*** calcLimit at sL = 0==> P = " << m_sumProb
-                << " and dir = " << dir
-                << std::endl;
+      if (m_verbose>1)
+        std::cout << "*** calcLimit at sL = 0 ==> P = " << m_sumProb
+                  << " and dir = " << dir
+                  << std::endl;
       if (dir<1) {
         done = true;
         m_lowerLimitFound = true;
@@ -1254,7 +1201,7 @@ void Pole::printLimit(bool doTitle) {
   }
   if (doTitle && (!simple)) {
     std::cout << cmtPre << "-------------------------------------------------------------------------------------" << std::endl;
-    std::cout << cmtPre << " Max N(belt) set  : " << m_nBelt << std::endl;
+    std::cout << cmtPre << " Max N(belt) set  : " << m_nBeltUsed << std::endl;
     std::cout << cmtPre << " Max N(belt) used : " << m_nBeltMaxUsed << std::endl;
     std::cout << cmtPre << " Min N(belt) used : " << m_nBeltMinUsed << std::endl;
     std::cout << cmtPre << " Prob(belt s=0)   : " << m_rejs0P << std::endl;
@@ -1353,7 +1300,7 @@ void Pole::printSetup() {
 
 void Pole::printFailureMsg() {
   std::cout << "- NEED TO UPDATE - ERROR: limit calculation failed. Possible causes:" << std::endl;
-  std::cout << "1. nbelt is too small (set nbelt = " << getNBelt() << ", max used = " << getNBeltMaxUsed() << ")" << std::endl;
+  //  std::cout << "1. nbelt is too small (set nbelt = " << getNBeltUsed() << ", max used = " << getNBeltMaxUsed() << ")" << std::endl;
   std::cout << "2. precision in integrations (eff,bkg) not sufficient" << std::endl;
   //  std::cout << "3. limit hypothesis step size too large ( step = " << m_limitHypStep << " )" << std::endl;
   std::cout << "4. Symptom: probability of lower/upper limit diverges from unity." << std::endl;

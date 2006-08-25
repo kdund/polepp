@@ -40,15 +40,15 @@ public:
   const char *getDumpName() {return m_dumpFileName.c_str();}
   //
   void collectStats(bool flag) { m_collectStats = flag; } // if true, then collect statistics
-  void pushMeas(bool ok=true);
-  void pushLimits();
+  void pushMeas();
+  void pushLimits(bool ok=true);
   void updateStatistics(bool ok=true);	// Update statistics on limits
   void resetStatistics();	// Reset dito
   void calcStatistics();	// calculate collected stats
   void printStatistics();	// print calculated stuff
   //  void dumpExperiments(const char *name=0);
   void dumpExperiments(std::string name, bool dumpLimits=true);
-  void dumpExperiments();
+  void dumpExperiments(bool dumpLimits=true);
   void calcCoverage();		// Calculate coverage
   virtual void outputCoverageResult(const int flag=0);	// Output coverage
   //

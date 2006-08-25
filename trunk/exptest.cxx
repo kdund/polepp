@@ -6,7 +6,7 @@
 #include "Coverage.h"
 
 Coverage gCoverage;
-std::string gFilename="";
+Pole     gPole;
 
 using namespace TCLAP;
 void processArgs(int argc, char *argv[]) {
@@ -24,21 +24,21 @@ void processArgs(int argc, char *argv[]) {
     ValueArg<int>    nLoops(   "","nloops",  "number of loops",    false,1000,"int");
     ValueArg<int>    rSeed(    "","rseed",   "rnd seed" ,          false,rndSeed,"int");
     ValueArg<int>    rSeedOfs( "","rseedofs","rnd seed offset" ,   false,0,"int");
-    ValueArg<double> strue(    "","strue",   "s_true",         false,1.0,"float");
-    ValueArg<double> effSigma( "","esigma",  "sigma of efficiency",false,0.2,"float");
-    ValueArg<double> effTrue(  "","etrue",   "eff true",       false,1.0,"float");
-    ValueArg<double> bkgSigma( "","bsigma",  "sigma of background",false,0.2,"float");
-    ValueArg<double> bkgTrue(  "","btrue",   "bkg true",false,3.0,"float");
-    ValueArg<double> beCorr(   "","corr",    "corr(bkg,eff)",false,0.5,"float");
-    ValueArg<int>    effDist(  "","effdist", "Efficiency distribution",false,1,"int");
-    ValueArg<int>    bkgDist(  "","bkgdist", "Background distribution",false,1,"int");
+    ValueArg<double> strue(    "","strue",   "s_true",         false,1.6,"float");
+    ValueArg<double> effSigma( "","effsigma",  "sigma of efficiency",false,0.2,"float");
+    ValueArg<double> effMean(  "","effmean",   "eff true mean",       false,1.0,"float");
+    ValueArg<double> bkgSigma( "","bkgsigma",  "sigma of background",false,0.2,"float");
+    ValueArg<double> bkgMean(  "","bkgmean",   "bkg true mean",false,2.0,"float");
+    ValueArg<int>    effDist(  "","effdist", "Efficiency distribution",false,2,"int");
+    ValueArg<int>    bkgDist(  "","bkgdist", "Background distribution",false,2,"int");
+    ValueArg<double> beCorr(   "","corr",    "corr(bkg,eff)",false,0.0,"float");
     ValueArg<std::string> dump("","dump",    "dump filename",false,"","string");
     //
     cmd.add(effSigma);
-    cmd.add(effTrue);
+    cmd.add(effMean);
     //
     cmd.add(bkgSigma);
-    cmd.add(bkgTrue);
+    cmd.add(bkgMean);
     //
     cmd.add(effDist);
     cmd.add(bkgDist);
@@ -54,21 +54,33 @@ void processArgs(int argc, char *argv[]) {
     //
     cmd.parse(argc,argv);
     //
-    gFilename = dump.getValue();
-    gCoverage.setEffDist( effTrue.getValue(), effSigma.getValue(), static_cast<PDF::DISTYPE>(effDist.getValue()));
-    gCoverage.setBkgDist( bkgTrue.getValue(), bkgSigma.getValue(), static_cast<PDF::DISTYPE>(bkgDist.getValue()));
-    gCoverage.setEffBkgCorr(beCorr.getValue());
-    gCoverage.checkEffBkgDists(); // will make sure the settings above are OK - it will update pole if changes are made
+    // First set Pole
+    //
+    gPole.setPoisson(&PDF::gPoisTab);
+    gPole.setGauss(&PDF::gGauss);
+    gPole.setGauss2D(&PDF::gGauss2D);
+    gPole.setLogNormal(&PDF::gLogNormal);
+
+    gPole.setEffPdf( effMean.getValue(), effSigma.getValue(), static_cast<PDF::DISTYPE>(effDist.getValue()) );
+    gPole.setEffObs();
+    gPole.setBkgPdf( bkgMean.getValue(), bkgSigma.getValue(), static_cast<PDF::DISTYPE>(bkgDist.getValue()) );
+    gPole.setBkgObs();
+    gPole.checkEffBkgDists();
+    gPole.setEffPdfBkgCorr(beCorr.getValue());
+
+    gPole.setTrueSignal(strue.getValue());
+    //
+    gCoverage.setPole(&gPole);
+    gCoverage.setDumpBase(dump.getValue().c_str());
     //
     gCoverage.collectStats(true);
     gCoverage.setNloops(nLoops.getValue());
     gCoverage.setSeed(rSeed.getValue()+rSeedOfs.getValue());
     //
     gCoverage.setSTrue(strue.getValue(), strue.getValue(), 0.0);
-    gCoverage.setEffTrue(effTrue.getValue(), effTrue.getValue(), 0.0);
-    gCoverage.setBkgTrue(bkgTrue.getValue(), bkgTrue.getValue(), 0.0);
+    gCoverage.setEffTrue(effMean.getValue(), effMean.getValue(), 0.0);
+    gCoverage.setBkgTrue(bkgMean.getValue(), bkgMean.getValue(), 0.0);
     //
-    
   }
   catch (ArgException e) {
     std::cout << "ERROR: " << e.error() << " " << e.argId() << std::endl;
@@ -77,12 +89,10 @@ void processArgs(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
   //
-  std::cout << "NOT FUNCTIONAL IN THIS RELEASE\n" << std::endl;
-  exit(-1);
   processArgs(argc,argv);
   //
   gCoverage.printSetup();
   gCoverage.doExpTest();
-  gCoverage.dumpExperiments(gFilename);
+  gCoverage.dumpExperiments(false);
   //
 }
