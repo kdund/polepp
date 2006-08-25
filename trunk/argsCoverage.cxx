@@ -60,7 +60,9 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     ValueArg<int>    nMus(      "", "nmus",     "maximum number of steps in findBestMu",false,100,"float",cmd);
     ValueArg<int>    belt(      "", "nbelt",    "maximum n for findBestMu" ,false,0,"int",cmd);
     //
-    ValueArg<double> limitHypStep("","step",  "limit hypothesis step" ,false,0.01,"float",cmd);
+    ValueArg<double> threshBS("","threshbs",  "binary search (limit) threshold" ,false,0.001,"float",cmd);
+    ValueArg<double> threshAlpha("","threshalpha",  "threshold for accepting a cl in % of (1-cl)" ,false,0.01,"float",cmd);
+    //
     ValueArg<double> hypTestMin( "","hmin",   "hypothesis test min" ,false,0.0,"float",cmd);
     ValueArg<double> hypTestMax( "","hmax",   "hypothesis test max" ,false,35.0,"float",cmd);
     ValueArg<double> hypTestStep("","hstep",  "hypothesis test step" ,false,0.01,"float",cmd);
@@ -105,7 +107,9 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     pole->getMeasurement().setEffInt(effIntScale.getValue(),effIntN.getValue());
     pole->getMeasurement().setBkgInt(bkgIntScale.getValue(),bkgIntN.getValue());
     //
-    pole->setLimitHypStep(limitHypStep.getValue());
+    pole->setBSThreshold(threshBS.getValue());
+    pole->setAlphaThreshold(threshAlpha.getValue());
+    //
     pole->setBelt(belt.getValue());
     pole->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
 

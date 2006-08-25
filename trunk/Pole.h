@@ -271,7 +271,8 @@ public:
     }
   }
   // POLE test hypothesis range
-  void setLimitHypStep(double step=0.001) { m_limitHypStep=(step>0 ? step:0.001); } // set the hypothesis step size when scanning for limits
+  void setBSThreshold(double step=0.001)    { m_thresholdBS    = (step>0 ? step:0.001); } // set the limit for the binary search
+  void setAlphaThreshold( double da=0.01)   { m_thresholdAlpha = (da>0 ? da:0.01); }
   void setTestHyp(double step=-1.0); // set test range based on the input measurement
   void setTestHyp(double low, double high, double step); // test mu=s+b for belt construction etc (NOT for limit scan)
   void setNuppLim(int n=-1) { m_nUppLim = n; }
@@ -393,7 +394,8 @@ public:
   const double getMinMuProb() const { return m_minMuProb; }
   const double getMuProb(int n) const { if ((n>m_nBeltMaxUsed)||(n<m_nBeltMinUsed)) return 0.0; return m_muProb[n];}
   //
-  const double getLimitHypStep() const { return m_limitHypStep; }
+  const double getBSThreshold() const { return m_thresholdBS; }
+  const double getAlphaThreshold() const { return m_thresholdAlpha; }
   const double getSumProb() const    { return m_sumProb; }
   const double getLowerLimit() const { return m_lowerLimit; }
   const double getUpperLimit() const { return m_upperLimit; }
@@ -454,7 +456,8 @@ private:
   std::vector<double> m_lhRatio;    // likelihood ratio
   double m_minMuProb;  // minimum probability accepted
   //
-  double m_limitHypStep; // step size when searching for the limits (see calcLimits())
+  double m_thresholdBS; // binary search threshold
+  double m_thresholdAlpha; // threshold for accepting a CL in calcLimit(s)
   double m_sumProb;    // sum of probs for conf.belt construction - set by calcLimit()
   double m_prevSumProb;// ditto from previous scan - idem
   double m_scanBeltNorm; // sum(p) for all n used in belt at the current s - idem
