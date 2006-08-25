@@ -45,6 +45,9 @@ LIBOLIST =$(patsubst %.cxx,%.o,$(LIBCPPLIST))
 TOOLOLIST=$(patsubst %.cxx,%.o,$(TOOLCPPLIST))
 TOOLELIST=$(patsubst %.cxx,%,$(TOOLCPPLIST))
 
+# list of files for package
+PACKAGELIST = $(LIBCPPLIST) $(TOOLCPPLIST) $(HLIST) Makefile Makefile.arch release.notes Doxyfile README
+
 # rules to compile tools
 
 alltools: $(TOOLELIST)
@@ -101,6 +104,11 @@ $(SHLIBFILE): $(LIBOLIST)
 	$(LD) $(SOFLAGS) $(addprefix $(OBJDIR)/,$(LIBOLIST)) -o $(SHLIBFILE)
 	@echo "Done"
 
+# Rule to make package
+package: $(PACKAGELIST)
+	@echo -n "Creating package... "
+	@tar -czf polelib.tgz $^
+	@echo "Done"
 
 # Useful build targets
 lib: $(LIBFILE) 
