@@ -1,128 +1,124 @@
-ROOTCFLAGS = $(shell root-config --cflags)
-ROOTLIBS   = $(shell root-config --libs)
-LDOBJS     =  Pdf.o Random.o Pole.o Combination.o Tools.o Coverage.o
-LDVERSION  = .1
-###LDOBJS     =  Pdf.o Random.o Coverage.o Pole.o Combination.o Combine.o
-#### Power.o
-LDSMOBJS     =  Pdf.o Random.o
-###LDFLAGS      = -fPIC -shared
-LDFLAGS      = -shared
-###CFLAGS     = -O
-# Use -g to include debug info
-# Use -pg for profiling info
-# Use -O3 for optimizing
-CFLAGS       = -g -O0
-CFLAGSARG    = -g -O0
-SRCTOOLS     = polelim.cxx polecov.cxx argsPole.cxx argsCoverage.cxx
-SRCEXTRAS    = exptest.cxx plotexp.cxx estbelt.cxx polebelt.cxx poleconst.cxx polepow.cxx
-INCFILES     = Pole.h Coverage.h Random.h Range.h Pdf.h BeltEstimator.h Combination.h Measurement.h \
-	       Power.h Observable.h Combine.h Tools.h
-SRCFILES     = Pole.cxx Coverage.cxx Random.cxx Pdf.cxx Combination.cxx Power.cxx Combine.cxx Tools.cxx
-LDFILE	     = libPole++.so
-LDSMFILE     = libPoleSM++.so
-LIBS         = -L./ -lPole++
-LIBSSM       = -L./ -lPoleSM++
+ ######################################################################
+ # Project: Pole++                                                    #
+ ###################################################################### 
+.SUFFIXES: .cxx .h .o
+#MAKEFLAGS = --no-print-directory -r -s
+#MAKEFLAGS = --warn-undefined-variables --debug
 
-all:		$(LDFILE) polelim polecov
-extras:         polebelt exptest plotexp estbelt poleconst polecomb polepow
-small:          $(LDSMFILE)
+include Makefile.arch
 
-$(LDFILE):	$(LDOBJS)
-		g++ $(LDFLAGS) $(LDOBJS) -o $(LDFILE)
+# Internal configuration
+PACKAGE=Pole++
+LD_LIBRARY_PATH:=.:$(ROOTSYS)/lib:$(LD_LIBRARY_PATH)
+OBJDIR=/work/scratch/obj
+DEPDIR=$(OBJDIR)/dep
+VPATH= $(OBJDIR)
+INCLUDES += -I../include/  
+ROOTSYS  ?= ERROR_RootSysIsNotDefined
 
-$(LDSMFILE):	$(LDSMOBJS)
-		g++ $(LDFLAGS) $(LDSMOBJS) -o $(LDSMFILE)
+TOOLLIST = polelim.cxx polecov.cxx argsPole.cxx argsCoverage.cxx polebelt.cxx exptest.cxx plotexp.cxx poleconst.cxx polepow.cxx
+LIBLIST  = Pole.cxx  Coverage.cxx Random.cxx Pdf.cxx Combination.cxx Tools.cxx
+SKIPLIST = Combine.cxx Power.cxx Tabulated.cxx pdftst.cxx polecomb.cxx plotexp.cxx poleconst.cxx polepow.cxx
+SKIPLIBLIST = $(SKIPLIST) $(TOOLLIST)
+SKIPTOOLLIST = $(SKIPLIST) $(LIBLIST)
+SKIPHLIST = Tabulated.h
+LIBFILE      = lib$(PACKAGE).a
+SHLIBFILE    = lib$(PACKAGE).so
 
-argsPole.o:	argsPole.cxx
-		g++ $(CFLAGSARG) -Wall -c $<
-argsCoverage.o:	argsCoverage.cxx
-		g++ $(CFLAGSARG) -Wall -c $<
+UNAME = $(shell uname)
 
-polepow:	polepow.o
-		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
-polepow.o:	polepow.cxx
-		g++ $(CFLAGS) -Wall -c $<
 
-polecomb:       polecomb.o
-		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
-polecomb.o:     polecomb.cxx
-		g++ $(CFLAGS) -Wall -c $<
+default: shlib 
 
-estbelt:	estbelt.o
-		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
-estbelt.o:	estbelt.cxx
-		g++ $(CFLAGS) -Wall -c $<
 
-poleconst:	poleconst.o
-		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
-poleconst.o:	poleconst.cxx
-		g++ $(CFLAGS) -Wall -c $<
+# List of all include files
+HLIST   = $(filter-out $(SKIPHLIST),$(wildcard *.h))
+
+# source for library
+LIBCPPLIST   =  $(filter-out $(SKIPLIBLIST),$(LIBLIST))
+
+# source for tools
+TOOLCPPLIST  =  $(filter-out $(SKIPTOOLLIST),$(TOOLLIST))
+
+# List of all object files to build
+LIBOLIST =$(patsubst %.cxx,%.o,$(LIBCPPLIST))
+TOOLOLIST=$(patsubst %.cxx,%.o,$(TOOLCPPLIST))
+TOOLELIST=$(patsubst %.cxx,%,$(TOOLCPPLIST))
+
+# rules to compile tools
+
+alltools: $(TOOLELIST)
 
 polelim:	polelim.o argsPole.o
-		g++ $(CFLAGS) -Wall $^ $(LIBS)  -o $@
-polelim.o:	polelim.cxx
-		g++ $(CFLAGS) -Wall -c $<
-
-polebelt:	polebelt.o argsPole.o
-		g++ $(CFLAGS) -Wall $^ $(LIBS)  -o $@
-polebelt.o:	polebelt.cxx
-		g++ $(CFLAGS) -Wall -c $<
-
+		g++ $(CFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
 polecov:	polecov.o argsCoverage.o
-		g++ $(CFLAGS) -Wall $^ $(LIBS)  -o $@
-polecov.o:	polecov.cxx
-		g++ $(CFLAGS) -Wall -c $<
-
+		g++ $(CFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
+polebelt:	polebelt.o argsPole.o
+		g++ $(CFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
 exptest:	exptest.o
-		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
-exptest.o:	exptest.cxx
-		g++ $(CFLAGS) -Wall -c $<
+		g++ $(CFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
 
-plotexp:	plotexp.o
-		g++ $(CFLAGS) -Wall $< $(ROOTLIBS)  -o $@
-plotexp.o:	plotexp.cxx
-		g++ $(CFLAGS) $(ROOTCFLAGS) -Wall -c $<
 
-obstest:	obstest.o
-		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
-obstest.o:	obstest.cxx
-		g++ $(CFLAGS) -Wall -c $<
+# Implicit rule to compile all classes
+%.o : %.cxx 
+	@echo -n "Compiling $< ... "
+	@mkdir -p $(OBJDIR)
+	$(CXX) $(INCLUDES) $(CXXFLAGS) -g -c $< -o $(OBJDIR)/$(notdir $@)
+	@echo "Done"
 
-pdftst:		pdftst.o
-		g++ $(CFLAGS) -Wall $^ $(LIBS)  -o $@
-pdftst.o:	pdftst.cxx
-		g++ $(CFLAGS) -Wall -c $<
+##############################
+# The dependencies section   
+# - the purpose of the .d files is to keep track of the
+#   header file dependence
+# - this can be achieved using the makedepend command 
+##############################
+# .d tries to pre-process .cc
+-include $(foreach var,$(LIBCPPLIST:.$(SrcSuf)=.d),$(DEPDIR)/$(var))
+-include $(foreach var,$(TOOLCPPLIST:.$(SrcSuf)=.d),$(DEPDIR)/$(var))
+#-include $(foreach var,$(CPPLIST:.$(SrcSuf)=.d),$(DEPDIR)/$(var)) /dev/null
 
-pdftstold:	pdftstold.o
-		g++ $(CFLAGS) -Wall $< $(LIBS)  -o $@
-pdftstold.o:	pdftstold.cxx
-		g++ $(CFLAGS) -Wall -c $<
 
-meastst:	meastst.o
-		g++ $(CFLAGS) -Wall $< $(LIBSSM)  -o $@
-meastst.o:	meastst.cxx
-		g++ $(CFLAGS) -Wall -c $<
+$(DEPDIR)/%.d: %.$(SrcSuf)
+	@mkdir -p $(DEPDIR)
+	if test -f $< ; then \
+		echo -n "Building $(@F) ... "; \
+		$(SHELL) -ec '$(CPP) -MM $(INCLUDES) $(CXXFLAGS) $< | sed '\''/Cstd\/rw/d'\'' > $@'; \
+		echo "Done"; \
+	fi
 
-Combine.o:      Combine.cxx Combine.h
-		g++ $(CFLAGS) -Wall -c $<
+# Rule to combine objects into a library
+$(LIBFILE): $(LIBOLIST)
+	@echo -n "Making static library $(LIBFILE) ... "
+	@rm -f $(LIBFILE)
+	@ar q $(LIBFILE) $(addprefix $(OBJDIR)/,$(LIBOLIST))
+	@ranlib $(LIBFILE)
+	@echo "Done"
 
-Pole.o:		Pole.cxx Pole.h Pdf.h Range.h
-		g++ $(CFLAGS) -Wall -c $<
-Coverage.o:	Coverage.cxx Coverage.h Range.h Random.h Pole.h Pdf.h
-		g++ $(CFLAGS) -Wall -c $<
-Random.o:	Random.cxx Random.h
-		g++ $(CFLAGS) -Wall -c $<
-Pdf.o:		Pdf.cxx Pdf.h
-		g++ $(CFLAGS) -Wall -c $<
-Combination.o:	Combination.cxx Combination.h
-		g++ $(CFLAGS) -Wall -c $<
-Power.o:	Power.cxx Power.h
-		g++ $(CFLAGS) -Wall -c $<
-Tools.o:	Tools.cxx Tools.h
-		g++ $(CFLAGS) -Wall -c $<
+# Rule to combine objects into a unix shared library
+$(SHLIBFILE): $(LIBOLIST)
+	@echo -n "Building shared library $(SHLIBFILE) ... "
+	@rm -f $(SHLIBFILE)
+	$(LD) $(SOFLAGS) $(addprefix $(OBJDIR)/,$(LIBOLIST)) -o $(SHLIBFILE)
+	@echo "Done"
 
-package:	$(SRCLIB) $(SRCTOOLS) Makefile
-		tar -czf polelib.tgz $(SRCFILES) $(INCFILES) $(SRCTOOLS) $(SRCEXTRAS) release.notes Makefile Doxyfile README
 
+# Useful build targets
+lib: $(LIBFILE) 
+shlib: $(SHLIBFILE)
 clean:
-		rm -f *.o
+	rm -f $(SHLIBFILE)
+	rm -f $(OBJDIR)/*.o
+	rm -f $(DEPDIR)/*.d
+	rm -f $(LIBFILE)
+	rm -f $(SHLIBFILE)
+
+distclean:
+	rm -rf obj 
+	rm -f *~
+	rm -f $(SHLIBFILE)
+	rm -f $(LIBFILE)
+	rm -f $(SHLIBFILE)
+
+.PHONY : shlib lib default clean
+
+
