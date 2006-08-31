@@ -15,19 +15,24 @@ void my_sighandler(int a) {
   TOOLS::makeTimeStamp(timestamp);
   //
   if (a==SIGUSR1) {
-    gCoverage.calcCoverage();
-    std::string header("STATUS ( ");
-    header += timestamp;
-    header += " ) : ";
-    gCoverage.outputCoverageResult(1);
+    if (gCoverage.DoneOneLoop()) {
+      gCoverage.calcCoverage();
+      gCoverage.outputCoverageResult(1);
+    } else {
+      std::cout << "STATUS: No coverage results yet" << std::endl;
+    }
   } else {
     std::cout << "WARNING (" << timestamp << " ) Job aborting (signal = " << a
 	      << " ). Will output data from unfinnished loop.\n" << std::endl;
-    gCoverage.calcCoverage();
-    gCoverage.outputCoverageResult(0); // always output
-    gCoverage.calcStatistics();        // only if collecting stats
-    gCoverage.printStatistics();       // ditto
-    gCoverage.dumpExperiments();       // only if dump filename is defined
+    if (gCoverage.DoneOneLoop()) {
+      gCoverage.calcCoverage();
+      gCoverage.outputCoverageResult(0); // always output
+      gCoverage.calcStatistics();        // only if collecting stats
+      gCoverage.printStatistics();       // ditto
+      gCoverage.dumpExperiments();       // only if dump filename is defined
+    } else {
+      std::cout << "STATUS: No coverage results yet" << std::endl;
+    }
     exit(-1);
   }
 }

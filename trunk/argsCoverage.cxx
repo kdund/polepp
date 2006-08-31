@@ -62,13 +62,13 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     ValueArg<double> threshBS("","threshbs",  "binary search (limit) threshold" ,false,0.001,"float",cmd);
     ValueArg<double> threshAlpha("","threshalpha",  "threshold for accepting a cl in % of (1-cl)" ,false,0.01,"float",cmd);
     //
-    ValueArg<double> hypTestMin( "","hmin",   "hypothesis test min" ,false,0.0,"float",cmd);
-    ValueArg<double> hypTestMax( "","hmax",   "hypothesis test max" ,false,35.0,"float",cmd);
-    ValueArg<double> hypTestStep("","hstep",  "hypothesis test step" ,false,0.01,"float",cmd);
+//     ValueArg<double> hypTestMin( "","hmin",   "hypothesis test min" ,false,0.0,"float",cmd);
+//     ValueArg<double> hypTestMax( "","hmax",   "hypothesis test max" ,false,35.0,"float",cmd);
+//     ValueArg<double> hypTestStep("","hstep",  "hypothesis test step" ,false,0.01,"float",cmd);
     //
     ValueArg<double> effIntScale( "","effscale","eff num sigma in integral", false,5.0,"float",cmd);
     ValueArg<int>    effIntN(     "","effn",    "eff: N points in integral", false,21, "int",cmd);
-    ValueArg<double> bkgIntScale( "","bscale",  "bkg num sigma in integral", false,5.0,"float",cmd);
+    ValueArg<double> bkgIntScale( "","bkgscale","bkg num sigma in integral", false,5.0,"float",cmd);
     ValueArg<int>    bkgIntN(     "","bkgn",    "bkg: N points in integral", false,21, "int",cmd);
     //
     ValueArg<double> tabPoisMin( "","poismin",  "minimum mean value in table", false,0.0,"float",cmd);
@@ -109,7 +109,7 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     pole->setBSThreshold(threshBS.getValue());
     pole->setAlphaThreshold(threshAlpha.getValue());
     //
-    pole->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
+    pole->setTestHyp(0.0,1.0,0.1);//hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
 
     pole->setMinMuProb(minProb.getValue());
     //

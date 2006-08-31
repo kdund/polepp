@@ -13,6 +13,7 @@
 #include "Coverage.h"
 
 Coverage::Coverage() {
+  m_doneOneLoop = false;
   m_pole = 0;
   m_nLoops = 1;
   m_fixedSig = false;
@@ -204,8 +205,11 @@ void Coverage::outputCoverageResult(const int flag) { //output coverage result
   static bool firstCall=true;
   std::string header;
   if (firstCall) {
-    std::cout << "       Signal \tEfficiency\t\t\tBackground\t\tCoverage\t\t\tLoops\tMax loops" << std::endl;
-    std::cout << "      --------------------------------------------------------------------------------------------" << std::endl;
+    //
+    std::cout << "#==================================================================================================================" << std::endl;
+    std::cout << "#     Signal    |     Efficiency       |      Background       |      Coverage         |    Loops    |    Time " << std::endl;
+    std::cout << "#               | mean        sigma    |  mean        sigma    |  mean        sigma    | done    max |    [ms] " << std::endl;
+    std::cout << "#==================================================================================================================" << std::endl;
     firstCall = false;
   }
   if (flag==1) { // status (intermediate result)
@@ -214,17 +218,17 @@ void Coverage::outputCoverageResult(const int flag) { //output coverage result
     header = "DATA: ";
   }
   std::cout << header.c_str();
-  TOOLS::coutFixed(6,m_pole->getTrueSignal()); std::cout << "\t";
-  TOOLS::coutFixed(6,m_pole->getEffPdfMean()); std::cout << "\t";
-  TOOLS::coutFixed(6,m_pole->getEffPdfSigma()); std::cout << "\t";
-  TOOLS::coutFixed(6,m_pole->getBkgPdfMean()); std::cout << "\t";
-  TOOLS::coutFixed(6,m_pole->getBkgPdfSigma()); std::cout << "\t";
-  //TOOLS::coutFixed(6,m_beCorr); std::cout << "\t";
-  TOOLS::coutFixed(6,m_coverage); std::cout << "\t";
-  TOOLS::coutFixed(6,m_errCoverage); std::cout << "\t";
-  TOOLS::coutFixed(6,m_totalCount); std::cout << "\t";
-  TOOLS::coutFixed(6,m_nLoops); std::cout << "\t";
-  TOOLS::coutFixed(6,(m_stopClock-m_startClock)/1000.0); std::cout << std::endl;
+  TOOLS::coutFixed(6,m_pole->getTrueSignal()); std::cout << "    ";
+  TOOLS::coutFixed(6,m_pole->getEffPdfMean()); std::cout << "    ";
+  TOOLS::coutFixed(6,m_pole->getEffPdfSigma()); std::cout << "    ";
+  TOOLS::coutFixed(6,m_pole->getBkgPdfMean()); std::cout << "    ";
+  TOOLS::coutFixed(6,m_pole->getBkgPdfSigma()); std::cout << "    ";
+  //TOOLS::coutFixed(6,m_beCorr); std::cout << "    ";
+  TOOLS::coutFixed(6,m_coverage); std::cout << "    ";
+  TOOLS::coutFixed(6,m_errCoverage); std::cout << "    ";
+  TOOLS::coutFixed(6,m_totalCount); std::cout << "    ";
+  TOOLS::coutFixed(6,m_nLoops); std::cout << "      ";
+  TOOLS::coutFixed(2,m_timer.getUsedClock()); std::cout << std::endl;
 }
 
 
@@ -511,6 +515,7 @@ void Coverage::printSetup() {
 }
 
 void Coverage::doLoop() {
+  m_doneOneLoop = false;
   if (m_pole==0) return;
   //
   //
@@ -533,8 +538,7 @@ void Coverage::doLoop() {
   //
   // Start timer
   //
-  TOOLS::Timer etimer;
-  etimer.startClock();
+  m_timer.startClock();
   //
   for (is=0; is<m_sTrue.n(); is++) { // loop over all s_true
     m_pole->setTrueSignal( m_sTrue.getVal(is) );
@@ -551,10 +555,10 @@ void Coverage::doLoop() {
         //
         // For each 'truth', make nLoops pseudoexperiments and check if the truth is with the limits
         // 
-        etimer.startClock();
+        m_timer.startClock();
 	for (j=0; j<m_nLoops; j++) {  // get stats
 	  if (first) {
-            etimer.startTimer();       // used for estimating the time for the run
+            m_timer.startTimer();       // used for estimating the time for the run
 	    first = false;
 	  }
           // generate pseudoexperiment using given ditributions of signal,bkg and eff.
@@ -579,14 +583,15 @@ void Coverage::doLoop() {
 	    }
 	    nWarnings++;
 	  } else {
+            m_doneOneLoop = true;
 	    updateCoverage();            // update the coverage
 	    updateStatistics(true);          // statistics (only if activated)
 	    if (!timingDone) {
 	      nest++;
-	      if (etimer.checkTimer(5)) {
+	      if (m_timer.checkTimer(5)) {
 		timingDone = true;
-                etimer.stopTimer();
-                etimer.printEstimatedTime(nTotal, nest);
+                m_timer.stopTimer();
+                m_timer.printEstimatedTime(nTotal, nest);
 	      }
 	    }
 	  }
@@ -594,7 +599,7 @@ void Coverage::doLoop() {
           m_pole->setBkgPdfMean( m_bkgTrue.getVal(ib) );
 	}
 	calcCoverage();         // calculate coverage and its uncertainty
-        etimer.stopClock();
+        m_timer.stopClock();
 	outputCoverageResult(); // print the result
 	calcStatistics();       // dito for the statistics...
 	printStatistics();
@@ -611,7 +616,7 @@ void Coverage::doLoop() {
     std::cout << "         2. Increase hypothesis range ( Pole::setTestHyp() )" << std::endl;
     std::cout << "         3. Increase integration precision (Pole::setEffInt(),setBkgInt() )" << std::endl;
   }
-  etimer.printCurrentTime("\nEnd of run: ");
+  m_timer.printCurrentTime("\nEnd of run: ");
 }
 
 // void Coverage::doLoopOLD() {

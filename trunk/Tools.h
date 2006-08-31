@@ -17,15 +17,16 @@ namespace TOOLS {
   void makeTimeStamp( std::string & stamp, struct tm *time );
   class Timer {
   public:
-    Timer()  {}
+    Timer():m_runningTime(false),m_runningClock(false)  {}
     ~Timer() {}
 
     void start() { startTimer(); startClock(); }
     void stop() { stopTimer(); stopClock(); }
-    void clear() { m_startTime=0; m_stopTime=0; m_estTime=0; m_startClock=0; m_stopClock=0; }
+    void clear() { m_startTime=0; m_stopTime=0; m_estTime=0; m_startClock=0; m_stopClock=0; m_runningTime = false; m_runningClock = false; }
     void startTimer();
     bool checkTimer(int dt);
     void stopTimer();
+    time_t calcEstimatedTime( int nloops, int ntotal );
     void printTime(const char *msg, time_t t );
     void printCurrentTime(const char *msg);
     void printUsedTime();
@@ -34,7 +35,19 @@ namespace TOOLS {
     void stopClock();
     void printUsedClock(int norm);
 
+    clock_t getStartClock() { return m_startClock; }
+    clock_t getStopClock()  { return (m_runningClock ? clock():m_stopClock); }
+    double  getUsedClock( double scale=1e-3 ) { return (getStopClock() - m_startClock)*scale; }
+
+    time_t getStartTime() { return m_startTime; }
+    time_t getStopTime()  { time_t t; time(&t); return (m_runningTime ? t:m_stopTime); }
+    time_t getUsedTime()  { return getStopTime() - m_startTime; }
+    time_t getEstTime()   { return m_estTime; }
+
   private:
+    bool   m_runningTime;
+    bool   m_runningClock;
+
     time_t m_startTime;
     time_t m_stopTime;
     time_t m_estTime;

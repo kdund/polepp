@@ -117,19 +117,15 @@ void Pole::exeFromFile() {
     getline(inpf,dataLine);
     if ((dataLine[0]!='#') && (dataLine.size()>0)) {
       std::istringstream sstr(dataLine);
-      //  sstr >> n >> ed >> em >> es >> bd >> bm >> bs;
-      sstr >> n >> iy >> iz >> t >> u;
+      //      sstr >> n >> ed >> em >> es >> bd >> bm >> bs;
+      sstr >> n >> y >> z >> t >> u;
       if (sstr) {
+        nread++;
         if ((m_verbose>0) && (nlines<10)) {
           std::cout << "LINE: ";
           //          std::cout << n << "\t" << ed << "\t" << em << "\t" << es << "\t" << bd << "\t" << bm << "\t" << bs << std::endl;
-          std::cout << n << "\t" << iy << "\t" << iz << "\t" << t << "\t" << u  << std::endl;
+          std::cout << n << "\t" << y << "\t" << z << "\t" << t << "\t" << u  << std::endl;
         }
-        y = iy;
-        z = iz;
-        //        if ((n==3) && (iy==82) && (iz==105)) m_verbose=3;
-        //
-        nread++;
         setNObserved(static_cast<int>(n*t+0.5));
         setEffPdf( z, z, PDF::DIST_POIS );
         setEffObs();
@@ -142,6 +138,7 @@ void Pole::exeFromFile() {
 //         setEffObs();
 //         setBkgPdf( bm, bs, PDF::DISTYPE(bd) );
 //         setBkgObs();
+//         setScaleLimit(1.0);
         //      
         exeEvent(first);
         first=false;
@@ -421,7 +418,11 @@ double Pole::calcLhRatio(double s, int & nbMin, int & nbMax) {
       //      if ((s<5.02) &&(m_muProb[n]>0.00001)) std::cout << "s = " << s << "     : m_muProb[" << n << "] = " << m_muProb[n] << std::endl;
     }
     lhSbest = getLsbest(n);
-    m_lhRatio[n]  = m_muProb[n]/lhSbest;
+    if (lhSbest>0) {
+       m_lhRatio[n]  = m_muProb[n]/lhSbest;
+    } else {
+       m_lhRatio[n]  = 0.0;
+    }
     if (m_verbose>8) {
       std::cout << "LHRATIO: " << "\t" << n << "\t" << s << "\t" << m_muProb[n] << "\t" << lhSbest << std::endl;
     }
@@ -578,15 +579,28 @@ bool Pole::limitsOK() {
 //*********************************************************************//
 //*********************************************************************//
 
-void Pole::calcConstruct(double s, bool verb) {
+void Pole::calcConstruct(double s, bool title) {
   int i;
   int nb1,nb2;
   //
   double norm_p = calcLhRatio(s,nb1,nb2);
-  if (verb) {
-    for (i=nb1; i<nb2; i++) {
-      std::cout << "CONSTRUCT: " << s << "\t" << i << "\t" << m_lhRatio[i] << "\t" << m_muProb[i] << "\t" << norm_p << std::endl;
-    }
+  if (title) {
+    std::cout << "#========================================================================" << std::endl;
+    std::cout << "#          Signal       N       R(L)            P(s)            Norm     " << std::endl;
+    std::cout << "#========================================================================" << std::endl;
+  }
+  for (i=nb1; i<nb2; i++) {
+    std::cout << "CONSTRUCT: ";
+    TOOLS::coutFixed(4,s);
+    std::cout << "\t";
+    TOOLS::coutFixed(6,i);
+    std::cout << "\t";
+    TOOLS::coutFixed(6,m_lhRatio[i]);
+    std::cout << "\t";
+    TOOLS::coutFixed(6,m_muProb[i]);
+    std::cout << "\t";
+    TOOLS::coutFixed(6,norm_p);
+    std::cout << std::endl;
   }
 }
 
@@ -617,7 +631,7 @@ void sort_index(std::vector<double> & input, std::vector<int> & index, bool reve
   }
 }
 
-double Pole::calcBelt(double s, int & n1, int & n2, bool verb) { //, double muMinProb) {
+double Pole::calcBelt(double s, int & n1, int & n2, bool verb, bool title) { //, double muMinProb) {
   //
   int nBeltMinUsed;
   int nBeltMaxUsed;
@@ -670,9 +684,20 @@ double Pole::calcBelt(double s, int & n1, int & n2, bool verb) { //, double muMi
   n1 = nmin;
   n2 = nmax;
   if (verb) {
-    std::cout << "CONFBELT: " << s << "\t" << n1 << "\t" << n2 << "\t" << sumProb << std::endl;
-    //	      << m_lhRatio[n1] << "\t" << m_lhRatio[n2] << "\t" << norm_p << "\t"
-    //	      << index[0] << "\t" << m_lhRatio[index[0]] << " , nBelt: " << nBeltMinUsed << " , " << nBeltMaxUsed << std::endl;
+    if (title) {
+      std::cout << "#==================================================" << std::endl;
+      std::cout << "#         Signal       N1      N2      P(n1,n2|s)  " << std::endl;
+      std::cout << "#==================================================" << std::endl;
+    }
+    std::cout << "CONFBELT: ";
+    TOOLS::coutFixed(4,s);
+    std::cout << "\t";
+    TOOLS::coutFixed(6,n1);
+    std::cout << "\t";
+    TOOLS::coutFixed(6,n2);
+    std::cout << "\t";
+    TOOLS::coutFixed(6,sumProb);
+    std::cout << std::endl;
   }
   return sumProb;
 }
@@ -695,7 +720,7 @@ void Pole::calcPower() {
   for (int i=0; i<nhyp; i++) {
     muTest = m_hypTest.min() + i*m_hypTest.step();
     //    if (m_verbose>-1) std::cout << "Hypothesis: " << muTest << std::endl;
-    sumP = calcBelt(muTest,n1,n2,false); //,-1.0);
+    sumP = calcBelt(muTest,n1,n2,false,false);
     fullConstruct.push_back(m_muProb);
 
     n1vec.push_back(n1);
@@ -786,31 +811,35 @@ void Pole::calcConstruct() {
   double mu_test;
   int i = 0;
   bool done = (i==m_hypTest.n());
+  bool title = true;
   m_nBeltMinLast = 0;
   //
   while (!done) {
     mu_test = m_hypTest.min() + i*m_hypTest.step();
-    calcConstruct(mu_test,true);
+    calcConstruct(mu_test,title);
     i++;
+    title = false;
     done = (i==m_hypTest.n()); // must loop over all hypothesis
   }
 }
 
 void Pole::calcNMin() { // calculates the minimum N rejecting s = 0.0
   m_nBeltMinLast = 0;
-  m_rejs0P = calcBelt(0.0,m_rejs0N1,m_rejs0N2,false);//,-1.0);
+  m_rejs0P = calcBelt(0.0,m_rejs0N1,m_rejs0N2,false,false);//,-1.0);
 }
 
 void Pole::calcBelt() {
   double mu_test;
   int i = 0;
   bool done = (i==m_hypTest.n());
+  bool title = true;
   //
   m_nBeltMinLast = 0;
   int n1,n2;
   while (!done) {
     mu_test = m_hypTest.min() + i*m_hypTest.step();
-    calcBelt(mu_test,n1,n2,true);
+    calcBelt(mu_test,n1,n2,true,title);
+    title = false;
     i++;
     done = (i==m_hypTest.n()); // must loop over all hypothesis
   }
@@ -872,8 +901,8 @@ bool Pole::calcLimit() {
   double mustart = getObservedSignal();
   double muhigh  = mustart;
   double mulow   = 0.0;
-  double dmu;
-  int dir;
+  double dmu = 0.0;
+  int dir=100; // invalid number - check for bugs
   //
   if (m_verbose>1) {
     std::cout << "*** Calculating belt for start s = " << mustart << std::endl;
@@ -893,7 +922,7 @@ bool Pole::calcLimit() {
     m_lowerLimit      = 0;
     if (m_verbose>1) {
       std::cout << "*** Lower limit concluded from the fact that N(obs) = " << getNObserved()
-                << " and Belt(s=0) = [ " << m_rejs0N1 << " : " << m_rejs0N2 << std::endl;
+                << " and Belt(s=0) = [ " << m_rejs0N1 << " : " << m_rejs0N2 << " ]" << std::endl;
     }
   } else {
     // First scan for lower limit
@@ -935,7 +964,7 @@ bool Pole::calcLimit() {
         m_lowerLimitFound = true;
         m_lowerLimitNorm  = m_scanBeltNorm;
         m_lowerLimit      = mutest;
-      } if (dir==1) {
+      } else if (dir==1) {
         mulow = mutest;
       } else {
         muhigh = mutest;
@@ -965,20 +994,22 @@ bool Pole::calcLimit() {
     if (m_verbose>1)
       std::cout << "*** Find a rough upper limit, starting at " << muhigh << std::endl;
     int cn=0;
-    while (dir==-1) {
+    while (!done) { //dir==-1) {
       dir = calcLimit(muhigh); // what if out of reach for nbelt???? CHECK
       if (dir==-1) muhigh *= 1.1; // scale up
       cn++;
-      if (cn>1000) {
-        dir=-1;
+      if (cn>30) {
+        done = true;
         std::cout << "*** WARNING infinite (?) loop when scanning for the rough upper limit!" << std::endl;
+      } else {
+        done = (dir!=-1);
       }
     }
     // found a rough upper limit, now go down
     if (m_verbose>1)
       std::cout << "*** Upper limit: binary search" << std::endl;
-
     i = 0;
+    done = false;
     while (!done) {
       mutest = (mulow+muhigh)/2.0;
       if (m_verbose>1)
@@ -993,7 +1024,7 @@ bool Pole::calcLimit() {
         m_upperLimitFound = true;
         m_upperLimitNorm  = m_scanBeltNorm;
         m_upperLimit      = mutest;
-      } if (dir==1) {
+      } else if (dir==1) {
         muhigh = mutest;
       } else {
         mulow = mutest;

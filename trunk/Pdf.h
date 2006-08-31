@@ -116,6 +116,11 @@ namespace PDF {
         std::cout << "--------------------------------------------------" << std::endl;
       }
     }
+
+    virtual const bool isInt()    const { return false; }
+    virtual const bool isDouble() const { return false; }
+    virtual const bool isFloat()  const { return false; }
+
   protected:
     void copy(const Base & other) {
       if (this != &other) {
@@ -150,11 +155,19 @@ namespace PDF {
     virtual ~BaseType() { }
     //
     virtual const double F(T x) const=0;
-    virtual const double getVal(const T x, const double mean, const double sigma) const {std::cerr << "ERROR: Accessing getVal(T x,m,s) - NOT IMPLEMENTED for this class" << std::endl; exit(-1); return 0;}
-    virtual const double getVal(const T x, const double mean) const {std::cerr << "ERROR: Accessing getVal(T x,m) - NOT IMPLEMENTED for this class" << std::endl; exit(-1); return 0;}
+    const double getVal(const T x, const double mean, const double sigma) const {std::cerr << "ERROR: Accessing getVal(T x,m,s) - NOT IMPLEMENTED for this class" << std::endl; exit(-1); return 0;}
+    const double getVal(const T x, const double mean) const {std::cerr << "ERROR: Accessing getVal(T x,m) - NOT IMPLEMENTED for this class" << std::endl; exit(-1); return 0;}
     inline const double operator()(T x) const { return F(x); }
 
+    virtual const bool isInt()    const { return false; }
+    virtual const bool isDouble() const { return false; }
+    virtual const bool isFloat()  const { return false; }
+
   };
+
+  const bool BaseType<int>::isInt()       const { return true; }
+  const bool BaseType<double>::isDouble() const { return true; }
+  const bool BaseType<float>::isFloat()   const { return true; }
 
   class Flat : public BaseType<double> {
   public:

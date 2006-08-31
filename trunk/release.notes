@@ -1,7 +1,14 @@
 /*! @file release.notes
  *
  *  Manager: Fredrik Tegenfeldt (fredrik.tegenfeldt@cern.ch)
- *
+ *  - 25.08.2006 Major revision
+ *     -# Uses a new more general structure
+ *     -# Now works with poissonian nuisance parameters
+ *     -# Pole can now read data from file
+ *     -# Several numerical bugs fixed (rel. poisson)
+ *     -# Not compatible with previous release
+ *     -# polelim, polecov and exptest works
+ *     -# polecomb is currently broken - to be fixed
  *  - 16.02.2006 Update
  *     -# Now compiles under gcc 4
  *     -# Accepts poisson distributions for efficiency and background
@@ -11,6 +18,6 @@
  *  - 09.09.2004 Update
  *     -# Several changes
  *  - 17.08.2004 First release
- *     -# Blablabla
+ *     -# Here we go...
  *
  */

@@ -391,11 +391,11 @@ public:
   //! calculate the construct
   void calcConstruct();
   //! calculate the construct for the given signal
-  void calcConstruct(double s, bool verb);
+  void calcConstruct(double s, bool title);
   //! calculate the confidence belt
   void calcBelt();
   //! calculate the confidence belt for the given signal
-  double calcBelt(double s, int & n1, int & n2,bool verb);
+  double calcBelt(double s, int & n1, int & n2,bool verb, bool title);
   //! calculate the confidence limits
   bool calcLimit();
   //! calculate the confidence limit probability for the given signal

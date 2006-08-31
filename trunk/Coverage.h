@@ -53,6 +53,8 @@ public:
   virtual void outputCoverageResult(const int flag=0);	// Output coverage
   //
   void setVerbose(int v=0) { m_verbose = v; }
+
+  bool DoneOneLoop() { return m_doneOneLoop; }
   //
 private:
   void calcStats(std::vector<double> & vec, double & average, double & variance);
@@ -69,6 +71,7 @@ private:
   Range<double>  m_effTrue;
   Range<double>  m_bkgTrue;
   int    m_nLoops;   // number of loops
+
   // flags if true, the corresponding observable is kept fixed when generating experiments
   bool   m_fixedEff;
   bool   m_fixedBkg;
@@ -109,12 +112,8 @@ private:
   double m_aveStatus;
   double m_varStatus;
 
+  bool   m_doneOneLoop;
   // some timing stuff
-  time_t m_startTime;  // start time
-  time_t m_stopTime;   // stop time
-  time_t m_estTime;    // estimated time for completion
-
-  clock_t m_startClock;
-  clock_t m_stopClock;
+  TOOLS::Timer m_timer;
 };
 #endif

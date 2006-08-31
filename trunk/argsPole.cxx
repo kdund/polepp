@@ -47,7 +47,7 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     //
     ValueArg<double> effIntScale( "","effscale","eff num sigma in integral", false,5.0,"float",cmd);
     ValueArg<int>    effIntN(     "","effn",    "eff: N points in integral", false,21, "int",cmd);
-    ValueArg<double> bkgIntScale( "","bscale",  "bkg num sigma in integral", false,5.0,"float",cmd);
+    ValueArg<double> bkgIntScale( "","bkgscale","bkg num sigma in integral", false,5.0,"float",cmd);
     ValueArg<int>    bkgIntN(     "","bkgn",    "bkg: N points in integral", false,21, "int",cmd);
 
     ValueArg<double> tabPoisMin( "","poismin",  "minimum mean value in table", false,0.0,"float",cmd);

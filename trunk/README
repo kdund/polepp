@@ -1,4 +1,11 @@
->Created 16/2/2006, Fredrik Tegenfeldt, CERN<
+**************************************************
+*                                                *
+* Created  : 16/2/2006                           *
+* Author   : Fredrik Tegenfeldt, CERN            *
+* Modified : 2006-08-31                          *
+*            Major revision.                     *
+*                                                *
+**************************************************
 
 This is a short version of a 'manual'. The intention is to include this in the doxygen
 documentation with somewhat more fancy layout.
@@ -64,36 +71,44 @@ Running polelim with option --help yields:
 
 USAGE: 
 
-   ./polelim  [-V <int>] [--bkgn <int>] [--bscale <float>] [--effn <int>]
-              [--effscale <float>] [--hstep <float>] [--hmax <float>]
-              [--hmin <float>] [--nbelt <int>] [--nmus <float>] [--dmus
-              <float>] [--corr <float>] [--bkgdist <int>] [--bkgmeas
-              <float>] [--bkgsigma <float>] [--effdist <int>] [--effmeas
-              <float>] [--effsigma <float>] [--minp <float>] [-T] [-m
-              <int>] [--strue <float>] [--cl <float>] [--nobs <int>] [--]
-              [-v] [-h]
+   ./polelim  [-l <int>] [-f <string>] [-V <int>] [--poisnx <int>]
+              [--poisnm <int>] [--poismax <float>] [--poismin <float>]
+              [--bkgn <int>] [--bkgscale <float>] [--effn <int>] [--effscale
+              <float>] [--hstep <float>] [--hmax <float>] [--hmin <float>]
+              [--threshalpha <float>] [--threshbs <float>] [--nmus <float>]
+              [--dmus <float>] [--corr <float>] [--bkgdist <int>]
+              [--bkgmeas <float>] [--bkgsigma <float>] [--effdist <int>]
+              [--effmeas <float>] [--effsigma <float>] [--minp <float>]
+              [-K] [-m <int>] [--strue <float>] [--cl <float>] [--nobs
+              <int>] [--] [-v] [-h]
 
+
+III.1 Minimum requirements
+--------------------------
 
 Pole calculates the confidence interval of a given confidence level from the following information:
 
 * Number of observed events
-  --nobs
+  --nobs <int>         : default is 1
 
 * Method
-  -m or --method   : 1 - FHC2 (default), 2 - MBT
+  -m or --method <int> : 1 - FHC2 (default), 2 - MBT
 
-* Confidence level : --cl
+* Confidence level
+  --cl       <float>   : default is 0.90
 
-* Signal efficiency: --effmeas
-  distribution     : --effdist
-  uncertainty      : --effmeas
+* Efficiency
+  --effmeas  <float>   : measured mean
+  --effdist  <float>   : assumed distribution
+  --effsigma <float>   : measured uncertainty
 
-* Background       : --bkgmeas
-  distribution     : --bkgdist
-  uncertainty      : --bkgmeas
+* Background
+  --bkgmeas  <float>   : measured mean
+  --bkgdist  <float>   : assumed distribution
+  --bkgsigma <float>   : measured uncertainty
 
 * Correlation coefficient between eff and bkg:
-  --corr      : is in the range of [-1,1]
+  --corr     <float>   : is in the range of [-1,1]
 
 The distributions above are:
   0 - none
@@ -105,49 +120,95 @@ The distributions above are:
 
 ------------------------------------------------------------------
 
-In many cases it is enough if these are set.
-However, there are several other parameters to control the precision of integrals etc.
+An alternative way of inputting data is by file. This is not yet well developed.
+See the function Pole::exeFromFile().
+
+* Filename
+  -f <string>   : data file name - see/modify Pole::exeFromFile()
+  -l <int>      : number of lines to read from input file
+
+  If -f is used --nobs, --eff/bkg{meas,dist,sigma} are ignored
+
+
+
+III.2 Precision related
+-----------------------
+
+There are several other parameters to control the precision of integrals, limit scan etc.
 
 * Integral over aposteriori efficiency distribution:
-  --effn     :   number of points, default = 21
-  --effscale :   integrate between [ mean-scale*sigma, mean+scale*sigma ]
-		 where mean == --effmeas and sigma = --effsigma
-		 default = 5.0
+  --effn     <float    : number of points, default = 21
+  --effscale <float>   :  integrate between [ mean-scale*sigma, mean+scale*sigma ]
+		         where mean == --effmeas and sigma = --effsigma
+		         default = 5.0
 
 * Ditto for background integration:
-  --bkgn
-  --bkgscale
+  --bkgn     <float>   : see above
+  --bkgscale <float>   : see above
 
-* Confidence belt construct:
-  --hstep : hypothesis step size
-  --hmin  : minimum
-  --hmax  : maximum
+* Finding s_best - only used when method is FHC2
 
-  --nbelt : maximum N in belt - if set to -1, the code will try to guess what is needed
+  --dmus     <float>   : step size in search, usually fine with 0.01
+	                 increase or reduce depending on requirements in precision or speed.
+  --nmus     <float>   : maximum number of steps - using the given step size, the number of steps is not allowed
+                         to be greater than nmus. default = 100
 
-  These might very well need modifications if it fails finding a limit.
-  Usually what is needed is to increase hmax and/or nbelt.
+* Search threshholds
 
-* Finding s_best
+  --threshbs    <float> : minimum relative change in hypothesis in the binary search for the limit
+                          default = 0.001
+  --threshalpha <float> : minimum relative diff in alpha to required alpha = 1-cl
+                          default = 0.01
 
-  --dmus  : step size in search, usually fine with 0.01
-	    increase or reduce depending on requirements in precision or speed.
-  --nmus  : maximum number of steps - using the given step size, the number of steps is not allowed
-            to be greater than nmus. default = 100
+  The binary search stops whenever one of the above conditions are met.
 
-* Diverse
-  --minp  : minimum probability considered when creating the belt - default=-1.0
-	    for speed, this number may be > 0.0 without loosing precision
+* Probability threshhold
 
-  -T or --tab : use tabulated poisson - only relevant when speed is an issue
+  --minp        <float> : minimum probability p(n|H) considered when calculating the belt
+                          automatically set depending on the selected CL
 
-  -V or --verbose : verbose mode; mainly for debugging. Output may be confusing...
+* Poisson table; for speed, the poisson table is tabulated for a range of N and mean values.
+  This only makes sense if many points are to be caclulated.
+  When reading the table, 2nd order derivative corrections are applied.
 
-  --strue  : has no effect *OBSOLETE*
+  --poisnx      <int>   : maximum N
+                          default = 200
+  --poisnm      <int>   : number of mean values
+                          default = 100000
+  --poismin     <float> : minimum mean
+                          default = 0.0
+  --poismax     <float> : maximum mean
+                          default = 100.0
 
-  -v or --version: print version
+  NOTE: if large N or mean values are used, it might fail due to limited memory.
 
-  -h or --help : print help
+  -K                    : do not tabulate poisson - rarely needed but can be good to check that the
+                          poisson table is accurate enough
+
+III.3 Various options
+---------------------
+
+  -V or --verbose <int> : verbose mode; mainly for debugging. Output may be confusing...
+
+  -v or --version       : print version
+
+  -h or --help          : print help
+
+
+III.4 Extras - NOT USED WHEN CALCULATING LIMITS
+-----------------------------------------------
+
+* Confidence belt construct.
+  Relevant when calculating the construct or belt (polebelt and poleconst tools).
+
+  --hstep <float> : hypothesis step size
+  --hmin  <float> : minimum
+  --hmax  <float> : maximum
+
+
+The following options are now obsolete:
+
+--nobs, --strue
 
 
 IV. INPUT OPTIONS, POLECOV
@@ -157,12 +218,14 @@ Running polecov --help gives:
 
 USAGE: 
 
-   ./polecov  [--bkgn <int>] [--bkgscale <float>] [--effn <int>] [--effscale
-              <float>] [--hstep <float>] [--hmax <float>] [--hmin <float>]
-              [--nbelt <int>] [--nmus <float>] [--dmus <float>] [--corr
-              <float>] [--bstep <float>] [--bmax <float>] [--bmin <float>]
-              [--bsigma <float>] [--bkgdist <int>] [--estep <float>]
-              [--emax <float>] [--emin <float>] [--esigma <float>]
+   ./polecov  [--poisnx <int>] [--poisnm <int>] [--poismax <float>]
+              [--poismin <float>] [--bkgn <int>] [--bscale <float>] [--effn
+              <int>] [--effscale <float>] [--hstep <float>] [--hmax
+              <float>] [--hmin <float>] [--threshalpha <float>] [--threshbs
+              <float>] [--nmus <float>] [--dmus <float>] [--corr <float>]
+              [--bkgstep <float>] [--bkgmax <float>] [--bkgmin <float>]
+              [--bkgsigma <float>] [--bkgdist <int>] [--effstep <float>]
+              [--effmax <float>] [--effmin <float>] [--effsigma <float>]
               [--effdist <int>] [--sstep <float>] [--smax <float>] [--smin
               <float>] [-P <int>] [-V <int>] [--dump <string>] [--minp
               <float>] [-S] [-C] [-K] [-m <int>] [--cl <float>] [--rseedofs
@@ -221,7 +284,7 @@ Statistics:
 
 For each point calculated a line is printed as follows:
 
- DATA: <s(true)>    <eff>  <sigma(eff)>  <bkg> <sigma(bkg)>  <corr>  <coverage> <coverage uncertainty>  <number of loops done>  <max n(loops)>  <...>
+ DATA: <s(true)>    <eff>  <sigma(eff)>  <bkg> <sigma(bkg)>  <corr>  <coverage> <coverage uncertainty>  <number of loops done>  <max n(loops)>  <time in ms>
 
 From the logfile, a tabulated file can be obtained using the following:
 
@@ -246,12 +309,25 @@ The coverage can then be plotted using, e.g, gnuplot.
 V. EXAMPLE POLELIM
 ===================
 
-Running the polelim with default parameters:
+* Running the polelim with default parameters:
 
-
+---------------------------------------------------------------------
+--- Tabulating pdf <Poisson>
+--- N(X)       = 201
+---   min      = 0
+---   max      = 200
+--- N(mean)    = 100000
+---   min      = 0
+---   max      = 100
+--- N(sigma)   = 1
+---   min      = 0
+---   max      = 0
+---------------------------------------------------------------------
+--- Tabulating ... be patient
+--- Tabulating DONE!
 
 ================ P O L E ==================
- Confidence level   : 0.9
+ 1.0 - conf. level  : 0.1
  N observed         : 1
 ----------------------------------------------
  Coverage friendly  : No
@@ -275,36 +351,39 @@ Running the polelim with default parameters:
  Int. bkg. max      : 0
  Int. bkg. N pts    : 1
 ----------------------------------------------
- Test hyp. min      : 0
- Test hyp. max      : 35
- Test hyp. step     : 0.01
+ Binary search thr. : 0.001
+ 1-CL threshold     : 0.01
+ Min prob in belt   : 0.001
 ----------------------------------------------
- Min. probability   : 0.001
+ *Test hyp. min     : 0
+ *Test hyp. max     : 35
+ *Test hyp. step    : 0.01
 ----------------------------------------------
- Belt N max         : variable
+----------------------------------------------
  Step mu_best       : 0.002
  Max N, mu_best     : 100
 ----------------------------------------------
  Method             : FHC2
 ----------------------------------------------
  Verbosity          : 0
+----------------------------------------------
+ Parameters prefixed with a * above are not   
+ relevant for limit calculations.
 ==============================================
-CONFBELT: 0	0	1	1
-NMIN0:	1	1
--------------------------------------------------
- Max N(belt) set  : 47
- Max N(belt) used : 13
--------------------------------------------------
- Nobs  	  Eff   	 Bkg
--------------------------------------------------
-1	1.000000	0.200000	0.000000	0.000000	[ 0.11, 4.63 ]
+#-------------------------------------------------------------------------------------
+# Max N(belt) set  : 15
+# Max N(belt) used : 13
+# Min N(belt) used : 0
+# Prob(belt s=0)   : 1
+# N1(belt s=0)     : 0
+# N2(belt s=0)     : 1
+#-----------------------------------------------------------------------------------------
+# N(obs)  eff(mean)     eff(sigma)      bkg(mean)       bkg(sigma)      low         up
+#-----------------------------------------------------------------------------------------
+  1	  1.000000	0.200000	0.000000	0.000000	0.105469	4.636250
 
 
 The last line contains: nobs, eff, sigma(eff), bkg, sigma(bkg), [limits].
-Note the lines further up "Max N(belt) set...". The max used gives the lower limit of --nbelt argument.
-In the case above we could set --nbelt 13 without loosing precision.
-This is only really relevant when calculating coverage.
-
 
 * Fixed efficiency, gaussian backgound:
 
@@ -316,31 +395,7 @@ This is only really relevant when calculating coverage.
 
 ./polelim --nobs 30
 
- => FAILS with the following message:
-
--------------------------------------------
-ERROR: limit calculation failed. Possible causes:
-1. nbelt is too small (set nbelt = 121, max used = 61)
-2. precision in integrations (eff,bkg) not sufficient
-3. hypethesis test range too small ( max = 35 )
-4. Symptom: probability of lower/upper limit diverges from unity.
-   -> if Poisson table is used, insufficient precision.
-   -> minimum probability too large; min = 0.001
-Input:
-   N(obs)     = 30
-Results:
-   probability (should be = CL)  = 0.44372
-   lower lim norm (should be 1)  = 0.998133
-   upper lim norm (ditto)        = 0.99708
-   lower lim                     = 18.75
-   upper lim                     = 34.99
--------------------------------------------
-
-Lower limit is ok but upper limit has reached the upper test range.
-The remedy is to increase the range. Adding --hmax 50 gives a proper limit:
-[18.75,47.65]
-
-
+ => Used to fail in previous versions. Due to the binary search approach, this does not fail anymore.
 
 
 VI. EXAMPLE POLECOV
@@ -348,12 +403,23 @@ VI. EXAMPLE POLECOV
 
 * Running polecov with default settings:
 
-
-
-<<Pole::CheckParams() is disabled - Manually make sure that the integration limits are ok>>
+---------------------------------------------------------------------
+--- Tabulating pdf <Poisson>
+--- N(X)       = 201
+---   min      = 0
+---   max      = 200
+--- N(mean)    = 100000
+---   min      = 0
+---   max      = 100
+--- N(sigma)   = 1
+---   min      = 0
+---   max      = 0
+---------------------------------------------------------------------
+--- Tabulating ... be patient
+--- Tabulating DONE!
 
 ==============C O V E R A G E=================
- Random seed        : 1140085666
+ Random seed        : 1157036854
  Number of loops    : 1
  Collect statistics : No
 ----------------------------------------------
@@ -376,68 +442,75 @@ VI. EXAMPLE POLECOV
  Background dist    : None
 ----------------------------------------------
  Correlated bkg,eff : No
- Correlation coef.  : 0
 ==============================================
-Start of run: 16/02/2006 11:27:47
-       Signal 	Efficiency			Background			Correlation	Coverage			Loops	Max loops
-      --------------------------------------------------------------------------------------------
-DATA: 1.000000	1.000000	0.200000	0.000000	0.000000	0.000000	1.000000	0.000000	1	1	30.000000
->>>Limit calculation failure rate: 0.000000
+Start of run: 31/08/2006 17:07:35
+#==================================================================================================================
+#     Signal    |     Efficiency       |      Background       |      Coverage         |    Loops    |    Time 
+#               | mean        sigma    |  mean        sigma    |  mean        sigma    | done    max |    [ms] 
+#==================================================================================================================
+DATA: 1.000000    1.000000    0.200000    0.000000    0.000000    1.000000    0.000000    1    1      0.00
+>>>Limit calculation failure rate: 0
 
-End of run: 16/02/2006 11:27:47
-
-
-
-* Scanning several parameters
+End of run: 31/08/2006 17:07:35
 
 
+* Scanning several parameters:
 
-<<Pole::CheckParams() is disabled - Manually make sure that the integration limits are ok>>
+> ./polecov --smin 1.0 --smax 5.0 --sstep 1.0 --dmus 0.1 --nloops 1000
+
+---------------------------------------------------------------------
+--- Tabulating pdf <Poisson>
+--- N(X)       = 201
+---   min      = 0
+---   max      = 200
+--- N(mean)    = 100000
+---   min      = 0
+---   max      = 100
+--- N(sigma)   = 1
+---   min      = 0
+---   max      = 0
+---------------------------------------------------------------------
+--- Tabulating ... be patient
+--- Tabulating DONE!
 
 ==============C O V E R A G E=================
- Random seed        : 1140085784
- Number of loops    : 10
+ Random seed        : 1157036928
+ Number of loops    : 1000
  Collect statistics : No
 ----------------------------------------------
  Signal min         : 1
- Signal max         : 2
+ Signal max         : 5
  Signal step        : 1
- Signal N           : 2
+ Signal N           : 5
  Signal fixed       : No
 ----------------------------------------------
- Efficiency min     : 0.9
- Efficiency max     : 1.1
- Efficiency step    : 0.1
+ Efficiency min     : 1
+ Efficiency max     : 1
+ Efficiency step    : 0
  Efficiency sigma   : 0.2
  Efficiency dist    : Gauss
 ----------------------------------------------
- Background min     : 1
- Background max     : 2
- Background step    : 0.5
+ Background min     : 0
+ Background max     : 0
+ Background step    : 0
  Background sigma   : 0
  Background dist    : None
 ----------------------------------------------
  Correlated bkg,eff : No
- Correlation coef.  : 0
 ==============================================
-Start of run: 16/02/2006 11:29:44
-       Signal 	Efficiency			Background			Correlation	Coverage			Loops	Max loops
-      --------------------------------------------------------------------------------------------
-DATA: 1.000000	0.900000	0.200000	1.000000	0.000000	0.000000	0.900000	0.094868	10	10	300.000000
-DATA: 1.000000	0.900000	0.200000	1.500000	0.000000	0.000000	0.900000	0.094868	10	10	310.000000
-.
-.
-.
-DATA: 2.000000	1.000000	0.200000	1.500000	0.000000	0.000000	0.900000	0.094868	10	10	350.000000
-DATA: 2.000000	1.000000	0.200000	2.000000	0.000000	0.000000	1.000000	0.000000	10	10	360.000000
-Estimated end of run: 16/02/2006 11:29:51 ( 0h 0m 7s )
+Start of run: 31/08/2006 17:08:49
+#==================================================================================================================
+#     Signal    |     Efficiency       |      Background       |      Coverage         |    Loops    |    Time 
+#               | mean        sigma    |  mean        sigma    |  mean        sigma    | done    max |    [ms] 
+#==================================================================================================================
+DATA: 1.000000    1.000000    0.200000    0.000000    0.000000    0.946000    0.007147    1000    1000      240.00
+DATA: 2.000000    1.000000    0.200000    0.000000    0.000000    0.979000    0.004534    1000    1000      510.00
+DATA: 3.000000    1.000000    0.200000    0.000000    0.000000    0.944000    0.007271    1000    1000      800.00
+DATA: 4.000000    1.000000    0.200000    0.000000    0.000000    0.945000    0.007209    1000    1000      1070.00
+DATA: 5.000000    1.000000    0.200000    0.000000    0.000000    0.961000    0.006122    1000    1000      1460.00
+>>>Limit calculation failure rate: 0
 
-DATA: 2.000000	1.100000	0.200000	1.000000	0.000000	0.000000	1.000000	0.000000	10	10	360.000000
-DATA: 2.000000	1.100000	0.200000	1.500000	0.000000	0.000000	0.900000	0.094868	10	10	350.000000
-DATA: 2.000000	1.100000	0.200000	2.000000	0.000000	0.000000	0.700000	0.144914	10	10	340.000000
->>>Limit calculation failure rate: 0.000000
-
-End of run: 16/02/2006 11:29:50
+End of run: 31/08/2006 17:08:53
 
 
 * A long run first checked with  kill -USR1 <process id>
@@ -448,16 +521,16 @@ End of run: 16/02/2006 11:29:50
 
  < SAME BEGINNING AS BEFORE>
 
-Start of run: 16/02/2006 11:33:00
-Estimated end of run: 16/02/2006 11:37:54 ( 0h 4m 54s )
+Estimated end of run: 31/08/2006 17:12:19 ( 0h 0m 23s )
 
-       Signal 	Efficiency			Background			Correlation	Coverage			Loops	Max loops
-      --------------------------------------------------------------------------------------------
-STATUS: 1.000000	1.000000	0.200000	0.000000	0.000000	0.000000	0.906736	0.014801	386	10000	-310.000000
-WARNING (16/02/2006 11:33:17 ) Job aborting (signal = 2 ). Will output data from unfinnished loop.
+#==================================================================================================================
+#     Signal    |     Efficiency       |      Background       |      Coverage         |    Loops    |    Time
+#               | mean        sigma    |  mean        sigma    |  mean        sigma    | done    max |    [ms]
+#==================================================================================================================
+STATUS: 1.000000    0.668974    0.200000    0.000000    0.000000    0.944142    0.003791    3670    10000      8540.00
+WARNING (31/08/2006 17:12:08 ) Job aborting (signal = 2 ). Will output data from unfinnished loop.
 
-DATA: 1.000000	1.000000	0.200000	0.000000	0.000000	0.000000	0.920553	0.011239	579	10000	-310.000000
-
+DATA: 1.000000    1.103927    0.200000    0.000000    0.000000    0.943144    0.003220    5171    10000      12090.00
 
 ---------------------------------------------------------------------
 
@@ -467,17 +540,10 @@ With a ctrl-c (or kill -2 <pid>) the running is aborted and the current result i
 
 
 
-
 VII. KNOWN ISSUES
 ==================
 
+The previous issues have been fixed.
 
-1. Using efficiency and background with poisson distribution does NOT
-   converge when using larger integration range (ie scale).
-	=> NEEDS to be fixed - result is not reliable
-
-2. The belt estimator is not optimal - does not handle absolute efficiencies properly.
-	=> not too problematic since you can set N(belt) etc manually.
-
-I'm sure there are some more...
+1. Combined measurements - numerically tricky - does not work now
 

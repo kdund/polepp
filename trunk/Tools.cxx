@@ -29,18 +29,24 @@ namespace TOOLS {
     std::string tstamp;
     TOOLS::makeTimeStamp( tstamp, m_startTime );
     std::cout << "Start of run: " << tstamp << std::endl;
+    m_runningTime = true;
   }
 
   bool Timer::checkTimer(int dt) {
     time_t chk;
-    int delta;
-    time(&chk);
-    delta = int(chk - m_startTime);
+    int delta=0;
+    if (m_runningTime) {
+      time(&chk);
+      delta = int(chk - m_startTime);
+    }
     return (delta>dt); // true if full time has passed
   }
 
   void Timer::stopTimer() {
-    time(&m_stopTime);
+    if (m_runningTime) {
+      time(&m_stopTime);
+      m_runningTime = false;
+    }
   }
 
   void Timer::printTime(const char *msg, time_t t ) {
@@ -56,44 +62,60 @@ namespace TOOLS {
   }
 
   void Timer::printUsedTime() {
-    if (m_startTime<=m_stopTime) {
-      time_t loopTime  = m_stopTime - m_startTime;
-      int hours,mins,secs;
-      hours = static_cast<int>(loopTime/3600);
-      mins = (loopTime - hours*3600)/60;
-      secs =  loopTime - hours*3600-mins*60;
-      std::cout << "Used time: ";
-      std::cout << hours << "h " << mins << "m " << secs << "s" << std::endl;
-    }
+    time_t loopTime  = getUsedTime();
+    int hours,mins,secs;
+    hours = static_cast<int>(loopTime/3600);
+    mins = (loopTime - hours*3600)/60;
+    secs =  loopTime - hours*3600-mins*60;
+    std::cout << "Used time: ";
+    std::cout << hours << "h " << mins << "m " << secs << "s" << std::endl;
+  }
+
+  time_t Timer::calcEstimatedTime(int nloops, int ntotal ) {
+    time_t loopTime  = getStopTime() - m_startTime;
+    time_t deltaTime = (nloops*loopTime)/ntotal;
+    //
+    return deltaTime + m_startTime;
   }
 
   void Timer::printEstimatedTime(int nloops, int ntotal ) {
-    if (m_startTime<=m_stopTime) {
-      time_t loopTime  = m_stopTime - m_startTime;
-      time_t deltaTime = (ntotal*loopTime)/ntotal;
-      //
-      m_estTime = deltaTime + m_startTime;
-      std::string tstamp;
-      makeTimeStamp( tstamp, m_estTime );
-      //
-      int hours,mins,secs;
-      hours = static_cast<int>(deltaTime/3600);
-      mins = (deltaTime - hours*3600)/60;
-      secs =  deltaTime - hours*3600-mins*60;
-      std::cout << "Estimated end of run: " << tstamp;
-      std::cout << " ( " << hours << "h " << mins << "m " << secs << "s" << " )\n" << std::endl;
+    time_t esttime = calcEstimatedTime(nloops,ntotal);
+    time_t deltaTime = esttime - m_startTime;
+    std::string tstamp;
+    makeTimeStamp( tstamp, esttime );
+    //
+    int hours,mins,secs;
+    hours = static_cast<int>(deltaTime/3600);
+    mins = (deltaTime - hours*3600)/60;
+    secs =  deltaTime - hours*3600-mins*60;
+    std::cout << "Estimated end of run: " << tstamp;
+    std::cout << " ( " << hours << "h " << mins << "m " << secs << "s" << " )\n" << std::endl;
+  }
+
+  void Timer::startClock() {
+    if (!m_runningClock) {
+      m_startClock = clock();
+      m_runningClock=true;
     }
   }
-  void Timer::startClock() {
-    m_startClock = clock();
-  }
+
   void Timer::stopClock() {
-    m_stopClock = clock();
+    if (m_runningClock) {
+      m_stopClock = clock();
+      m_runningClock=false;
+    }
   }
+
   void Timer::printUsedClock(int norm) {
-    clock_t t = m_stopClock - m_startClock;
-    std::cout << "Total CPU time used (ms)     : " << t/1000.0 << std::endl;
-    if (norm>0) std::cout << "Per event CPU time used (ms) : " << (t/norm)/1000.0 << std::endl;
+    clock_t stopClock;
+    if (m_runningClock) {
+      stopClock = clock();
+    } else {
+      stopClock = m_stopClock;
+    }
+    double dt = getUsedClock(1e-3); // return time in ms
+    std::cout << "Total CPU time used (ms)     : " << dt << std::endl;
+    if (norm>0) std::cout << "Per event CPU time used (ms) : " << (dt/norm) << std::endl;
   }
 
 };

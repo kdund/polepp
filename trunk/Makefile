@@ -2,18 +2,19 @@
  # Project: Pole++                                                    #
  ###################################################################### 
 .SUFFIXES: .cxx .h .o
-#MAKEFLAGS = --no-print-directory -r -s
+MAKEFLAGS = --no-print-directory -r -s
 #MAKEFLAGS = --warn-undefined-variables --debug
 
 include Makefile.arch
 
 # Internal configuration
 PACKAGE=Pole++
+LIBVERS=.1
 LD_LIBRARY_PATH:=.:$(ROOTSYS)/lib:$(LD_LIBRARY_PATH)
 OBJDIR=/work/scratch/obj
 DEPDIR=$(OBJDIR)/dep
 VPATH= $(OBJDIR)
-INCLUDES += -I../include/  
+INCLUDES += -I./  
 ROOTSYS  ?= ERROR_RootSysIsNotDefined
 
 TOOLLIST = polelim.cxx polecov.cxx argsPole.cxx argsCoverage.cxx polebelt.cxx exptest.cxx plotexp.cxx poleconst.cxx polepow.cxx
@@ -22,8 +23,8 @@ SKIPLIST = Combine.cxx Power.cxx Tabulated.cxx pdftst.cxx polecomb.cxx plotexp.c
 SKIPLIBLIST = $(SKIPLIST) $(TOOLLIST)
 SKIPTOOLLIST = $(SKIPLIST) $(LIBLIST)
 SKIPHLIST = Tabulated.h
-LIBFILE      = lib$(PACKAGE).a
-SHLIBFILE    = lib$(PACKAGE).so
+LIBFILE      = lib$(PACKAGE).a${LIBVERS}
+SHLIBFILE    = lib$(PACKAGE).so${LIBVERS}
 
 UNAME = $(shell uname)
 
@@ -50,13 +51,15 @@ PACKAGELIST = $(LIBCPPLIST) $(TOOLCPPLIST) $(HLIST) Makefile Makefile.arch relea
 
 # rules to compile tools
 
-alltools: $(TOOLELIST)
+tools: $(TOOLELIST)
 
 polelim:	polelim.o argsPole.o
 		g++ $(CFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
 polecov:	polecov.o argsCoverage.o
 		g++ $(CFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
 polebelt:	polebelt.o argsPole.o
+		g++ $(CFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
+poleconst:	poleconst.o argsPole.o
 		g++ $(CFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
 exptest:	exptest.o
 		g++ $(CFLAGS) -Wall $^ $(SHLIBFILE)  -o $@

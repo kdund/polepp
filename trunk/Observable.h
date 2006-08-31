@@ -16,67 +16,6 @@
 // NOTE: pdf is given as a pointer and can be manipulated by the object
 //
 namespace OBS {
-//   template <typename T>
-//   void getIntRange(T & low, T & high, double scale, double mean, double sigma, PDF::DISTYPE dist, bool positive=true) {
-//   //  void getIntRange(T & low, T & high, double scale, double mean, double sigma, PDF::BaseType<T> *pdf, bool positive=true) {
-//     //
-//     //    if (pdf==0) return;
-//     double dx;
-//     const double maxp = 0.9999;
-//     int n=0, nprev, nlow, nhigh;
-//     double p=0.0;
-//     //  PDF::DISTYPE dist = pdf->getDist();
-//     //
-//     if (dist==PDF::DIST_NONE) {
-//       low  = static_cast<T>(mean);
-//       high = static_cast<T>(mean);
-//     } else {
-//       switch (dist) {
-//       case PDF::DIST_GAUS2D:
-//       case PDF::DIST_GAUS:
-//       case PDF::DIST_LOGN:
-// 	low  = static_cast<T>(mean - scale*sigma);
-// 	high = static_cast<T>(mean + scale*sigma);
-// 	break;
-//       case PDF::DIST_FLAT:
-// 	dx=sigma*1.73205081; // == sqrt(12)*0.5; ignore scale - always use full range
-// 	low  = static_cast<T>(mean-dx);
-// 	high = static_cast<T>(mean+dx);
-// 	break;
-//       case PDF::DIST_POIS:
-//         nlow  = -1;
-//         nhigh = -1;
-//         // find min and max range of poisson
-//         // this is defined by maxp above
-//         // low  : max N for wich sum( p(n) ) < 1.0-maxp
-//         // high : min N for wich sum( p(n) ) > maxp
-//         while (nhigh<0) {
-//           nprev=n;
-//           p += PDF::gPoisTab.getVal( n, mean );
-//           //          p += pdf->getVal( n, mean );
-//           if ((n==0) || (p<(1.0-maxp))) nlow  = n;
-//           if (p>maxp)       nhigh = n;
-//           n++;
-//           if (nprev>n) { // just a STUPID test; can be done better...
-//             std::cerr << "Infinite loop caugh in OBS::getIntRange() for Poisson - brutal exit" << std::endl;
-//             exit(-1);
-//           }
-//         }
-// 	low  = static_cast<T>(nlow);
-// 	high = static_cast<T>(nhigh);
-// 	break;
-//       default: // ERROR STATE
-// 	low  = static_cast<T>(0);
-// 	high = static_cast<T>(0);
-// 	std::cerr << "OBS::getIntRange() -> Unknown pdf type = " << dist << std::endl;
-// 	break;
-//       }
-//     }
-//     if (positive && (low<0)) {
-//       high = high-low;
-//       low = 0;
-//     }
-//   }
 
   class Base {
   public:
@@ -100,17 +39,21 @@ namespace OBS {
     /////////////////////////////////////////////////////
 
     virtual void   setObservedRnd(void)           { std::cout << "1MUST BE OVERLOADED!" << std::endl; }
-    virtual void   setObservedValue(double v)     { std::cout << "2MUST BE OVERLOADED!" << std::endl; }
-    virtual void   setObservedValue(int v)        { std::cout << "3MUST BE OVERLOADED!" << std::endl; }
+    //    virtual void   setObservedValue(double v)     { std::cout << "2MUST BE OVERLOADED!" << std::endl; }
+    //    virtual void   setObservedValue(int v)        { std::cout << "3MUST BE OVERLOADED!" << std::endl; }
     virtual void   setObservedValue()             { std::cout << "4MUST BE OVERLOADED!" << std::endl; }
     //
-    virtual const void   getObservedValue(int & val)    const { std::cout << "5MUST BE OVERLOADED!" << std::endl; val=0; }
-    virtual const void   getObservedValue(double & val) const { std::cout << "6MUST BE OVERLOADED! "
-                                                                          << getName() << std::endl; val=0.0; }
-    virtual const double getObservedValue()             const { std::cout << "7MUST BE OVERLOADED!" << std::endl; return 0.0;}
+//     virtual const void   getObservedValue(int & val)    const { std::cout << "5MUST BE OVERLOADED!" << std::endl; val=0; }
+//     virtual const void   getObservedValue(double & val) const { std::cout << "6MUST BE OVERLOADED! "
+//                                                                          << getName() << std::endl; val=0.0; }
+    /////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////
 
-    /////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////
+    inline void   setObservedValue( double v );
+    inline void   setObservedValue( int v );
+    inline void   getObservedValue( double & v ) const { v = m_obsVal; }
+    inline void   getObservedValue( int & v ) const;
+    const  double getObservedValue() const { return m_obsVal;}
 
     // setting name, pdf and rdn generator
     void         setName(const char *name)               { m_name=name;}
@@ -328,6 +271,9 @@ namespace OBS {
     }
     //
   protected:
+    virtual const bool isInt()    const { return false; }
+    virtual const bool isDouble() const { return false; }
+    virtual const bool isFloat()  const { return false; }
     const double  getObsVal() const { return m_obsVal; } // users should not use this one - only set in BaseType<T>
     void copy(const Base & other) {
       if (this != &other) {
@@ -418,7 +364,7 @@ namespace OBS {
     void setObservedValue(T val)   { setObsVal(val); }
     void setObservedValue()        { setObsVal(static_cast<T>(getPdfMean())); }
     //
-    virtual const double getObservedValue()        const { return static_cast<double>(m_observedValue); }
+    virtual const double getObservedValue()        const { return m_obsVal; }
     virtual const void   getObservedValue(T & val) const { val = m_observedValue; }
 
     virtual void dump() const {
@@ -434,6 +380,10 @@ namespace OBS {
     }
 
   protected:
+    virtual const bool isInt()    const { return false; }
+    virtual const bool isDouble() const { return false; }
+    virtual const bool isFloat()  const { return false; }
+
     void setObsVal( T val) {
       m_obsVal = static_cast<double>(val);
       m_observedValue = val;
@@ -449,35 +399,38 @@ namespace OBS {
     //
   };
 
+  const bool BaseType<int>::isInt()       const { return true; }
+  const bool BaseType<double>::isDouble() const { return true; }
+  const bool BaseType<float>::isFloat()   const { return true; }
   //
   // TODO: Maybe Observable<T> is NOT needed, might just rename BaseType to Observable
   //
-  template <typename T>
-  class Observable: public BaseType<T> {
-  public:
-    Observable():BaseType<T>() {}
-    Observable(const char *name, const char *description=0):BaseType<T>(name,description) {}
-    Observable(PDF::BaseType<T> *pdf, RND::Random *rndgen, const char *name, const char *description=0):BaseType<T>(pdf,rndgen,name,description) {}
-    Observable(const Observable<T> & other):BaseType<T>(other) {}
+//   template <typename T>
+//   class Observable: public BaseType<T> {
+//   public:
+//     Observable():BaseType<T>() {}
+//     Observable(const char *name, const char *description=0):BaseType<T>(name,description) {}
+//     Observable(PDF::BaseType<T> *pdf, RND::Random *rndgen, const char *name, const char *description=0):BaseType<T>(pdf,rndgen,name,description) {}
+//     Observable(const Observable<T> & other):BaseType<T>(other) {}
 
-    virtual ~Observable() {};
+//     virtual ~Observable() {};
 
-    Observable<T> const & operator=(Observable<T> const & rh) {
-      copy(rh);
-      return *this;
-    }
+//     Observable<T> const & operator=(Observable<T> const & rh) {
+//       copy(rh);
+//       return *this;
+//     }
 
-    Observable<T> *clone() const {
-      Observable<T> *obj = new Observable<T>(*this);
-      return obj;
-    }
-    void copy(const Observable<T> & other) {
-      if (this != &other) {
-	BaseType<T>::copy(other);
-      }
-    }
-    //
-  };
+//     Observable<T> *clone() const {
+//       Observable<T> *obj = new Observable<T>(*this);
+//       return obj;
+//     }
+//     void copy(const Observable<T> & other) {
+//       if (this != &other) {
+// 	BaseType<T>::copy(other);
+//       }
+//     }
+//     //
+//   };
 
   class ObservableGauss : public BaseType<double> {
   public:
@@ -609,7 +562,34 @@ namespace OBS {
       obs->validate();
     }
     return obs;
+  };
+
+
+  inline void Base::setObservedValue( double v ) {
+    if (this->isDouble())   static_cast<BaseType<double> *>(this)->setObservedValue(v);
+    else if (this->isInt()) static_cast<BaseType<int> *>(this)->setObservedValue(static_cast<int>(v));
+    else {
+      std::cout << "FATAL: OBS::Base::setObservedValue(double): not supported type!" << std::endl;
+      exit(-1);
+    }
   }
+  inline void Base::setObservedValue( int v ) {
+    if (this->isInt())         static_cast<BaseType<int> *>(this)->setObservedValue(v);
+    else if (this->isDouble()) static_cast<BaseType<double> *>(this)->setObservedValue(static_cast<int>(v));
+    else {
+      std::cout << "FATAL: OBS::Base::setObservedValue(int): not supported type!" << std::endl;
+      exit(-1);
+    }
+  }
+  inline void Base::getObservedValue( int & v ) const {
+    if (this->isInt())         static_cast<const BaseType<int> *>(this)->getObservedValue(v);
+    else if (this->isDouble()) v = static_cast<const int>(m_obsVal);
+    else {
+      std::cout << "FATAL: OBS::Base::getObservedValue(int): not supported type!" << std::endl;
+      exit(-1);
+    }
+  }
+
 // #ifndef OBSERVABLE_CXX
 //   extern Base *makeObservable(PDF::DISTYPE dist);
 // #endif
