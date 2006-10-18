@@ -182,7 +182,7 @@ namespace PDF {
     virtual ~Flat() {};
     //
     inline const double pdf(double val) const;
-    inline const double cdf(double val) const { return 0};
+    inline const double cdf(double val) const { return 0;}
     inline const double getVal(const double x, const double mean, const double sigma) const;
     //
     void setMean(  const double m)  { Base::setMean(m);  setMinMax(m,getSigma()); }
@@ -296,6 +296,10 @@ namespace PDF {
     inline const double getVal(const double x, const double mean, const double sigma) const;
   protected:
     inline void updParams();
+    inline const double raw(const double x, const double k, const double theta) const;
+
+    double m_theta;
+    double m_k;
   };
 
   class Poisson : public BaseType<int> {
@@ -310,6 +314,7 @@ namespace PDF {
     void setSigma(const double sigma) { this->m_mean = sigma*sigma; this->m_sigma = sigma; }
     //
     virtual inline const double pdf(const int val) const;
+    virtual inline const double cdf(const int x) const { return 0; }
     virtual inline const double getVal(const int x, const double mean, const double sigma) const;
     inline const double getVal(const int x, const double mean) const;
     virtual inline const double getVal(const double x, const double mean, const double sigma) const;
@@ -419,6 +424,10 @@ namespace PDF {
 
     virtual const double pdf(const T x) const {
       return m_pdf->pdf(x);
+    }
+
+    virtual const double cdf(const T x) const {
+      return m_pdf->cdf(x);
     }
 
     virtual const double getVal(T x, double m, double s) const {
@@ -594,6 +603,7 @@ namespace PDF {
     virtual const double getVal(double x, double m, double s) const {
       return this->getVal(int(x+0.5),m);
     }
+
   };
     
   class GaussTab : public Tabulated<double> {
@@ -707,7 +717,7 @@ namespace PDF {
     }
   }
 
-  inline const double Gamma::pdf(const int x) const {
+  inline const double Gamma::pdf(const double x) const {
     return raw(x,this->m_k, this->m_theta);
   }
 
@@ -721,6 +731,7 @@ namespace PDF {
     m_statNraw++;
     const double xt   = x/theta;
     double lnf = (k-1.0)*log(xt) - xt - log(theta) - lgamma(k);
+    double prob;
     if (isinf(lnf) || isnan(lnf)) {
       prob=0;
     } else {

@@ -295,8 +295,8 @@ class MeasPois : public Measurement<int> {
 
 class MeasPoisEB : public MeasPois {
  public:
-  MeasPoisEB() : MeasPois() { m_eff=0; m_bkg=0; updNuisanceIndex();}
-  MeasPoisEB(const char *name, const char *desc=0) : MeasPois(name,desc) { m_eff=0; m_bkg=0;  updNuisanceIndex();}
+  MeasPoisEB() : MeasPois() { m_eff=0; m_bkg=0; m_effScale=1.0; m_bkgScale=0.0; updNuisanceIndex();}
+  MeasPoisEB(const char *name, const char *desc=0) : MeasPois(name,desc) { m_eff=0; m_bkg=0; m_effScale=1.0; m_bkgScale=0.0; updNuisanceIndex();}
   MeasPoisEB(const MeasPoisEB & other):MeasPois() {copy(other);}
   virtual ~MeasPoisEB() { }
   //
@@ -311,12 +311,22 @@ class MeasPoisEB : public MeasPois {
       if (eff) m_eff = eff->clone();
       bkg = other.getBkg();
       if (bkg) m_bkg = bkg->clone();
+      m_effScale = other.getEffScale();
+      m_bkgScale = other.getBkgScale();
     }
   }
 
   void updNuisanceIndex() { // get's the indices of the bkg and eff in the nuisance list
     m_bkgIndex = getNuisanceIndex(m_bkg);
     m_effIndex = getNuisanceIndex(m_eff);
+  }
+
+  void setEffScale( double scale ) {
+    if (scale>0) m_effScale = scale;
+  }
+
+  void setBkgScale( double scale ) {
+    if (scale>0) m_bkgScale = scale;
   }
 
   void setEffInt(double scale, int n) {
@@ -397,11 +407,14 @@ class MeasPoisEB : public MeasPois {
 
   void setBEcorr(double c) {} // TODO: Need to implement
   //
+  const double getEffScale() const { return m_effScale; }
+  const double getBkgScale() const { return m_bkgScale; }
+
   const double getBEcorr() const { return 0.0; } // TODO
 
-const double getEffObs() const { return (m_eff ? m_eff->getObservedValue():0); }
+  const double getEffObs() const { return (m_eff ? m_eff->getObservedValue():0); }
 
-const double getBkgObs() const { return (m_bkg ? m_bkg->getObservedValue():0); }
+  const double getBkgObs() const { return (m_bkg ? m_bkg->getObservedValue():0); }
 
 //   const OBS::BaseType<double> *getEff() const {
 //     return m_eff;
@@ -433,19 +446,19 @@ const double getBkgObs() const { return (m_bkg ? m_bkg->getObservedValue():0); }
 
   const double getM(double s) const {
     double e,b;
-    e = m_eff->getObservedValue();
-    b = m_bkg->getObservedValue();
+    e = m_eff->getObservedValue()*m_effScale;
+    b = m_bkg->getObservedValue()*m_bkgScale;
     return e*s + b;
   }
 
   const double getM(double s, double eff, double bkg) const {
-    return eff*s + bkg;
+    return m_effScale*eff*s + m_bkgScale*bkg;
   }
 
   const double getSignal() const {
     double e,b;
-    e = m_eff->getObservedValue();
-    b = m_bkg->getObservedValue();
+    e = m_eff->getObservedValue()*m_effScale;
+    b = m_bkg->getObservedValue()*m_bkgScale;;
     double dn = static_cast<OBS::Base *>(m_observable)->getObservedValue() - b;
     if (dn<0.0) dn=0.0;
     return (e>0 ? dn/e : 0);
@@ -508,6 +521,9 @@ const double getBkgObs() const { return (m_bkg ? m_bkg->getObservedValue():0); }
   OBS::Base *m_bkg;
   int m_effIndex;
   int m_bkgIndex;
+
+  double m_effScale;
+  double m_bkgScale;
 };
 
 #endif

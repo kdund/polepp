@@ -76,6 +76,7 @@ void Pole::execute() {
   if (m_inputFile.size()>0) {
     exeFromFile();
   } else {
+    m_printLimStyle = 2;
     exeEvent(true);
   }
 }
@@ -118,20 +119,23 @@ void Pole::exeFromFile() {
     if ((dataLine[0]!='#') && (dataLine.size()>0)) {
       std::istringstream sstr(dataLine);
       //      sstr >> n >> ed >> em >> es >> bd >> bm >> bs;
+      z=0;
       sstr >> n >> y >> z >> t >> u;
-      if (sstr) {
+      if ((sstr) && (z>0)) {
         nread++;
         if ((m_verbose>0) && (nlines<10)) {
           std::cout << "LINE: ";
           //          std::cout << n << "\t" << ed << "\t" << em << "\t" << es << "\t" << bd << "\t" << bm << "\t" << bs << std::endl;
           std::cout << n << "\t" << y << "\t" << z << "\t" << t << "\t" << u  << std::endl;
         }
-        setNObserved(static_cast<int>(n*t+0.5));
+        m_measurement.setEffScale(1.0/u);
+        m_measurement.setBkgScale(1.0/t);
+        setNObserved(static_cast<int>(n+0.5));
         setEffPdf( z, z, PDF::DIST_POIS );
         setEffObs();
         setBkgPdf( y, y, PDF::DIST_POIS );
         setBkgObs();
-        setScaleLimit(u/t);
+        //        setScaleLimit(u/t);
 
 //         setNObserved(n);
 //         setEffPdf( em, es, PDF::DISTYPE(ed) );
@@ -1211,8 +1215,8 @@ void Pole::printLimit(bool doTitle) {
   bool simple;
   switch (m_printLimStyle) {
   case 0:
-    cmtPre = "#";
-    linePre = "  ";
+    cmtPre = "LIM:#";
+    linePre = "LIM: ";
     simple=false;
     break;
   case 1:
@@ -1276,10 +1280,12 @@ void Pole::printSetup() {
   std::cout << " Efficiency meas    : " << getEffObs() << std::endl;
   std::cout << " Efficiency sigma   : " << getEffPdfSigma() << std::endl;
   std::cout << " Efficiency dist    : " << PDF::distTypeStr(getEffPdfDist()) << std::endl;
+  std::cout << " Efficiency scale   : " << m_measurement.getEffScale() << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Background meas    : " << getBkgObs() << std::endl;
   std::cout << " Background sigma   : " << getBkgPdfSigma() << std::endl;
   std::cout << " Background dist    : " << PDF::distTypeStr(getBkgPdfDist()) << std::endl;
+  std::cout << " Background scale   : " << m_measurement.getBkgScale() << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Bkg-Eff correlation: " << m_measurement.getBEcorr() << std::endl;
   std::cout << "----------------------------------------------\n";
