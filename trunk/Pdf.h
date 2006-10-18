@@ -28,6 +28,7 @@ namespace PDF {
     DIST_FLAT,     /*!< Flat */
     DIST_LOGN,     /*!< Log-Normal */
     DIST_GAUS2D,   /*!< Correlated gauss (eff,bkg) */
+    DIST_GAMMA,    /*!< Gamma                      */
     DIST_LAST,     /*!< Last element before UNDEF */
     DIST_UNDEF=999 /*!< No distrubution defined*/
   };
@@ -57,6 +58,9 @@ namespace PDF {
       break;
     case DIST_GAUS2D:
       rval = "Gauss 2D";
+      break;
+    case DIST_GAMMA:
+      rval = "Gamma";
       break;
     default:
       rval = "Unknown";
@@ -154,10 +158,11 @@ namespace PDF {
     }
     virtual ~BaseType() { }
     //
-    virtual const double F(T x) const=0;
+    virtual const double pdf(T x) const=0;
+    virtual const double cdf(T x) const=0;
     const double getVal(const T x, const double mean, const double sigma) const {std::cerr << "ERROR: Accessing getVal(T x,m,s) - NOT IMPLEMENTED for this class" << std::endl; exit(-1); return 0;}
     const double getVal(const T x, const double mean) const {std::cerr << "ERROR: Accessing getVal(T x,m) - NOT IMPLEMENTED for this class" << std::endl; exit(-1); return 0;}
-    inline const double operator()(T x) const { return F(x); }
+    inline const double operator()(T x) const { return pdf(x); }
 
     virtual const bool isInt()    const { return false; }
     virtual const bool isDouble() const { return false; }
@@ -173,10 +178,11 @@ namespace PDF {
   public:
     Flat():BaseType<double>("Flat",DIST_FLAT,1.0,0.1) { setMinMax(getMean(),getSigma()); }
     Flat(double mean, double sigma):BaseType<double>("Flat",DIST_FLAT,mean,sigma) { setMinMax(mean,sigma); }
-    Flat(const Flat & other):BaseType<double>(other) { m_min = other.getMin(); m_max = other.getMax(); m_F = other.getF();}
+    Flat(const Flat & other):BaseType<double>(other) { m_min = other.getMin(); m_max = other.getMax(); m_val = other.getF();}
     virtual ~Flat() {};
     //
-    inline const double F(double val) const;
+    inline const double pdf(double val) const;
+    inline const double cdf(double val) const { return 0};
     inline const double getVal(const double x, const double mean, const double sigma) const;
     //
     void setMean(  const double m)  { Base::setMean(m);  setMinMax(m,getSigma()); }
@@ -184,20 +190,20 @@ namespace PDF {
 
     inline const double getMin() const { return m_min; }
     inline const double getMax() const { return m_max; }
-    inline const double getF()   const { return m_F; }
+    inline const double getF()   const { return m_val; }
     
   protected:
     double m_min;
     double m_max;
-    double m_F;
+    double m_val;
 
     inline const double raw(const double x, const double f) const;
     inline const double raw(const double x, const double f, const double xmin, const double xmax) const;
 
     inline void setMinMax(double mean, double sigma) {
       calcMinMax(mean,sigma,m_min,m_max);
-      m_F = calcF(m_min,m_max);
-      //      std::cout << "Flat: " << m_F << " , " << m_min << " , " << m_max << std::endl;
+      m_val = calcVal(m_min,m_max);
+      //      std::cout << "Flat: " << m_val << " , " << m_min << " , " << m_max << std::endl;
     }
 
     inline void calcMinMax(double mean, double sigma, double & xmin, double & xmax) const {
@@ -208,7 +214,7 @@ namespace PDF {
       if (xmax<xmin) xmax=xmin;
     }
 
-    inline const double calcF(double xmin, double xmax) const {
+    inline const double calcVal(double xmin, double xmax) const {
       double d=(xmax-xmin);
       return (d>0 ? 1.0/d:-1);
     }
@@ -221,7 +227,8 @@ namespace PDF {
     Gauss(const Gauss & other):BaseType<double>(other) {}
     virtual ~Gauss() {};
     //
-    inline const double F(double val) const;
+    inline const double pdf(double val) const;
+    inline const double cdf(double val) const { return 0; }
     inline const double phi(double mu) const;
     inline const double getVal(const double x, const double mean, const double sigma) const;
   };
@@ -257,7 +264,8 @@ namespace PDF {
     inline const double getLogSigma() const { return m_logSigma; }
 
 
-    inline const double F(const double x) const {return (x>0.0 ? Gauss::getVal(log(x),m_logMean,m_logSigma)/x:0.0);}
+    inline const double pdf(const double x) const {return (x>0.0 ? Gauss::getVal(log(x),m_logMean,m_logSigma)/x:0.0);}
+    inline const double cdf(const double x) const { return 0; }
     inline const double getVal(const double x, const double m, const double s) const {
       m_statNtot++;
       if (x<=0) return 0.0;
@@ -273,6 +281,23 @@ namespace PDF {
     double m_logSigma;
   };
 
+  class Gamma : public BaseType<double> {
+  public:
+    Gamma():BaseType<double>("Gamma",DIST_GAMMA,1.0,1.0) { updParams(); }
+    Gamma(double mean, double sigma):BaseType<double>("Gamma",DIST_GAMMA,mean,sigma) { updParams(); }
+    Gamma(const Gamma & other):BaseType<double>(other) {}
+    virtual ~Gamma() {};
+    //
+    void setMean(const double mean)   { this->m_mean  = mean;  this->updParams(); }
+    void setSigma(const double sigma) { this->m_sigma = sigma; this->updParams(); }
+    //
+    inline const double pdf(const double val) const;
+    inline const double cdf(const double x) const { return 0; }
+    inline const double getVal(const double x, const double mean, const double sigma) const;
+  protected:
+    inline void updParams();
+  };
+
   class Poisson : public BaseType<int> {
   public:
     Poisson():BaseType<int>("Poisson",DIST_POIS,1.0,1.0) {}
@@ -284,7 +309,7 @@ namespace PDF {
     void setMean(const double mean)   { this->m_mean = mean; this->m_sigma = sqrt(mean); }
     void setSigma(const double sigma) { this->m_mean = sigma*sigma; this->m_sigma = sigma; }
     //
-    virtual inline const double F(int val) const;
+    virtual inline const double pdf(const int val) const;
     virtual inline const double getVal(const int x, const double mean, const double sigma) const;
     inline const double getVal(const int x, const double mean) const;
     virtual inline const double getVal(const double x, const double mean, const double sigma) const;
@@ -384,7 +409,7 @@ namespace PDF {
 	  m_pdf->setMean(m);
 	  for (int nx=0; nx<m_nX; nx++) {
 	    T x = nx*m_dx+m_xmin;
-	    m_table[ind] = m_pdf->F(x);
+	    m_table[ind] = m_pdf->pdf(x);
 	    ind++;
 	  }
 	}
@@ -392,8 +417,8 @@ namespace PDF {
       std::cout << "--- Tabulating DONE!" << std::endl;
     }
 
-    virtual const double F(T x) const {
-      return m_pdf->F(x);
+    virtual const double pdf(const T x) const {
+      return m_pdf->pdf(x);
     }
 
     virtual const double getVal(T x, double m, double s) const {
@@ -630,7 +655,7 @@ namespace PDF {
   //   double getMean()  { return m_mean; }
   //   double getSigma() { return m_sigma; }
   //   //
-  //   inline double F(double val);
+  //   inline double pdf(double val);
   //   inline double phi(double mu);
   // private:
   //   std::vector<double> m_x;
@@ -642,7 +667,7 @@ namespace PDF {
   inline const double Gauss::phi(double mu) const {
     return (1.0L/sqrt(2.0*M_PIl))*exp(-0.5L*mu*mu);
   }
-  inline const double Gauss::F(double x) const {
+  inline const double Gauss::pdf(const double x) const {
     double mu = fabs((x-this->m_mean)/this->m_sigma); // symmetric around mu0
     return phi(mu)/this->m_sigma;
   }
@@ -675,7 +700,36 @@ namespace PDF {
     return rval;
   }
 
-  inline const double Poisson::F(int x) const {
+  inline void Gamma::updParams() {
+    if ((m_mean>0) && (m_sigma>0)) {
+      m_theta = m_sigma*m_sigma/m_mean;
+      m_k     = m_mean/m_theta;
+    }
+  }
+
+  inline const double Gamma::pdf(const int x) const {
+    return raw(x,this->m_k, this->m_theta);
+  }
+
+  inline const double Gamma::getVal(const double x, const double mean, const double sigma) const {
+    double t = sigma*sigma/mean;
+    double k = mean/t;
+    return raw(x,k,t);
+  }
+  inline const double Gamma::raw(const double x, const double k, const double theta) const {
+    m_statNtot++;
+    m_statNraw++;
+    const double xt   = x/theta;
+    double lnf = (k-1.0)*log(xt) - xt - log(theta) - lgamma(k);
+    if (isinf(lnf) || isnan(lnf)) {
+      prob=0;
+    } else {
+      prob=exp(lnf);
+    }
+    return prob;
+  }
+
+  inline const double Poisson::pdf(const int x) const {
     return raw(x,this->m_mean);
   }
   inline const double Poisson::getVal(const int x, const double mean) const {
@@ -711,15 +765,14 @@ namespace PDF {
     return prob;
   }
 
-
-  inline const double Flat::F(double x) const {
-    return raw(x,m_F);
+  inline const double Flat::pdf(double x) const {
+    return raw(x,m_val);
   }
   inline const double Flat::getVal(const double x, const double mean, const double sigma) const {
     //    std::cout << "Flat: getVal() " << std::endl;
     double xmin,xmax,f;
     calcMinMax(mean,sigma,xmin,xmax);
-    f = calcF(xmin,xmax);
+    f = calcVal(xmin,xmax);
     double rval = raw(x,f,xmin,xmax);
     //    std::cout << " : x = " << x << " , f = " << f << " , range = " << xmin << " - " << xmax << " ==> " << rval << std::endl;
     return rval;
@@ -751,7 +804,7 @@ namespace PDF {
 //     } else {
 //       this->m_pdf->setMean(m);
 //       this->m_pdf->setSigma(s);
-//       rval = this->m_pdf->F(x);
+//       rval = this->m_pdf->pdf(x);
 //     }
 //     return rval;
 //   }
