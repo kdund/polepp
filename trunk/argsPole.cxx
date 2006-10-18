@@ -14,7 +14,16 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     // Arg1 = string printed at the end whenever --help is used or an error occurs
     // Arg2 = delimiter character between opt and its value
     // Arg3 = version number given when --version is used
-    CmdLine cmd("Try again, friend.", ' ', "0.99");
+    std::string postMsg;
+    std::ostringstream sstr;
+    int dist = static_cast<int>(PDF::DIST_NONE);
+    sstr << "Available distributions:" << std::endl;
+    while (dist !=  static_cast<int>(PDF::DIST_LAST)) {
+      sstr << " " << dist << std::setw(4) << " " << PDF::distTypeStr(static_cast<PDF::DISTYPE>(dist)) << std::endl;
+      dist++;
+    }
+    postMsg = sstr.str();
+    CmdLine cmd(postMsg.c_str(), ' ', "0.99");
 
     ValueArg<int>    nObs(      "","nobs",     "number observed events",false,1,"int",cmd);
     ValueArg<double> confLevel( "","cl",       "confidence level",false,0.9,"float",cmd);
