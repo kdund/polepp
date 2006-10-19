@@ -17,10 +17,11 @@ VPATH= $(OBJDIR)
 INCLUDES += -I./  
 ROOTSYS  ?= ERROR_RootSysIsNotDefined
 
-TOOLLIST = polelim.cxx polecov.cxx argsPole.cxx argsCoverage.cxx polebelt.cxx exptest.cxx plotexp.cxx poleconst.cxx polepow.cxx
+TOOLLIST = polelim.cxx polecov.cxx polebelt.cxx exptest.cxx plotexp.cxx poleconst.cxx polepow.cxx
 LIBLIST  = Pole.cxx  Coverage.cxx Random.cxx Pdf.cxx Combination.cxx Tools.cxx
+ARGLIST  = argsPole.cxx argsCoverage.cxx
 SKIPLIST = Combine.cxx Power.cxx Tabulated.cxx pdftst.cxx polecomb.cxx plotexp.cxx poleconst.cxx polepow.cxx
-SKIPLIBLIST = $(SKIPLIST) $(TOOLLIST)
+SKIPLIBLIST  = $(SKIPLIST) $(TOOLLIST) $(ARGLIST)
 SKIPTOOLLIST = $(SKIPLIST) $(LIBLIST)
 SKIPHLIST = Tabulated.h
 LIBFILE      = lib$(PACKAGE).a${LIBVERS}
@@ -29,7 +30,7 @@ SHLIBFILE    = lib$(PACKAGE).so${LIBVERS}
 UNAME = $(shell uname)
 
 
-default: shlib 
+default: shlib
 
 
 # List of all include files
@@ -47,23 +48,35 @@ TOOLOLIST=$(patsubst %.cxx,%.o,$(TOOLCPPLIST))
 TOOLELIST=$(patsubst %.cxx,%,$(TOOLCPPLIST))
 
 # list of files for package
-PACKAGELIST = $(LIBCPPLIST) $(TOOLCPPLIST) $(HLIST) Makefile Makefile.arch release.notes Doxyfile README
+PACKAGELIST = $(LIBCPPLIST) $(TOOLCPPLIST) $(HLIST) $(ARGLIST) Makefile Makefile.arch release.notes Doxyfile README
 
 # rules to compile tools
 
 tools: $(TOOLELIST)
 
 polelim:	polelim.o argsPole.o
-		g++ $(CFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
 polecov:	polecov.o argsCoverage.o
-		g++ $(CFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
 polebelt:	polebelt.o argsPole.o
-		g++ $(CFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
 poleconst:	poleconst.o argsPole.o
-		g++ $(CFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
 exptest:	exptest.o
-		g++ $(CFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
 
+# Explicit rule for args*.o
+argsPole.o:     argsPole.cxx
+		@echo -n "Compiling $< ... "
+		@mkdir -p $(OBJDIR)
+		$(CXX) $(INCLUDES) -fPIC -Wall -g -c $< -o $(OBJDIR)/$(notdir $@)
+		@echo "Done"
+
+argsCoverage.o: argsCoverage.cxx
+		@echo -n "Compiling $< ... "
+		@mkdir -p $(OBJDIR)
+		$(CXX) $(INCLUDES) -fPIC -Wall -g -c $< -o $(OBJDIR)/$(notdir $@)
+		@echo "Done"
 
 # Implicit rule to compile all classes
 %.o : %.cxx 

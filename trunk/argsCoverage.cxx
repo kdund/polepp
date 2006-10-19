@@ -7,6 +7,7 @@
 
 using namespace TCLAP;
 void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
+  std::cout << "Calling argsCoverage()" << std::endl;
   time_t timer;
   time(&timer);
   unsigned int rndSeed=static_cast<unsigned int>(timer);
@@ -66,10 +67,10 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
 //     ValueArg<double> hypTestMax( "","hmax",   "hypothesis test max" ,false,35.0,"float",cmd);
 //     ValueArg<double> hypTestStep("","hstep",  "hypothesis test step" ,false,0.01,"float",cmd);
     //
-    ValueArg<double> effIntScale( "","effscale","eff num sigma in integral", false,5.0,"float",cmd);
-    ValueArg<int>    effIntN(     "","effn",    "eff: N points in integral", false,21, "int",cmd);
-    ValueArg<double> bkgIntScale( "","bkgscale","bkg num sigma in integral", false,5.0,"float",cmd);
-    ValueArg<int>    bkgIntN(     "","bkgn",    "bkg: N points in integral", false,21, "int",cmd);
+    ValueArg<double> effIntScale( "","effintscale","eff num sigma in integral", false,5.0,"float",cmd);
+    ValueArg<int>    effIntN(     "","effintn",    "eff: N points in integral", false,21, "int",cmd);
+    ValueArg<double> bkgIntScale( "","bkgintscale","bkg num sigma in integral", false,5.0,"float",cmd);
+    ValueArg<int>    bkgIntN(     "","bkgintn",    "bkg: N points in integral", false,21, "int",cmd);
     //
     ValueArg<double> tabPoisMin( "","poismin",  "minimum mean value in table", false,0.0,"float",cmd);
     ValueArg<double> tabPoisMax( "","poismax",  "maximum mean value in table", false,100.0,"float",cmd);

@@ -68,6 +68,7 @@ namespace RND {
   
   double Random::gamma(double mean, double sigma) {
     //See algo at http://en.wikipedia.org/wiki/Gamma_distribution#Generating_Gamma_random_variables
+    return 0.0;
   }
 
   double Random::gauss(double mean, double sigma) {

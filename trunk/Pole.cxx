@@ -852,25 +852,6 @@ void Pole::calcBelt() {
 bool Pole::calcLimit() {
   if (m_verbose>1) std::cout << "*** Calculating limits" << std::endl;
   resetCalcLimit();
-  m_maxNorm = -1.0;
-  m_lowerLimitFound = false;
-  m_upperLimitFound = false;
-  m_lowerLimit = 0;
-  m_upperLimit = 0;
-  m_lowerLimitNorm = 0;
-  m_upperLimitNorm = 0;
-  m_nBeltUsed = getNObserved();
-  if (m_nBeltUsed<2) m_nBeltUsed=2;
-  m_nBeltMinLast=0;
-  m_nBeltMinUsed=m_nBeltUsed;
-  m_nBeltMaxUsed=0;
-  m_sumProb=0;
-  m_prevSumProb=0;
-  m_scanBeltNorm=0;
-  m_coversTruth=false;
-  //
-  //
-  //
   //
   // Obtain belt for s=0 - useful since lower limit is 0 if N(obs)<N2
   //
@@ -1002,7 +983,7 @@ bool Pole::calcLimit() {
       dir = calcLimit(muhigh); // what if out of reach for nbelt???? CHECK
       if (dir==-1) muhigh *= 1.1; // scale up
       cn++;
-      if (cn>30) {
+      if (cn>100) {
         done = true;
         std::cout << "*** WARNING infinite (?) loop when scanning for the rough upper limit!" << std::endl;
       } else {

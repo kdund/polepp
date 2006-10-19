@@ -238,6 +238,11 @@ public:
     m_validBestMu = false;
   }
   //! set pdf mean of efficiency
+  void setEffPdfScale( double s=1.0 ) {
+    m_measurement.setEffScale(s);
+    m_validBestMu = false;
+  }
+  //! set pdf mean of efficiency
   void setEffPdfMean( double m ) {
     m_measurement.setEffPdfMean(m);
     m_validBestMu = false;
@@ -245,6 +250,11 @@ public:
   //! set pdf sigma of efficiency
   void setEffPdfSigma( double s ) {
     m_measurement.setEffPdfSigma(s);
+    m_validBestMu = false;
+  }
+  //! set pdf mean of background
+  void setBkgPdfScale( double s=1.0 ) {
+    m_measurement.setBkgScale(s);
     m_validBestMu = false;
   }
   //! set pdf mean of background

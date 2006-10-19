@@ -9,6 +9,7 @@
 using namespace TCLAP;
 void argsPole(Pole *pole, int argc, char *argv[]) {
   //
+  std::cout << "Calling argsPole()" << std::endl;
   try {
     // Create a CmdLine object.
     // Arg1 = string printed at the end whenever --help is used or an error occurs
@@ -36,11 +37,13 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     //
     ValueArg<double> effSigma(  "", "effsigma","sigma of efficiency",false,0.2,"float",cmd);
     ValueArg<double> effMeas(   "", "effmeas",  "measured efficiency",false,1.0,"float",cmd);
-    ValueArg<int>    effDist(   "", "effdist",  "Efficiency distribution",false,2,"int",cmd);
+    ValueArg<int>    effDist(   "", "effdist",  "efficiency distribution",false,2,"int",cmd);
+    ValueArg<double> effScale(  "", "effscale", "effscale factor",false,1.0,"float",cmd);
     //
     ValueArg<double> bkgSigma(  "", "bkgsigma", "sigma of background",false,0.0,"float",cmd);
     ValueArg<double> bkgMeas(   "", "bkgmeas",  "measured background",false,0.0,"float",cmd);
-    ValueArg<int>    bkgDist(   "", "bkgdist",  "Background distribution",false,0,"int",cmd);
+    ValueArg<int>    bkgDist(   "", "bkgdist",  "background distribution",false,0,"int",cmd);
+    ValueArg<double> bkgScale(  "", "bkgscale", "bkgscale factor",false,1.0,"float",cmd);
     //
     ValueArg<double> beCorr(    "", "corr",     "corr(bkg,eff)",false,0.0,"float",cmd);
    //
@@ -54,10 +57,10 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> hypTestMax( "","hmax",   "hypothesis test max" ,false,35.0,"float",cmd);
     ValueArg<double> hypTestStep("","hstep",  "hypothesis test step" ,false,0.01,"float",cmd);
     //
-    ValueArg<double> effIntScale( "","effscale","eff num sigma in integral", false,5.0,"float",cmd);
-    ValueArg<int>    effIntN(     "","effn",    "eff: N points in integral", false,21, "int",cmd);
-    ValueArg<double> bkgIntScale( "","bkgscale","bkg num sigma in integral", false,5.0,"float",cmd);
-    ValueArg<int>    bkgIntN(     "","bkgn",    "bkg: N points in integral", false,21, "int",cmd);
+    ValueArg<double> effIntScale( "","effintscale","eff num sigma in integral", false,5.0,"float",cmd);
+    ValueArg<int>    effIntN(     "","effintn",    "eff: N points in integral", false,21, "int",cmd);
+    ValueArg<double> bkgIntScale( "","bkgintscale","bkg num sigma in integral", false,5.0,"float",cmd);
+    ValueArg<int>    bkgIntN(     "","bkgintn",    "bkg: N points in integral", false,21, "int",cmd);
 
     ValueArg<double> tabPoisMin( "","poismin",  "minimum mean value in table", false,0.0,"float",cmd);
     ValueArg<double> tabPoisMax( "","poismax",  "maximum mean value in table", false,100.0,"float",cmd);
@@ -82,10 +85,14 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     pole->setCL(confLevel.getValue());
     pole->setNObserved(nObs.getValue());
     //
+    pole->setEffPdfScale( effScale.getValue() );
     pole->setEffPdf( effMeas.getValue(), effSigma.getValue(), static_cast<PDF::DISTYPE>(effDist.getValue()) );
     pole->setEffObs();
+
+    pole->setBkgPdfScale( bkgScale.getValue() );
     pole->setBkgPdf( bkgMeas.getValue(), bkgSigma.getValue(), static_cast<PDF::DISTYPE>(bkgDist.getValue()) );
     pole->setBkgObs();
+
     pole->checkEffBkgDists();
     pole->setEffPdfBkgCorr(beCorr.getValue());
 
