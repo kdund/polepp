@@ -295,8 +295,8 @@ class MeasPois : public Measurement<int> {
 
 class MeasPoisEB : public MeasPois {
  public:
-  MeasPoisEB() : MeasPois() { m_eff=0; m_bkg=0; m_effScale=1.0; m_bkgScale=0.0; updNuisanceIndex();}
-  MeasPoisEB(const char *name, const char *desc=0) : MeasPois(name,desc) { m_eff=0; m_bkg=0; m_effScale=1.0; m_bkgScale=0.0; updNuisanceIndex();}
+  MeasPoisEB() : MeasPois() { m_eff=0; m_bkg=0; m_effScale=1.0; m_bkgScale=1.0; updNuisanceIndex();}
+  MeasPoisEB(const char *name, const char *desc=0) : MeasPois(name,desc) { m_eff=0; m_bkg=0; m_effScale=1.0; m_bkgScale=1.0; updNuisanceIndex();}
   MeasPoisEB(const MeasPoisEB & other):MeasPois() {copy(other);}
   virtual ~MeasPoisEB() { }
   //
