@@ -104,10 +104,7 @@ void Pole::exeFromFile() {
   int nskipped = 0;
   int nread    = 0;
   int n;
-  double em,es,bm,bs;
   double y,z,t,u;
-  int iy,iz;
-  int ed,bd;
   bool first=true;
   int nlines=0;
   TOOLS::Timer loopTime;

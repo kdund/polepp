@@ -21,36 +21,20 @@ void processArgs(int argc, char *argv[]) {
     // Arg3 = version number given when --version is used
     CmdLine cmd("Try again, friend.", ' ', "0.99");
 
-    ValueArg<int>    nLoops(   "","nloops",  "number of loops",    false,1000,"int");
-    ValueArg<int>    rSeed(    "","rseed",   "rnd seed" ,          false,rndSeed,"int");
-    ValueArg<int>    rSeedOfs( "","rseedofs","rnd seed offset" ,   false,0,"int");
-    ValueArg<double> strue(    "","strue",   "s_true",         false,1.6,"float");
-    ValueArg<double> effSigma( "","effsigma",  "sigma of efficiency",false,0.2,"float");
-    ValueArg<double> effMean(  "","effmean",   "eff true mean",       false,1.0,"float");
-    ValueArg<double> bkgSigma( "","bkgsigma",  "sigma of background",false,0.2,"float");
-    ValueArg<double> bkgMean(  "","bkgmean",   "bkg true mean",false,2.0,"float");
-    ValueArg<int>    effDist(  "","effdist", "Efficiency distribution",false,2,"int");
-    ValueArg<int>    bkgDist(  "","bkgdist", "Background distribution",false,2,"int");
-    ValueArg<double> beCorr(   "","corr",    "corr(bkg,eff)",false,0.0,"float");
-    ValueArg<std::string> dump("","dump",    "dump filename",false,"","string");
-    //
-    cmd.add(effSigma);
-    cmd.add(effMean);
-    //
-    cmd.add(bkgSigma);
-    cmd.add(bkgMean);
-    //
-    cmd.add(effDist);
-    cmd.add(bkgDist);
-    //
-    cmd.add(beCorr);
-    //
-    cmd.add(strue);
-    //
-    cmd.add(nLoops);
-    cmd.add(rSeedOfs);
-    cmd.add(rSeed);
-    cmd.add(dump);
+    ValueArg<int>    nLoops(   "","nloops",  "number of loops",    false,1000,"int",cmd);
+    ValueArg<int>    rSeed(    "","rseed",   "rnd seed" ,          false,rndSeed,"int",cmd);
+    ValueArg<int>    rSeedOfs( "","rseedofs","rnd seed offset" ,   false,0,"int",cmd);
+    ValueArg<double> strue(    "","strue",   "s_true",         false,1.6,"float",cmd);
+    ValueArg<double> effSigma( "","effsigma",  "sigma of efficiency",false,0.2,"float",cmd);
+    ValueArg<double> effMean(  "","effmean",   "eff true mean",       false,1.0,"float",cmd);
+    ValueArg<double> effScale( "","effscale",  "effscale factor",false,1.0,"float",cmd);
+    ValueArg<int>    effDist(  "","effdist", "Efficiency distribution",false,2,"int",cmd);
+    ValueArg<double> bkgSigma( "","bkgsigma",  "sigma of background",false,0.2,"float",cmd);
+    ValueArg<double> bkgMean(  "","bkgmean",   "bkg true mean",false,2.0,"float",cmd);
+    ValueArg<double> bkgScale(  "","bkgscale",  "bkgscale factor",false,1.0,"float",cmd);
+    ValueArg<int>    bkgDist(  "","bkgdist", "Background distribution",false,2,"int",cmd);
+    ValueArg<double> beCorr(   "","corr",    "corr(bkg,eff)",false,0.0,"float",cmd);
+    ValueArg<std::string> dump("","dump",    "dump filename",false,"","string",cmd);
     //
     cmd.parse(argc,argv);
     //
@@ -61,8 +45,10 @@ void processArgs(int argc, char *argv[]) {
     gPole.setGauss2D(&PDF::gGauss2D);
     gPole.setLogNormal(&PDF::gLogNormal);
 
+    gPole.setEffPdfScale( effScale.getValue() );
     gPole.setEffPdf( effMean.getValue(), effSigma.getValue(), static_cast<PDF::DISTYPE>(effDist.getValue()) );
     gPole.setEffObs();
+    gPole.setBkgPdfScale( bkgScale.getValue() );
     gPole.setBkgPdf( bkgMean.getValue(), bkgSigma.getValue(), static_cast<PDF::DISTYPE>(bkgDist.getValue()) );
     gPole.setBkgObs();
     gPole.checkEffBkgDists();

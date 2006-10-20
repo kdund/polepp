@@ -43,14 +43,16 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     ValueArg<double> sMax(      "","smax",    "max s_true",         false,1.0,"float",cmd);
     ValueArg<double> sStep(     "","sstep",   "step s_true",        false,1.0,"float",cmd);
 
-    ValueArg<int>    effDist(   "","effdist", "Efficiency distribution",false,2,"int",cmd);
+    ValueArg<int>    effDist(   "","effdist",   "efficiency distribution",false,2,"int",cmd);
     ValueArg<double> effSigma(  "","effsigma",  "sigma of efficiency",false,0.2,"float",cmd);
+    ValueArg<double> effScale(  "","effscale",  "effscale factor",false,1.0,"float",cmd);
     ValueArg<double> effMin(    "","effmin",    "min eff true",       false,1.0,"float",cmd);
     ValueArg<double> effMax(    "","effmax",    "max eff true",       false,1.0,"float",cmd);
     ValueArg<double> effStep(   "","effstep",   "step eff true",      false,1.0,"float",cmd);
 
-    ValueArg<int>    bkgDist(   "","bkgdist", "Background distribution",false,0,"int",cmd);
+    ValueArg<int>    bkgDist(   "","bkgdist",   "background distribution",false,0,"int",cmd);
     ValueArg<double> bkgSigma(  "","bkgsigma",  "sigma of background",false,0.2,"float",cmd);
+    ValueArg<double> bkgScale(  "","bkgscale",  "bkgscale factor",false,1.0,"float",cmd);
     ValueArg<double> bkgMin(    "","bkgmin",    "min bkg true",false,0.0,"float",cmd);
     ValueArg<double> bkgMax(    "","bkgmax",    "max bkg true",false,0.0,"float",cmd);
     ValueArg<double> bkgStep(   "","bkgstep",   "step bkg true",false,1.0,"float",cmd);
@@ -95,10 +97,14 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     pole->setBestMuStep(dMus.getValue());
     pole->setBestMuNmax(nMus.getValue());
     //
+    pole->setEffPdfScale( effScale.getValue() );
     pole->setEffPdf( effMin.getValue(), effSigma.getValue(), static_cast<PDF::DISTYPE>(effDist.getValue()) );
     pole->setEffObs();
+
+    pole->setBkgPdfScale( bkgScale.getValue() );
     pole->setBkgPdf( bkgMin.getValue(), bkgSigma.getValue(), static_cast<PDF::DISTYPE>(bkgDist.getValue()) );
     pole->setBkgObs();
+
     pole->checkEffBkgDists();
     pole->setEffPdfBkgCorr(beCorr.getValue());
 
