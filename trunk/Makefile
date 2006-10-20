@@ -11,7 +11,7 @@ include Makefile.arch
 PACKAGE=Pole++
 LIBVERS=.1
 LD_LIBRARY_PATH:=.:$(ROOTSYS)/lib:$(LD_LIBRARY_PATH)
-OBJDIR=/work/scratch/obj
+OBJDIR=/opt/scratch/obj
 DEPDIR=$(OBJDIR)/dep
 VPATH= $(OBJDIR)
 INCLUDES += -I./  
@@ -55,15 +55,15 @@ PACKAGELIST = $(LIBCPPLIST) $(TOOLCPPLIST) $(HLIST) $(ARGLIST) Makefile Makefile
 tools: $(TOOLELIST)
 
 polelim:	polelim.o argsPole.o
-		$(CXX) $(CXXFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
 polecov:	polecov.o argsCoverage.o
-		$(CXX) $(CXXFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
 polebelt:	polebelt.o argsPole.o
-		$(CXX) $(CXXFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
 poleconst:	poleconst.o argsPole.o
-		$(CXX) $(CXXFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
 exptest:	exptest.o
-		$(CXX) $(CXXFLAGS) -Wall $^ $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
 
 # Explicit rule for args*.o
 argsPole.o:     argsPole.cxx
@@ -129,6 +129,7 @@ package: $(PACKAGELIST)
 # Useful build targets
 lib: $(LIBFILE) 
 shlib: $(SHLIBFILE)
+all: $(SHLIBFILE) $(TOOLELIST)
 clean:
 	rm -f $(SHLIBFILE)
 	rm -f $(OBJDIR)/*.o
@@ -143,6 +144,6 @@ distclean:
 	rm -f $(LIBFILE)
 	rm -f $(SHLIBFILE)
 
-.PHONY : shlib lib default clean
+.PHONY : shlib lib default clean polelim
 
 
