@@ -164,15 +164,15 @@ namespace PDF {
     const double getVal(const T x, const double mean) const {std::cerr << "ERROR: Accessing getVal(T x,m) - NOT IMPLEMENTED for this class" << std::endl; exit(-1); return 0;}
     inline const double operator()(T x) const { return pdf(x); }
 
-    virtual const bool isInt()    const { return false; }
-    virtual const bool isDouble() const { return false; }
-    virtual const bool isFloat()  const { return false; }
+     const bool isInt()    const { return false; }
+     const bool isDouble() const { return false; }
+     const bool isFloat()  const { return false; }
 
   };
 
-  const bool BaseType<int>::isInt()       const { return true; }
-  const bool BaseType<double>::isDouble() const { return true; }
-  const bool BaseType<float>::isFloat()   const { return true; }
+  template<> inline const bool BaseType<int>::isInt()       const { return true; }
+  template<> inline const bool BaseType<double>::isDouble() const { return true; }
+  template<> inline const bool BaseType<float>::isFloat()   const { return true; }
 
   class Flat : public BaseType<double> {
   public:
@@ -441,7 +441,7 @@ namespace PDF {
 	xind = int(m_dx>0 ? (x-m_xmin)/m_dx : 0);
 	ind = xind + mind*m_nX + sind*m_nX*m_nMean;
 	if (ind<m_nTotal) {
-          m_statNtab++;
+          this->m_statNtab++;
 	  return m_table[ind];
         }
       }
@@ -638,7 +638,7 @@ namespace PDF {
 	  return static_cast<Gauss *>(this->m_pdf)->phi(mu)/s;
 	int muind = int(m_dx>0 ? (mu-m_xmin)/m_dx : 0);
 	if (muind<m_nTotal) {
-          m_statNtab++;
+          this->m_statNtab++;
 	  return m_table[muind];
         }
       }
@@ -822,6 +822,8 @@ namespace PDF {
 
 
 //
+   
+
 #ifndef PDF_CXX
   extern Poisson  gPoisson;
   extern PoisTab  gPoisTab;

@@ -399,9 +399,10 @@ namespace OBS {
     //
   };
 
-  const bool BaseType<int>::isInt()       const { return true; }
-  const bool BaseType<double>::isDouble() const { return true; }
-  const bool BaseType<float>::isFloat()   const { return true; }
+  template<> inline const bool BaseType<int>::isInt()       const { return true; }
+  template<> inline const bool BaseType<double>::isDouble()    const { return true; }
+  template<> inline const bool BaseType<float>::isFloat()     const { return true; }
+
   //
   // TODO: Maybe Observable<T> is NOT needed, might just rename BaseType to Observable
   //
