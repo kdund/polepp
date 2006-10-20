@@ -290,16 +290,16 @@ void Pole::findBestMu(int n) {
   double lh_max = 0.0;
   //
   mu_best = 0;
-  if(n<m_measurement.getBkgObs()) {
+  if(n<getBkgObs()*getBkgScale()) {
     m_bestMu[n] = 0; // best mu is 0
     m_bestMuProb[n] = m_measurement.calcProb(n,0);
   } else {
     //    sMax = double(n)-m_measurement.getBkgObs(); // OLD version
-    sMax = (double(n) - getBkgIntMin())/m_measurement.getEffObs();
+    sMax = (double(n) - getBkgIntMin()*getBkgScale())/(getEffObs()*getEffScale());
     if(sMax<0) {sMax = 0.0;}
     //    sMin = (double(n) - m_bkgRangeInt.max())/m_effRangeInt.max();
     //    sMin = sMax/2.0; //
-    sMin = (double(n) - getBkgIntMax())/getEffIntMax();
+    sMin = (double(n) - getBkgIntMax()*getBkgScale())/(getEffIntMax()*getEffScale());
     if(sMin<0) {sMin = 0.0;}
     sMin = (sMax-sMin)*0.6 + sMin;
     //    dmu_s = 0.01; // HARDCODED:: Change!
@@ -1261,12 +1261,12 @@ void Pole::printSetup() {
   std::cout << " Efficiency meas    : " << getEffObs() << std::endl;
   std::cout << " Efficiency sigma   : " << getEffPdfSigma() << std::endl;
   std::cout << " Efficiency dist    : " << PDF::distTypeStr(getEffPdfDist()) << std::endl;
-  std::cout << " Efficiency scale   : " << m_measurement.getEffScale() << std::endl;
+  std::cout << " Efficiency scale   : " << getEffScale() << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Background meas    : " << getBkgObs() << std::endl;
   std::cout << " Background sigma   : " << getBkgPdfSigma() << std::endl;
   std::cout << " Background dist    : " << PDF::distTypeStr(getBkgPdfDist()) << std::endl;
-  std::cout << " Background scale   : " << m_measurement.getBkgScale() << std::endl;
+  std::cout << " Background scale   : " << getBkgScale() << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Bkg-Eff correlation: " << m_measurement.getBEcorr() << std::endl;
   std::cout << "----------------------------------------------\n";
@@ -1287,7 +1287,6 @@ void Pole::printSetup() {
   std::cout << " *Test hyp. step    : " << m_hypTest.step() << std::endl;
   std::cout << "----------------------------------------------\n";
 
-  std::cout << "----------------------------------------------\n";
   if (m_method==RL_FHC2) {
     std::cout << " Step mu_best       : " << m_bestMuStep << std::endl;
     std::cout << " Max N, mu_best     : " << m_bestMuNmax << std::endl;

@@ -453,11 +453,13 @@ public:
   const double       getEffPdfMean()    const { return m_measurement.getEffPdfMean(); }
   const double       getEffPdfSigma()   const { return m_measurement.getEffPdfSigma(); }
   const PDF::DISTYPE getEffPdfDist()    const { return m_measurement.getEffPdfDist(); }
+  const double       getEffScale()      const { return m_measurement.getEffScale(); }
 
   const double       getBkgObs()        const { return m_measurement.getBkgObs(); }
   const double       getBkgPdfMean()    const { return m_measurement.getBkgPdfMean(); }
   const double       getBkgPdfSigma()   const { return m_measurement.getBkgPdfSigma(); }
   const PDF::DISTYPE getBkgPdfDist()    const { return m_measurement.getBkgPdfDist(); }
+  const double       getBkgScale()      const { return m_measurement.getBkgScale(); }
 
   const double       getEffPdfBkgCorr() const { return m_measurement.getBEcorr(); }
 
