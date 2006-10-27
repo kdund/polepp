@@ -9,15 +9,12 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <algorithm>
 
 #include "Pole.h"
 
 
-/*!
-  Source Main constructor.
- */
-// HERE: Should have a truly empty with NO initiation of variables -> SPEED!
-Pole::Pole() {
+void Pole::initDefault() {
   m_thresholdBS    = 0.001;
   m_thresholdAlpha = 0.01;
   m_scaleLimit=1.0;
@@ -67,9 +64,6 @@ Pole::Pole() {
   m_nBeltUsed    = 5; // not really needed to be set here - set in initBeltArrays()
   m_nBeltMinUsed = m_nBeltUsed; // idem
   m_nBeltMaxUsed = 0;
-}
-
-Pole::~Pole() {
 }
 
 void Pole::execute() {
@@ -310,8 +304,12 @@ void Pole::findBestMu(int n) {
     //    ntst = 1000;
     //    m_bestMuStep = (sMax-sMin)/double(ntst);
     //////////////////////////////////
-    if (m_verbose>1) std::cout << "FindBestMu range: " << " I " << getBkgIntMax() << " " << getEffIntMax() << " "
-			       << n << " " << m_measurement.getBkgObs() << " " << ntst << " [" << sMin << "," << sMax << "] => ";
+    if (m_verbose>1) std::cout << "FindBestMu range: "
+	  << " I(bkg) " << getBkgIntMax()
+	  << " I(eff)" << getEffIntMax()
+	  << " N " << n
+	  << " Bkg " << m_measurement.getBkgObs()
+	  << " ntst " << ntst << " [" << sMin << "," << sMax << "] => ";
     int imax=-10;
     for (i=0;i<ntst;i++) {
       mu_test = sMin + i*dmus;
@@ -376,7 +374,7 @@ void Pole::findAllBestMu() {
   if (m_verbose>2) {
     std::cout << "First 10 from best fit (mean,prob):" << std::endl;
     std::cout << m_bestMu.size() << ":" << m_bestMuProb.size() << std::endl;
-    for (int i=0; i<10; i++) {
+    for (unsigned int i=0; i<(m_bestMu.size()<10 ? m_bestMu.size():10); i++) {
       std::cout << m_bestMu[i] << "\t" << m_bestMuProb[i] << std::endl;
     }
   }
@@ -415,9 +413,7 @@ double Pole::calcLhRatio(double s, int & nbMin, int & nbMax) {
       }
     }
     m_muProb[n] =  m_measurement.calcProb(n, s);
-    if (m_verbose>0) {
-      //      if ((s<5.02) &&(m_muProb[n]>0.00001)) std::cout << "s = " << s << "     : m_muProb[" << n << "] = " << m_muProb[n] << std::endl;
-    }
+    //
     lhSbest = getLsbest(n);
     if (lhSbest>0) {
        m_lhRatio[n]  = m_muProb[n]/lhSbest;
@@ -425,7 +421,12 @@ double Pole::calcLhRatio(double s, int & nbMin, int & nbMax) {
        m_lhRatio[n]  = 0.0;
     }
     if (m_verbose>8) {
-      std::cout << "LHRATIO: " << "\t" << n << "\t" << s << "\t" << m_muProb[n] << "\t" << lhSbest << std::endl;
+      std::cout << "LHRATIO: " << "\t" << n << "\t"
+	  << s << "\t"
+	  << m_lhRatio[n] << "\t"
+	  << m_muProb[n] << "\t"
+	  << lhSbest
+	  << std::endl;
     }
     norm_p += m_muProb[n]; // needs to be renormalised
     //
@@ -449,6 +450,7 @@ double Pole::calcLhRatio(double s, int & nbMin, int & nbMax) {
   if (nbMax>m_nBeltMaxUsed) m_nBeltMaxUsed = nbMax;
   //
   if (m_verbose>2) {
+    std::cout << "LHRATIOSUM: " << norm_p << std::endl; 
     if (expandedBelt) {
       std::cout << "calcLhRatio() : expanded belt to " << m_nBeltUsed << std::endl;
       std::cout << "                new size = " << m_muProb.size() << std::endl;
@@ -458,7 +460,7 @@ double Pole::calcLhRatio(double s, int & nbMin, int & nbMax) {
 }
 
 
-int Pole::calcLimit(double s) {
+int Pole::calcLimit(double s, double & prec) {
   int k,i;
   int nBeltMinUsed;
   int nBeltMaxUsed;
@@ -530,14 +532,14 @@ int Pole::calcLimit(double s) {
   if (m_verbose>9) std::cout << "\nSearch s: = " <<  s << std::endl;
   while (!done) {
     if(i != k) { 
-      if(m_lhRatio[i] > m_lhRatio[k])  {
-	m_sumProb  +=  m_muProb[i];
-      }
-      if (m_verbose>9) {
-	std::cout << "RL[" << i << "] = " << m_lhRatio[i]
-                  << ", RLmax[" << k << "] = " << m_lhRatio[k]
-                  << ", sumP = " << m_sumProb << std::endl;
-      }
+    if(m_lhRatio[i] > m_lhRatio[k])  {
+      m_sumProb  +=  m_muProb[i];
+    }
+    if (m_verbose>9) {
+      std::cout << "RL[" << i << "] = " << m_lhRatio[i]
+                << ", RLmax[" << k << "] = " << m_lhRatio[k]
+                << ", sumP = " << m_sumProb << std::endl;
+    }
     }
     i++;
     done = ((i>nBeltMaxUsed) || m_sumProb>m_cl); // CHANGE 11/8
@@ -553,8 +555,9 @@ int Pole::calcLimit(double s) {
   int rval;
   if (fabs(diffOpt)<m_thresholdAlpha) rval = 0;                // match!
   else                  rval = (diffOpt>0 ? +1:-1); // need still more precision
+  prec = fabs(diffOpt);
   if (m_verbose>1) {
-    std::cout << "Dir = " << rval << " for diff cl = " << diff << " and diff a = " << diffOpt << std::endl;
+    std::cout << "s = " << s << " ; Sum(prob) = " << m_sumProb << " ; Dir = " << rval << " for diff cl = " << diff << " and diff a = " << diffOpt << std::endl;
   }
   if (m_verbose>2) {
     std::cout << "--- Done. Results:" << std::endl;
@@ -890,10 +893,15 @@ bool Pole::calcLimit() {
     std::cout << "*** Calculating belt for start s = " << mustart << std::endl;
   }
   mutestPrev = mustart;
+  int vvv=m_verbose; // TODO - remove this debug
+  //  m_verbose = 10;
   calcLimit(mustart);
+  m_verbose=vvv;
+  //
   p0 = m_sumProb;
   if (m_verbose>1) {
     std::cout << "*** Obtained probability p = " << m_sumProb << std::endl;
+    std::cout << "*** N2(s=0)                = " << m_rejs0N2 << std::endl;
   }
 
   // check if N(obs) < N2(s=0.0)
@@ -976,16 +984,28 @@ bool Pole::calcLimit() {
     if (m_verbose>1)
       std::cout << "*** Find a rough upper limit, starting at " << muhigh << std::endl;
     int cn=0;
+    double prec,prevPrec;
+    const double muscale=1.1;
+    double usescale = muscale;
+    prevPrec=0;
     while (!done) { //dir==-1) {
-      dir = calcLimit(muhigh); // what if out of reach for nbelt???? CHECK
-      if (dir==-1) muhigh *= 1.1; // scale up
-      cn++;
+      dir = calcLimit(muhigh,prec); // what if out of reach for nbelt???? CHECK
+      if (cn==1) { // check direction
+        if (prec>prevPrec) { // if precision is degraded => we're going in the wrong direction
+          usescale = 1.0/usescale;
+        }
+      }
+      muhigh *= usescale;
       if (cn>100) {
         done = true;
         std::cout << "*** WARNING infinite (?) loop when scanning for the rough upper limit!" << std::endl;
       } else {
-        done = (dir!=-1);
+        done = false;
+        if (cn>1) done = (prec>prevPrec);
       }
+      //
+      cn++;
+      prevPrec = prec;
     }
     // found a rough upper limit, now go down
     if (m_verbose>1)

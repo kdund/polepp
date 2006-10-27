@@ -175,13 +175,16 @@ enum RLMETHOD {
 
 class Pole {
 public:
-  /*! @name Constructors/destructor */
+  /*! @name Constructors/destructor/initialisor */
   //@{
   //! main constructor
-  Pole();
+  Pole() {}
 
   //! destructor
- ~Pole();
+  ~Pole() {}
+
+  //! initialise to default
+  void initDefault();
   //@}
 
   /*! @name Main interfaces */
@@ -409,7 +412,9 @@ public:
   //! calculate the confidence limits
   bool calcLimit();
   //! calculate the confidence limit probability for the given signal
-  int  calcLimit(double s);
+  int  calcLimit(double s, double & prec);
+  //! calculate the confidence limit probability for the given signal
+  int  calcLimit(double s) { double prec; return calcLimit(s,prec); }
   //! check if s(true) lies within the limit
   bool calcCoverageLimit();
   //! calculate the likelihood ratio
@@ -598,10 +603,10 @@ inline const double Pole::getLsbest(int n) const {
   double rval = 0.0;
   if (usesMBT()) {
     double g;
-    if (n>m_measurement.getBkgObs()) {
+    if (n>m_measurement.getBkgObs()*m_measurement.getBkgScale()) {
       g = static_cast<double>(n);
     } else {
-      g = m_measurement.getBkgObs();
+      g = m_measurement.getBkgObs()*m_measurement.getBkgScale();
     }
     rval = m_poisson->getVal(n,g);
   } else {
