@@ -112,6 +112,7 @@ void Pole::exeFromFile() {
       //      sstr >> n >> ed >> em >> es >> bd >> bm >> bs;
       z=0;
       sstr >> n >> y >> z >> t >> u;
+      //
       if ((sstr) && (z>0)) {
         nread++;
         if ((m_verbose>0) && (nlines<10)) {
@@ -893,10 +894,7 @@ bool Pole::calcLimit() {
     std::cout << "*** Calculating belt for start s = " << mustart << std::endl;
   }
   mutestPrev = mustart;
-  int vvv=m_verbose; // TODO - remove this debug
-  //  m_verbose = 10;
   calcLimit(mustart);
-  m_verbose=vvv;
   //
   p0 = m_sumProb;
   if (m_verbose>1) {
