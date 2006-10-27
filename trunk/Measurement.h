@@ -505,9 +505,16 @@ class MeasPoisEB : public MeasPois {
       ixeff = m_nuisanceIndecis[i][m_effIndex];
       ixbkg = m_nuisanceIndecis[i][m_bkgIndex];
       g = getM(s, m_eff->getIntX(ixeff), m_bkg->getIntX(ixbkg));
-      //      if ((s>4.01) && (s<4.03)) 
-      //        std::cout << "== s(true), e, b, mu = " << s << ", " << m_eff->getIntX(ixeff) << ", " << m_bkg->getIntX(ixbkg) << ", " << g << std::endl;
       p += m_nuisanceWeights[i]*pdf->getVal(x,g);
+//      if ((s>172.8) && (x<1))
+//	std::cout << "== s(true), e, b, mu = " << s
+//	    << ", " << m_eff->getIntX(ixeff)
+//	    << ", " << m_bkg->getIntX(ixbkg) << ", "
+//	    << g
+//	    << ", p= " << p
+//	    << ", w= " << m_nuisanceWeights[i]
+//	    << ",pdfval = " << pdf->getVal(x,g)
+//	    << std::endl;
     }
 
     //    std::cout << "calcProb( " << x << ", " << s << " ) = " << p/m_nuisanceIntNorm << std::endl;

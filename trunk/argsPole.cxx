@@ -9,7 +9,10 @@
 using namespace TCLAP;
 void argsPole(Pole *pole, int argc, char *argv[]) {
   //
-  std::cout << "Calling argsPole()" << std::endl;
+  if (pole==0) return;
+
+  pole->initDefault();
+  //
   try {
     // Create a CmdLine object.
     // Arg1 = string printed at the end whenever --help is used or an error occurs

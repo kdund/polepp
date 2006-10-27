@@ -7,7 +7,10 @@
 
 using namespace TCLAP;
 void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
-  std::cout << "Calling argsCoverage()" << std::endl;
+  if (coverage==0) return;
+  if (pole==0) return;
+  //
+  pole->initDefault();
   time_t timer;
   time(&timer);
   unsigned int rndSeed=static_cast<unsigned int>(timer);
