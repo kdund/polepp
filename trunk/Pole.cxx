@@ -591,9 +591,7 @@ int Pole::calcLimit(double s, double & prec) {
 bool Pole::limitsOK() {
   bool rval=false;
   if (m_lowerLimitFound && m_upperLimitFound) {
-    rval = ( (normOK(m_lowerLimitNorm) && normOK(m_upperLimitNorm)) &&
-             (m_lowerLimitPrec<m_thresholdPrec) &&
-             (m_upperLimitPrec<m_thresholdPrec) );
+    rval = ( (normOK(m_lowerLimitNorm) && normOK(m_upperLimitNorm)) );
   }
   return rval;
 }
@@ -1656,9 +1654,20 @@ void Pole::printLimit(bool doTitle) {
     TOOLS::coutFixed(6,m_scaleLimit*m_upperLimit);     std::cout << std::endl;
   }
   if (simple) {
-    std::cout << "Limits = [ ";
+    std::cout << std::endl;
+    std::cout << "*--------------------------------------------------*" << std::endl;
+    std::cout << "* Precision of lower limit = ";
+    TOOLS::coutFixed(6,m_lowerLimitPrec);
+    std::cout << std::endl;
+    std::cout << "*              upper limit = ";
+    TOOLS::coutFixed(6,m_upperLimitPrec);
+    std::cout << std::endl;
+    std::cout << "*" << std::endl;
+    std::cout << "* Limits = [ ";
     TOOLS::coutFixed(6,m_scaleLimit*m_lowerLimit); std::cout << ", ";
     TOOLS::coutFixed(6,m_scaleLimit*m_upperLimit); std::cout << " ]";
+    std::cout << std::endl;
+    std::cout << "*--------------------------------------------------*" << std::endl;
     std::cout << std::endl;
   }
 }

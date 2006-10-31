@@ -11,8 +11,17 @@
   Double_t smax = TMath::MaxElement(nent, tree->GetV1());
   Double_t nmin = TMath::MinElement(nent, tree->GetV2());
   Double_t nmax = TMath::MaxElement(nent, tree->GetV2());
-  Double_t s,n,w;
-  Double_t ds   = 0.1;
+  Double_t s,n,w,sp;
+  Double_t ds;
+  //
+  Int_t i=0;
+  sp = *(tree->GetV1()+0);
+  while ((ds==0) && (i<nent)) {
+    s = *(tree->GetV1()+i);
+    ds = s-sp;
+    sp = s;
+    i++;
+  }
   Int_t    nsbins = int((smax-smin)/ds)+1;
   TH2F *hist = new TH2F("construct","construct",int(nmax-nmin)+1,nmin,nmax,nsbins,smin,smax);
 
