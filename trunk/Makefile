@@ -47,8 +47,12 @@ LIBOLIST =$(patsubst %.cxx,%.o,$(LIBCPPLIST))
 TOOLOLIST=$(patsubst %.cxx,%.o,$(TOOLCPPLIST))
 TOOLELIST=$(patsubst %.cxx,%,$(TOOLCPPLIST))
 
+# list of scripts
+SCRIPTLIST = log2confbelt.csh log2construct.csh plotconfbelt.C plotconst.C
+
 # list of files for package
-PACKAGELIST = $(LIBCPPLIST) $(TOOLCPPLIST) $(HLIST) $(ARGLIST) Makefile Makefile.arch release.notes Doxyfile README
+PACKAGELIST = $(LIBCPPLIST) $(TOOLCPPLIST) $(HLIST) $(ARGLIST) $(SCRIPTLIST) \
+		Makefile Makefile.arch release.notes Doxyfile README
 
 # rules to compile tools
 
@@ -121,9 +125,9 @@ $(SHLIBFILE): $(LIBOLIST)
 	@echo "Done"
 
 # Rule to make package
-package: $(PACKAGELIST)
+package:
 	@echo -n "Creating package... "
-	@tar -czf polelib.tgz $^
+	@tar -czf polelib.tgz $(PACKAGELIST)
 	@echo "Done"
 
 # Useful build targets
