@@ -122,6 +122,16 @@ void Pole::exeFromFile() {
           //          std::cout << n << "\t" << ed << "\t" << em << "\t" << es << "\t" << bd << "\t" << bm << "\t" << bs << std::endl;
           std::cout << n << "\t" << y << "\t" << z << "\t" << t << "\t" << u  << std::endl;
         }
+        if (u<50) {
+          double scale=100;
+          u *= scale;
+          t *= scale;
+          y *= scale;
+          z *= scale;
+          if (nlines==0) {
+            std::cout << "==> Scaling up with factor = " << scale << std::endl;
+          }
+        }
         m_measurement.setEffScale(1.0/u);
         m_measurement.setBkgScale(1.0/t);
         setNObserved(static_cast<int>(n+0.5));
