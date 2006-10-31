@@ -16,7 +16,7 @@
 
 void Pole::initDefault() {
   m_thresholdBS    = 0.001;
-  m_thresholdAlpha = 0.01;
+  m_thresholdPrec = 0.01;
   m_scaleLimit=1.0;
   m_inputFile="";
   m_inputFileLines=0;
@@ -27,6 +27,8 @@ void Pole::initDefault() {
   m_normMaxDiff = 0.01;
   m_lowerLimitNorm = -1.0;
   m_upperLimitNorm = -1.0;
+  m_lowerLimitPrec = -1.0;
+  m_upperLimitPrec = -1.0;
   //
   m_poisson = &PDF::gPoisTab;
   m_gauss   = &PDF::gGauss;
@@ -423,11 +425,12 @@ double Pole::calcLhRatio(double s, int & nbMin, int & nbMax) {
     }
     if (m_verbose>8) {
       std::cout << "LHRATIO: " << "\t" << n << "\t"
-	  << s << "\t"
-	  << m_lhRatio[n] << "\t"
-	  << m_muProb[n] << "\t"
-	  << lhSbest
-	  << std::endl;
+                << s << "\t"
+                << m_lhRatio[n] << "\t"
+                << m_muProb[n] << "\t"
+                << getSbest(n) << "\t"
+                << lhSbest
+                << std::endl;
     }
     norm_p += m_muProb[n]; // needs to be renormalised
     //
@@ -468,7 +471,6 @@ int Pole::calcLimit(double s, double & prec) {
   //
   // Reset belt probabilities
   //
-  m_prevSumProb = m_sumProb;
   m_sumProb     = 0.0;
   //
   // Get RL(n,s)
@@ -502,6 +504,7 @@ int Pole::calcLimit(double s, double & prec) {
     m_lhRatio[k]   = 0.0;
     m_sumProb      = 1.0; // should always be >CL
     m_scanBeltNorm = 1.0;
+    prec           = 1.0;
     return 1; 
   }
 
@@ -530,35 +533,48 @@ int Pole::calcLimit(double s, double & prec) {
   // If so, m_sumProb> m_cl
   i=nBeltMinUsed;
   bool done=false;
+  int nsum=0;
   if (m_verbose>9) std::cout << "\nSearch s: = " <<  s << std::endl;
+  int nbmin,nbmax;
+  nbmin=100000;
+  nbmax=0;
   while (!done) {
     if(i != k) { 
-    if(m_lhRatio[i] > m_lhRatio[k])  {
-      m_sumProb  +=  m_muProb[i];
-    }
-    if (m_verbose>9) {
-      std::cout << "RL[" << i << "] = " << m_lhRatio[i]
-                << ", RLmax[" << k << "] = " << m_lhRatio[k]
-                << ", sumP = " << m_sumProb << std::endl;
-    }
+      if(m_lhRatio[i] > m_lhRatio[k])  {
+        if (i<nbmin) nbmin=i;
+        if (i>nbmax) nbmax=i;
+        m_sumProb  +=  m_muProb[i];
+        nsum++;
+      }
+      if (m_verbose>9) {
+        std::cout << "RL[" << i << "] = " << m_lhRatio[i]
+                  << ", RLmax[" << k << "] = " << m_lhRatio[k]
+                  << ", sumP = " << m_sumProb << std::endl;
+      }
     }
     i++;
     done = ((i>nBeltMaxUsed) || m_sumProb>m_cl); // CHANGE 11/8
   }
+  if (nsum==0) nbmin=0;
   //
   // Return:
   //  0 : if |diff|<0.001
   // +1 : if diff>0.001
   // -1 : if diff<-0.001
   //
-  double diff  = 2.0*(m_sumProb-m_cl)/(m_sumProb+m_cl); //
-  double diffOpt = 1.0 - ((1.0-m_sumProb)/(1.0-m_cl));
+  double diff = (m_sumProb-m_cl)/m_cl; //
+  //  double diffOpt = 1.0 - ((1.0-m_sumProb)/(1.0-m_cl));
   int rval;
-  if (fabs(diffOpt)<m_thresholdAlpha) rval = 0;                // match!
-  else                  rval = (diffOpt>0 ? +1:-1); // need still more precision
-  prec = fabs(diffOpt);
-  if (m_verbose>1) {
-    std::cout << "s = " << s << " ; Sum(prob) = " << m_sumProb << " ; Dir = " << rval << " for diff cl = " << diff << " and diff a = " << diffOpt << std::endl;
+  if (fabs(diff)<m_thresholdPrec) rval = 0;                // match!
+  else                             rval = (diff>0 ? +1:-1); // need still more precision
+  prec = (nsum>0 ? fabs(diff) : -1.0 );
+  if (m_verbose>3) {
+    std::cout << "s = " << s
+              << " ; nsum = " << nsum
+              << " ; nbmin = " << nbmin
+              << " ; nbmax = " << nbmax
+              << " ; Sum(prob) = " << m_sumProb
+              << " ; Dir = " << rval << " prec = " << prec << std::endl;
   }
   if (m_verbose>2) {
     std::cout << "--- Done. Results:" << std::endl;
@@ -575,7 +591,9 @@ int Pole::calcLimit(double s, double & prec) {
 bool Pole::limitsOK() {
   bool rval=false;
   if (m_lowerLimitFound && m_upperLimitFound) {
-    rval = (normOK(m_lowerLimitNorm) && normOK(m_upperLimitNorm));
+    rval = ( (normOK(m_lowerLimitNorm) && normOK(m_upperLimitNorm)) &&
+             (m_lowerLimitPrec<m_thresholdPrec) &&
+             (m_upperLimitPrec<m_thresholdPrec) );
   }
   return rval;
 }
@@ -850,8 +868,280 @@ void Pole::calcBelt() {
   }
 }
 
+bool Pole::scanLowerLimit( double mustart, double p0 ) {
+  //
+  //------------------------------
+  // Start search for lower limit
+  //------------------------------
+  // This routine will scan for a lower limit starting at mustart.
+  //  < p0 = m_sumProb after a call to calcLimit(mustart). >
+  //
+  // Special case:
+  //  check if N(obs) < N2(s=0.0)
+  //  if so, the lower limit is 0.0
+  //
+  if (getNObserved()<m_rejs0N2) {
+    m_lowerLimitFound = true;
+    m_lowerLimitNorm  = 1.0;
+    m_lowerLimit      = 0;
+    if (m_verbose>1) {
+      std::cout << "*** Lower limit scan: limit concluded from the fact that N(obs) = " << getNObserved()
+                << " and Belt(s=0) = [ " << m_rejs0N1 << " : " << m_rejs0N2 << " ]" << std::endl;
+    }
+  } else {
+    //
+    // Scan for lower limit
+    //
+    bool done = false;
+    int  dir = -1;
+    //
+    // Special case:
+    //  N(obs) == N2(s=0)
+    //  if (dir!=1) then the lower limit is at s=0
+    //  if (dir==1) m_sumProb>cl => lower limit at some s>0
+    //
+    if (getNObserved()==m_rejs0N2) {
+      if (m_verbose>1)
+        std::cout << "*** Lower limit scan: special case -> N(obs) = N2(s=0), test for limit at s=0" << std::endl;
+      dir = calcLimit(0);
+      if (m_verbose>1)
+        std::cout << "*** Lower limit scan: calcLimit at sL = 0 ==> P = " << m_sumProb
+                  << " and dir = " << dir
+                  << std::endl;
+      if (dir<1) {
+        done = true;
+        m_lowerLimitFound = true;
+        m_lowerLimitNorm  = m_scanBeltNorm;
+        m_lowerLimit = 0;
+        if (m_verbose>1)
+          std::cout << "*** Lower limit scan: limit concluded to be 0"
+                    << std::endl;
+      }
+    }
+    //
+    // Lower limit binary search
+    //
+    int    cn = 0;                // reset loop counter
+    double mutestPrev = mustart;  // start point
+    double muhigh     = mustart;  // binary search, high point
+    double mulow      = 0.0;      // idem, low point
+    double prevPrec   = 100000.0; // a dummy large value
+    double precMin    = 100000.0;
+    double prec       = 0;
+    double dmu        = 0;
+    double mutest;
+    //
+    if ((m_verbose>1) && (!done))
+      std::cout << "*** Lower limit scan: binary search, start at mutest = " << mustart << std::endl;
+    while (!done) {
+      mutest = (muhigh+mulow)/2.0;
+      dmu = 2.0*fabs(mutestPrev-mutest)/(mutestPrev+mutest);
+      //
+      if (m_verbose>1)
+        std::cout << "*** Lower limit scan: test at mutest  = " << mutest
+                  << " mulow,muhigh = " << mulow << " , " << muhigh
+                  << std::endl;
+      //
+      dir = calcLimit(mutest,prec);
+      if (!(prec<0)) {
+        if (prec<precMin) {
+          precMin           = prec;
+          m_lowerLimitNorm  = m_scanBeltNorm;
+          m_lowerLimit      = mutest;
+          m_lowerLimitPrec  = prec;
+        }
+      }
+      if (m_verbose>1)
+        std::cout << "*** Lower limit scan: got dir = " << dir
+                  << ", P(s) = " << m_sumProb
+                  << " and prec = " << prec << std::endl;
+      if ((dir==0) || (dmu<m_thresholdBS)) {
+        if (m_verbose>1) {
+          if (dir==0) {
+            std::cout << "*** Lower limit scan: scan stopped since sufficient precision is reached!"
+                      << std::endl;
+            std::cout << "*** Lower limit scan: precision = " << prec << " < " << m_thresholdPrec
+                      << std::endl;
+          } else if (dmu<m_thresholdBS) {
+            std::cout << "*** Lower limit scan: scan stopped since change in mutest is small enough!"
+                      << std::endl;
+            std::cout << "*** Lower limit scan: delta mu = " << dmu << " < " << m_thresholdBS
+                      << std::endl;
+          }
+        }
+        done = true;
+        m_lowerLimitFound = true;
+      } else if (dir==1) {
+        mulow = mutest;
+      } else {
+        muhigh = mutest;
+      }
+      mutestPrev = mutest;
+      prevPrec = prec;
+      cn++;
+      if (cn>1000) {
+        done=true;
+        std::cout << "*** WARNING calcLimit() failed when scanning for lower limit! Infinite or long loop encountered - limit at 1000" << std::endl;
+      }
+    }
+    if ((m_lowerLimitFound) && (m_verbose>1)) {
+      std::cout << "*** Lower limit scan: limit from full scan; dir = " << dir << " dmu = " << dmu <<  " and sL = " << m_lowerLimit << std::endl;
+    }
+  }
+  return m_lowerLimitFound;
+}
+
+
+bool Pole::scanUpperLimit( double mustart, double p0 ) {
+  //
+  if (!m_lowerLimitFound) return false;
+  //
+  // Scan for upper limit
+  //
+  const double muscale=1.1;
+  bool   done     = false;
+  int    dir      = -1;
+  double mulow    = mustart;
+  double muhigh   = 2.0*(mustart+1.0)-m_lowerLimit; // pick an initial upper limit
+  double usescale = muscale;
+  double prevmu   = muhigh;
+  double prec     = 0;
+  double prevPrec = 100000.0;
+  double precMin  = 100000.0;
+  int    cn       = 0;
+  double mutest;
+  double muRoughLim;
+  double dmu;
+  //
+  // Start at muhigh.
+  // calcLimit returns:
+  //---------------------------------------------
+  // dir | prec | action
+  //---------------------------------------------
+  //  -  | <0   | sumProb==0, muhigh at s_best
+  // +1  | >0   | sumProb>cl
+  // -1  | <0   | sumProb<cl
+  //  0  |  0   | sumProb = cl (within precision)
+  //---------------------------------------------
+  if (m_verbose>1)
+    std::cout << "*** Upper limit scan: find a rough limit, starting at " << muhigh << std::endl;
+  mutest = muhigh;
+  muRoughLim = mutest;
+  while (!done) { //dir==-1) {
+    dir = calcLimit(mutest,prec);
+    if (m_verbose>1)
+      std::cout << "*** Upper limit scan: test at " << mutest
+                << " gave dir = " << dir
+                << " , precision = " << prec
+                << " and prob = " << m_sumProb
+                << std::endl;
+    if (prec<0) {
+      usescale = muscale;
+    } else {
+      if (cn>0) { // check direction
+        if (prec>prevPrec) { // if precision is degraded => we're going in the wrong direction
+          usescale = 1.0/usescale;
+        }
+      }
+      if (prec<precMin) {
+        precMin = prec;
+        muRoughLim = mutest;
+      }
+      done = false;
+      // check the precision
+      if (cn>1) {
+        done = (prec>prevPrec);
+      }
+      // step up counter of ok mu
+      cn++;
+      prevPrec = prec;
+      // check for infinite loop
+      if ((!done) && (cn>100)) {
+        done = true;
+        std::cout << "*** WARNING infinite (?) loop when scanning for the rough upper limit!" << std::endl;
+      }
+    }
+    // continue if not done
+    if (!done) {
+      prevmu = mutest;
+      mutest *= usescale;
+    }
+  }
+  muhigh = muRoughLim;
+  //
+  // found a rough upper limit, now go down
+  // binary search start range is [ mulow = mustart, muhigh ]
+  //
+  if (m_verbose>1) {
+    std::cout << "*** Upper limit scan: found a rough limit at " << muhigh << std::endl;
+    std::cout << "*** Upper limit scan: binary search" << std::endl;
+  }
+  cn = 0;
+  done = false;
+  prevmu = mustart;  // start point
+  precMin = 100000.0;
+  while (!done) {
+    mutest = (mulow+muhigh)/2.0;
+    if (m_verbose>1)
+      std::cout << "*** Upper limit scan: test at mutest  = " << mutest
+                << " mulow,muhigh = " << mulow << " , " << muhigh
+                << std::endl;
+    //      dmu = fabs(muhigh-mulow)/(muhigh+mulow);
+    dmu = 2.0*fabs(prevmu-mutest)/(prevmu+mutest);
+    dir = calcLimit(mutest,prec);
+    if (!(prec<0)) {
+      if (prec<precMin) {
+        precMin           = prec;
+        m_upperLimitNorm  = m_scanBeltNorm;
+        m_upperLimit      = mutest;
+        m_upperLimitPrec  = prec;
+      }
+    }
+    if (m_verbose>1)
+      std::cout << "*** Upper limit scan: got dir = " << dir
+                << " , P(s) = " << m_sumProb
+                << " and prec = " << prec
+                << std::endl;
+    if ((dir==0) || (dmu<m_thresholdBS)) { // see comment above for lower limit
+      if (m_verbose>1) {
+        if (dir==0) {
+          std::cout << "*** Upper limit scan: scan stopped since sufficient precision is reached!"
+                    << std::endl;
+          std::cout << "*** Upper limit scan: precision = " << prec << " < " << m_thresholdPrec
+                    << std::endl;
+        } else if (dmu<m_thresholdBS) {
+          std::cout << "*** Upper limit scan: scan stopped since change in mutest is small enough!"
+                    << std::endl;
+          std::cout << "*** Upper limit scan: delta mu = " << dmu << " < " << m_thresholdBS
+                    << std::endl;
+        }
+      }
+      done = true;
+      m_upperLimitFound = true;
+    } else if (dir==1) {
+      muhigh = mutest;
+    } else {
+      mulow = mutest;
+    }
+    prevmu   = mutest;
+    prevPrec = prec;
+    cn++;
+    if (cn>1000) { // TODO: change this to a more smart check
+      done=true;
+      std::cout << "calcLimit() failed when scanning for UL! Infinite or long loop encountered - limit at 1000" << std::endl;
+    }
+  }
+  if ((m_upperLimitFound) && (m_verbose>1)) {
+    std::cout << "*** Upper limit scan: limit obtained from full scan; dir = " << dir << " dmu = " << dmu <<  " and sU = " << m_upperLimit << std::endl;
+  }
+  return m_upperLimitFound;
+}
+
 bool Pole::calcLimit() {
   if (m_verbose>1) std::cout << "*** Calculating limits" << std::endl;
+  //
+  // Reset
+  //
   resetCalcLimit();
   //
   // Obtain belt for s=0 - useful since lower limit is 0 if N(obs)<N2
@@ -864,8 +1154,10 @@ bool Pole::calcLimit() {
     m_lowerLimitFound = true;
     m_lowerLimitNorm  = 1.0;
     m_lowerLimit      = 0;
+    m_lowerLimitPrec  = 0   ;
     m_upperLimitFound = true;
     m_upperLimitNorm  = 1.0;
+    m_upperLimitPrec  = 0   ;
     m_upperLimit      = 0;
     m_sumProb         = 0.0;
     m_coversTruth     = false; // SHOULD THIS BE TRUE IF s=0??? (getTrueSignal()==0);
@@ -873,173 +1165,29 @@ bool Pole::calcLimit() {
     return true;
   }
   //
-  if (m_verbose>1) std::cout << "*** Scanning over all hypothesis" << std::endl;
-
-  //
   // Find hypothesis start - s = (Nobs-bkg)/eff - should be in ~the middle of the belt
   //
-  double mutest;
-  double mutestPrev;
-  int    i;
-  double p0;
-  bool done = false;
-
-  double mustart = getObservedSignal();
-  double muhigh  = mustart;
-  double mulow   = 0.0;
-  double dmu = 0.0;
-  int dir=100; // invalid number - check for bugs
   //
-  if (m_verbose>1) {
+  if (m_verbose>1) std::cout << "*** Scanning over all hypothesis" << std::endl;
+  //
+  double mustart = getObservedSignal();
+  //
+  if (m_verbose>1)
     std::cout << "*** Calculating belt for start s = " << mustart << std::endl;
-  }
-  mutestPrev = mustart;
+  //
+  // Calculate belt for mustart
+  //
   calcLimit(mustart);
   //
-  p0 = m_sumProb;
   if (m_verbose>1) {
     std::cout << "*** Obtained probability p = " << m_sumProb << std::endl;
     std::cout << "*** N2(s=0)                = " << m_rejs0N2 << std::endl;
   }
 
-  // check if N(obs) < N2(s=0.0)
-  // if so, the lower limit is 0.0
-  if (getNObserved()<m_rejs0N2) {
-    m_lowerLimitFound = true;
-    m_lowerLimitNorm  = 1.0;
-    m_lowerLimit      = 0;
-    if (m_verbose>1) {
-      std::cout << "*** Lower limit concluded from the fact that N(obs) = " << getNObserved()
-                << " and Belt(s=0) = [ " << m_rejs0N1 << " : " << m_rejs0N2 << " ]" << std::endl;
-    }
-  } else {
-    // First scan for lower limit
-    done = false;
-    m_prevSumProb = p0;
-    i = 1;
-    if (getNObserved()==m_rejs0N2) { // special case
-      if (m_verbose>1)
-        std::cout << "*** Special case: N(obs) = N2(s=0), test for limit at s=0" << std::endl;
-      dir = calcLimit(0);
-      if (m_verbose>1)
-        std::cout << "*** calcLimit at sL = 0 ==> P = " << m_sumProb
-                  << " and dir = " << dir
-                  << std::endl;
-      if (dir<1) {
-        done = true;
-        m_lowerLimitFound = true;
-        m_lowerLimitNorm  = m_scanBeltNorm;
-        m_lowerLimit = 0;
-        if (m_verbose>1)
-          std::cout << "*** Lower limit concluded to be sL = 0"
-                    << std::endl;
-      }
-    }
-    if ((m_verbose>1) && (!done))
-      std::cout << "*** Lower limit: binary search" << std::endl;
-    while (!done) {
-      mutest = (muhigh+mulow)/2.0;
-      dmu = 2.0*fabs(mutestPrev-mutest)/(mutestPrev+mutest);
-      //
-      if (m_verbose>1)
-        std::cout << "*** Test at mutest  = " << mutest << std::endl;
-      //
-      dir = calcLimit(mutest);
-      if (m_verbose>1)
-        std::cout << "*** Got dir = " << dir << " and P(s) = " << m_sumProb << std::endl;
-      if ((dir==0) || (dmu<m_thresholdBS)) {
-        done = true;
-        m_lowerLimitFound = true;
-        m_lowerLimitNorm  = m_scanBeltNorm;
-        m_lowerLimit      = mutest;
-      } else if (dir==1) {
-        mulow = mutest;
-      } else {
-        muhigh = mutest;
-      }
-      mutestPrev = mutest;
-      i++;
-      if (i>1000) {
-        done=true;
-        std::cout << "*** WARNING calcLimit() failed  when scanning for LL! Infinite or long loop encountered - limit at 1000" << std::endl;
-      }
-    }
-    if ((m_lowerLimitFound) && (m_verbose>1)) {
-      std::cout << "*** Lower limit obtained from full scan; dir = " << dir << " dmu = " << dmu <<  " and sL = " << m_lowerLimit << std::endl;
-    }
-  }
+  scanLowerLimit(mustart,m_sumProb);
 
-  if (m_lowerLimitFound) {
-    // Scan for upper limit
-    done = false;
-    m_prevSumProb = p0;
-    
-    // find a rough range guaranteed to cover the upper limit
-    dir = -1;
-    mulow  = mustart;
-    muhigh = 2.0*(mustart+1.0)-m_lowerLimit; // pick an initial upper limit
-    // loop
-    if (m_verbose>1)
-      std::cout << "*** Find a rough upper limit, starting at " << muhigh << std::endl;
-    int cn=0;
-    double prec,prevPrec;
-    const double muscale=1.1;
-    double usescale = muscale;
-    prevPrec=0;
-    while (!done) { //dir==-1) {
-      dir = calcLimit(muhigh,prec); // what if out of reach for nbelt???? CHECK
-      if (cn==1) { // check direction
-        if (prec>prevPrec) { // if precision is degraded => we're going in the wrong direction
-          usescale = 1.0/usescale;
-        }
-      }
-      muhigh *= usescale;
-      if (cn>100) {
-        done = true;
-        std::cout << "*** WARNING infinite (?) loop when scanning for the rough upper limit!" << std::endl;
-      } else {
-        done = false;
-        if (cn>1) done = (prec>prevPrec);
-      }
-      //
-      cn++;
-      prevPrec = prec;
-    }
-    // found a rough upper limit, now go down
-    if (m_verbose>1)
-      std::cout << "*** Upper limit: binary search" << std::endl;
-    i = 0;
-    done = false;
-    while (!done) {
-      mutest = (mulow+muhigh)/2.0;
-      if (m_verbose>1)
-        std::cout << "*** Test at mutest  = " << mutest << std::endl;
-      //      dmu = fabs(muhigh-mulow)/(muhigh+mulow);
-      dmu = 2.0*fabs(mutestPrev-mutest)/(mutestPrev+mutest);
-      dir = calcLimit(mutest);
-      if (m_verbose>1)
-        std::cout << "*** Got dir = " << dir << " and P(s) = " << m_sumProb << std::endl;
-      if ((dir==0) || (dmu<m_thresholdBS)) { // see comment above for lower limit
-        done = true;
-        m_upperLimitFound = true;
-        m_upperLimitNorm  = m_scanBeltNorm;
-        m_upperLimit      = mutest;
-      } else if (dir==1) {
-        muhigh = mutest;
-      } else {
-        mulow = mutest;
-      }
-      mutestPrev = mutest;
-      i++;
-      if (i>1000) { // TODO: change this to a more smart check
-        done=true;
-        std::cout << "calcLimit() failed when scanning for UL! Infinite or long loop encountered - limit at 1000" << std::endl;
-      }
-    }
-    if ((m_upperLimitFound) && (m_verbose>1)) {
-      std::cout << "Upper limit obtained from full scan; dir = " << dir << " dmu = " << dmu <<  " and sU = " << m_upperLimit << std::endl;
-    }
-  }
+  scanUpperLimit(mustart,m_sumProb);
+
   //
   bool rval=limitsOK();
   if (rval) {
@@ -1052,8 +1200,258 @@ bool Pole::calcLimit() {
 //     TOOLS::coutFixed("u = ",4,m_upperLimit); std::cout << "   ";
 //     std::cout << "c = " << TOOLS::yesNo(m_coversTruth) << std::endl;
   }
-  return limitsOK();
+  return rval;
 }
+
+////////////////////////////// OLD 
+// bool Pole::calcLimit() {
+//   if (m_verbose>1) std::cout << "*** Calculating limits" << std::endl;
+//   resetCalcLimit();
+//   //
+//   // Obtain belt for s=0 - useful since lower limit is 0 if N(obs)<N2
+//   //
+//   calcNMin();
+//   //
+//   // If N(obs) is BELOW belt at s=0.0, then we have an empty belt.
+//   //
+//   if (getNObserved()<m_rejs0N1) {
+//     m_lowerLimitFound = true;
+//     m_lowerLimitNorm  = 1.0;
+//     m_lowerLimit      = 0;
+//     m_upperLimitFound = true;
+//     m_upperLimitNorm  = 1.0;
+//     m_upperLimit      = 0;
+//     m_sumProb         = 0.0;
+//     m_coversTruth     = false; // SHOULD THIS BE TRUE IF s=0??? (getTrueSignal()==0);
+//     std::cout << "WARNING: Empty limit created!" << std::endl;
+//     return true;
+//   }
+//   //
+//   if (m_verbose>1) std::cout << "*** Scanning over all hypothesis" << std::endl;
+
+//   //
+//   // Find hypothesis start - s = (Nobs-bkg)/eff - should be in ~the middle of the belt
+//   //
+//   double mutest;
+//   double mutestPrev;
+//   int    i;
+//   double p0;
+//   bool done = false;
+
+//   double mustart = getObservedSignal();
+//   double muhigh  = mustart;
+//   double mulow   = 0.0;
+//   double dmu = 0.0;
+//   int dir=100; // invalid number - check for bugs
+//   //
+//   if (m_verbose>1) {
+//     std::cout << "*** Calculating belt for start s = " << mustart << std::endl;
+//   }
+//   calcLimit(mustart);
+//   //
+//   p0 = m_sumProb;
+//   if (m_verbose>1) {
+//     std::cout << "*** Obtained probability p = " << m_sumProb << std::endl;
+//     std::cout << "*** N2(s=0)                = " << m_rejs0N2 << std::endl;
+//   }
+//   //
+//   //------------------------------
+//   // Start search for lower limit
+//   //------------------------------
+//   //
+//   // Special case:
+//   //  check if N(obs) < N2(s=0.0)
+//   //  if so, the lower limit is 0.0
+//   //
+//   if (getNObserved()<m_rejs0N2) {
+//     m_lowerLimitFound = true;
+//     m_lowerLimitNorm  = 1.0;
+//     m_lowerLimit      = 0;
+//     if (m_verbose>1) {
+//       std::cout << "*** Lower limit concluded from the fact that N(obs) = " << getNObserved()
+//                 << " and Belt(s=0) = [ " << m_rejs0N1 << " : " << m_rejs0N2 << " ]" << std::endl;
+//     }
+//   } else {
+//     //
+//     // Scan for lower limit
+//     //
+//     done = false;
+//     m_prevSumProb = p0;
+//     i = 1;
+//     //
+//     // Special case:
+//     //  N(obs) == N2(s=0)
+//     //
+//     if (getNObserved()==m_rejs0N2) {
+//       if (m_verbose>1)
+//         std::cout << "*** Special case: N(obs) = N2(s=0), test for limit at s=0" << std::endl;
+//       dir = calcLimit(0);
+//       if (m_verbose>1)
+//         std::cout << "*** calcLimit at sL = 0 ==> P = " << m_sumProb
+//                   << " and dir = " << dir
+//                   << std::endl;
+//       if (dir<1) {
+//         done = true;
+//         m_lowerLimitFound = true;
+//         m_lowerLimitNorm  = m_scanBeltNorm;
+//         m_lowerLimit = 0;
+//         if (m_verbose>1)
+//           std::cout << "*** Lower limit concluded to be sL = 0"
+//                     << std::endl;
+//       }
+//     }
+//     //
+//     // Lower limit binary search
+//     //
+//     mutestPrev = mustart;
+//     if ((m_verbose>1) && (!done))
+//       std::cout << "*** Lower limit: binary search, start at mutest = " << mustart << std::endl;
+//     while (!done) {
+//       mutest = (muhigh+mulow)/2.0;
+//       dmu = 2.0*fabs(mutestPrev-mutest)/(mutestPrev+mutest);
+//       //
+//       if (m_verbose>1)
+//         std::cout << "*** Test at mutest  = " << mutest << std::endl;
+//       //
+//       dir = calcLimit(mutest);
+//       if (m_verbose>1)
+//         std::cout << "*** Got dir = " << dir << " and P(s) = " << m_sumProb << std::endl;
+//       if ((dir==0) || (dmu<m_thresholdBS)) {
+//         done = true;
+//         m_lowerLimitFound = true;
+//         m_lowerLimitNorm  = m_scanBeltNorm;
+//         m_lowerLimit      = mutest;
+//       } else if (dir==1) {
+//         mulow = mutest;
+//       } else {
+//         muhigh = mutest;
+//       }
+//       mutestPrev = mutest;
+//       i++;
+//       if (i>1000) {
+//         done=true;
+//         std::cout << "*** WARNING calcLimit() failed  when scanning for LL! Infinite or long loop encountered - limit at 1000" << std::endl;
+//       }
+//     }
+//     if ((m_lowerLimitFound) && (m_verbose>1)) {
+//       std::cout << "*** Lower limit obtained from full scan; dir = " << dir << " dmu = " << dmu <<  " and sL = " << m_lowerLimit << std::endl;
+//     }
+//   }
+
+//   if (m_lowerLimitFound) {
+//     // Scan for upper limit
+//     done = false;
+//     m_prevSumProb = p0;
+    
+//     // find a rough range guaranteed to cover the upper limit
+//     dir = -1;
+//     mulow  = mustart;
+//     muhigh = 2.0*(mustart+1.0)-m_lowerLimit; // pick an initial upper limit
+//     // loop
+//     if (m_verbose>1)
+//       std::cout << "*** Find a rough upper limit, starting at " << muhigh << std::endl;
+//     int cn=0;
+//     double prec,prevPrec;
+//     const double muscale=1.1;
+//     double usescale = muscale;
+//     double prevmu = muhigh;
+//     prevPrec=0;
+//     //
+//     // Start at muhigh.
+//     // calcLimit returns:
+//     //---------------------------------------------
+//     // dir | prec | action
+//     //---------------------------------------------
+//     //  -  | <0   | sumProb==0, muhigh at s_best
+//     // +1  | >0   | sumProb>cl
+//     // -1  | <0   | sumProb<cl
+//     //  0  |  0   | sumProb = cl (within precision)
+//     //---------------------------------------------
+//     while (!done) { //dir==-1) {
+//       dir = calcLimit(muhigh,prec);
+//       if (prec<0) {
+//         usescale = muscale;
+//       } else {
+//         if (cn>0) { // check direction
+//           if (prec>prevPrec) { // if precision is degraded => we're going in the wrong direction
+//             usescale = 1.0/usescale;
+//           }
+//         }
+//         done = false;
+//         // check the precision
+//         if (cn>1) {
+//           done = (prec>prevPrec);
+//           if (done) muhigh = prevmu;
+//         }
+//         // step up counter of ok mu
+//         cn++;
+//         prevPrec = prec;
+//         // check for infinite loop
+//         if ((!done) && (cn>100)) {
+//           done = true;
+//           std::cout << "*** WARNING infinite (?) loop when scanning for the rough upper limit!" << std::endl;
+//         }
+//       }
+//       // continue if not done
+//       if (!done) {
+//         prevmu = muhigh;
+//         muhigh *= usescale;
+//       }
+//     }
+//     //
+//     // found a rough upper limit, now go down
+//     //
+//     if (m_verbose>1) {
+//       std::cout << "*** Found a rough upper limit at " << muhigh << std::endl;
+//       std::cout << "*** Upper limit: binary search" << std::endl;
+//     }
+//     i = 0;
+//     done = false;
+//     while (!done) {
+//       mutest = (mulow+muhigh)/2.0;
+//       if (m_verbose>1)
+//         std::cout << "*** Test at mutest  = " << mutest << std::endl;
+//       //      dmu = fabs(muhigh-mulow)/(muhigh+mulow);
+//       dmu = 2.0*fabs(mutestPrev-mutest)/(mutestPrev+mutest);
+//       dir = calcLimit(mutest,prec);
+//       if (m_verbose>1)
+//         std::cout << "*** Got dir = " << dir << " and P(s) = " << m_sumProb << std::endl;
+//       if ((dir==0) || (dmu<m_thresholdBS)) { // see comment above for lower limit
+//         done = true;
+//         m_upperLimitFound = true;
+//         m_upperLimitNorm  = m_scanBeltNorm;
+//         m_upperLimit      = mutest;
+//       } else if (dir==1) {
+//         muhigh = mutest;
+//       } else {
+//         mulow = mutest;
+//       }
+//       mutestPrev = mutest;
+//       prevPrec
+//       i++;
+//       if (i>1000) { // TODO: change this to a more smart check
+//         done=true;
+//         std::cout << "calcLimit() failed when scanning for UL! Infinite or long loop encountered - limit at 1000" << std::endl;
+//       }
+//     }
+//     if ((m_upperLimitFound) && (m_verbose>1)) {
+//       std::cout << "Upper limit obtained from full scan; dir = " << dir << " dmu = " << dmu <<  " and sU = " << m_upperLimit << std::endl;
+//     }
+//   }
+//   //
+//   bool rval=limitsOK();
+//   if (rval) {
+//     m_coversTruth = ((getTrueSignal()>=m_lowerLimit) && (getTrueSignal()<=m_upperLimit));
+//     //    calcLimit(getTrueSignal());
+// //     std::cout << "COV: ";
+// //     TOOLS::coutFixed("s = ",4,getTrueSignal()); std::cout << "   ";
+// //     TOOLS::coutFixed("p = ",4,m_sumProb); std::cout << "   ";
+// //     TOOLS::coutFixed("l = ",4,m_lowerLimit); std::cout << "   ";
+// //     TOOLS::coutFixed("u = ",4,m_upperLimit); std::cout << "   ";
+// //     std::cout << "c = " << TOOLS::yesNo(m_coversTruth) << std::endl;
+//   }
+//   return limitsOK();
+// }
 
 bool Pole::calcCoverageLimit() {
   resetCalcLimit();
@@ -1075,13 +1473,14 @@ void Pole::resetCalcLimit() {
   m_upperLimit = 0;
   m_lowerLimitNorm = 0;
   m_upperLimitNorm = 0;
+  m_lowerLimitPrec = -1;
+  m_upperLimitPrec = -1;
   m_nBeltUsed = getNObserved();
   if (m_nBeltUsed<2) m_nBeltUsed=2;
   m_nBeltMinLast=0;
   m_nBeltMinUsed=m_nBeltUsed;
   m_nBeltMaxUsed=0;
   m_sumProb=0;
-  m_prevSumProb=0;
   m_scanBeltNorm=0;
   m_coversTruth=false;
 }
@@ -1294,7 +1693,7 @@ void Pole::printSetup() {
   std::cout << " Int. bkg. N pts    : " << getBkgIntN() << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " Binary search thr. : " << m_thresholdBS << std::endl;
-  std::cout << " 1-CL threshold     : " << m_thresholdAlpha << std::endl;
+  std::cout << " 1-CL threshold     : " << m_thresholdPrec << std::endl;
   std::cout << " Min prob in belt   : " << m_minMuProb << std::endl;
   std::cout << "----------------------------------------------\n";
   std::cout << " *Test hyp. min     : " << m_hypTest.min() << std::endl;
@@ -1331,20 +1730,21 @@ void Pole::printSetup() {
 }
 
 void Pole::printFailureMsg() {
-  std::cout << "- NEED TO UPDATE - ERROR: limit calculation failed. Possible causes:" << std::endl;
-  //  std::cout << "1. nbelt is too small (set nbelt = " << getNBeltUsed() << ", max used = " << getNBeltMaxUsed() << ")" << std::endl;
-  std::cout << "2. precision in integrations (eff,bkg) not sufficient" << std::endl;
-  //  std::cout << "3. limit hypothesis step size too large ( step = " << m_limitHypStep << " )" << std::endl;
-  std::cout << "4. Symptom: probability of lower/upper limit diverges from unity." << std::endl;
-  std::cout << "   -> if Poisson table is used, insufficient precision." << std::endl;
-  std::cout << "   -> minimum probability too large; min = " << m_minMuProb << std::endl;
-  std::cout << "Input:" << std::endl;
-  std::cout << "   N(obs)     = " << getNObserved() << std::endl;
-  std::cout << "Results:" << std::endl;
-  std::cout << "   probability (should be = CL)  = " << getSumProb() << std::endl;
-  std::cout << "   lower lim norm (should be 1)  = " << getLowerLimitNorm() << std::endl;
-  std::cout << "   upper lim norm (ditto)        = " << getUpperLimitNorm() << std::endl;
-  std::cout << "   lower lim                     = " << getLowerLimit() << std::endl;
-  std::cout << "   upper lim                     = " << getUpperLimit() << std::endl;
+  std::cout << std::endl;
+  std::cout << "------------------------------------------------------" << std::endl;
+  std::cout << "- ERROR: limit calculation failed. Possible causes:" << std::endl;
+  std::cout << "- 1. binary search threshold too large" << std::endl;
+  std::cout << "- 2. precision threshold too large" << std::endl;
+  std::cout << "- 3. precision in integrations (eff,bkg) not sufficient" << std::endl;
+  std::cout << "- 4. poisson table insufficient precision -> try without tabulated poisson" << std::endl;
+  std::cout << "- 5. minimum probability in belt calculation too large; min = " << m_minMuProb << std::endl;
+  std::cout << "-" << std::endl;
+  std::cout << "- Results:" << std::endl;
+  std::cout << "-    probability (should be ~ CL)  = " << getSumProb() << std::endl;
+  std::cout << "-    lower lim norm (should be ~1) = " << getLowerLimitNorm() << std::endl;
+  std::cout << "-    upper lim norm (ditto)        = " << getUpperLimitNorm() << std::endl;
+  std::cout << "-    lower lim                     = " << getLowerLimit() << std::endl;
+  std::cout << "-    upper lim                     = " << getUpperLimit() << std::endl;
+  std::cout << "------------------------------------------------------" << std::endl;
 }
 

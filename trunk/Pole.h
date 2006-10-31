@@ -342,7 +342,7 @@ public:
     The cutoff is $x = 1.0 - (\alpha_{est}/\alpha_{req})$.
     Default value is 0.01.
    */
-  void setAlphaThreshold( double da=0.01)   { m_thresholdAlpha = (da>0 ? da:0.01); }
+  void setPrecThreshold( double da=0.01)   { m_thresholdPrec = (da>0 ? da:0.01); }
 
   //! set range for mutest in calcBelt() etc (NOT used in the limit calculation)
   void setTestHyp(double low, double high, double step);
@@ -409,6 +409,10 @@ public:
   void calcBelt();
   //! calculate the confidence belt for the given signal
   double calcBelt(double s, int & n1, int & n2,bool verb, bool title);
+  //! scan for lower limit
+  bool scanLowerLimit( double mustart, double p0 );
+  //! scan for upper limit
+  bool scanUpperLimit( double mustart, double p0 );
   //! calculate the confidence limits
   bool calcLimit();
   //! calculate the confidence limit probability for the given signal
@@ -485,6 +489,7 @@ public:
   const double getBkgIntNorm() const { return m_measurement.getBkg()->getIntegral(); }
   const double getIntNorm() const { return m_measurement.getNuisanceIntNorm(); }
   //
+  const double  getSbest(int n) const;
   const double  getLsbest(int n) const;
   const int     getNBeltUsed() const { return m_nBeltUsed; }
   const int     getNBeltMinUsed() const { return m_nBeltMinUsed; }
@@ -501,12 +506,14 @@ public:
   const double getMuProb(int n) const { if ((n>m_nBeltMaxUsed)||(n<m_nBeltMinUsed)) return 0.0; return m_muProb[n];}
   //
   const double getBSThreshold() const { return m_thresholdBS; }
-  const double getAlphaThreshold() const { return m_thresholdAlpha; }
+  const double getPrecThreshold() const { return m_thresholdPrec; }
   const double getSumProb() const    { return m_sumProb; }
   const double getLowerLimit() const { return m_lowerLimit; }
   const double getUpperLimit() const { return m_upperLimit; }
   const double getLowerLimitNorm() const { return m_lowerLimitNorm; }
   const double getUpperLimitNorm() const { return m_upperLimitNorm; }
+  const double getLowerLimitPrec() const { return m_lowerLimitPrec; }
+  const double getUpperLimitPrec() const { return m_upperLimitPrec; }
   const double getRejS0P()  const { return m_rejs0P; }
   const int    getRejS0N1() const { return m_rejs0N1; }
   const int    getRejS0N2() const { return m_rejs0N2; }
@@ -571,9 +578,8 @@ private:
   double m_minMuProb;  // minimum probability accepted
   //
   double m_thresholdBS; // binary search threshold
-  double m_thresholdAlpha; // threshold for accepting a CL in calcLimit(s)
+  double m_thresholdPrec; // threshold for accepting a CL in calcLimit(s)
   double m_sumProb;    // sum of probs for conf.belt construction - set by calcLimit()
-  double m_prevSumProb;// ditto from previous scan - idem
   double m_scanBeltNorm; // sum(p) for all n used in belt at the current s - idem
   bool   m_lowerLimitFound; // true if lower limit is found
   bool   m_upperLimitFound; // true if an upper limit is found
@@ -581,6 +587,8 @@ private:
   double m_upperLimit; // upperlimit
   double m_lowerLimitNorm; // sum of the probabilities in the belt given by the lower limit
   double m_upperLimitNorm; // dito upper limit (useful to check whether nbelt was enough or not)
+  double m_lowerLimitPrec; // precision for lower limit
+  double m_upperLimitPrec; // precision for upper limit
   //
   double m_maxNorm;  // max probability sum (should be very near 1)
   double m_normMaxDiff; // max(norm-1.0) allowed before giving a warning
@@ -594,6 +602,22 @@ private:
   int         m_inputFileLines; // number of lines to read; if < 1 => read ALL lines
   //
 };
+
+
+inline const double Pole::getSbest(int n) const {
+  double rval = 0.0;
+  if (usesMBT()) {
+    if (n>m_measurement.getBkgObs()*m_measurement.getBkgScale()) {
+      rval = static_cast<double>(n);
+    } else {
+      rval = m_measurement.getBkgObs()*m_measurement.getBkgScale();
+    }
+  } else {
+    rval = m_bestMu[n];
+  }
+  return rval;
+}
+
 /*!
   Calculates the likelihood of the best fit signal to the given number of observations.
   For RLMETHOD::RL_MBT it will use the result from findBestMu().
@@ -614,6 +638,8 @@ inline const double Pole::getLsbest(int n) const {
   }
   return rval;
 }
+
+
 
 #endif
 

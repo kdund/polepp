@@ -10,6 +10,7 @@
 #include <string>
 #include <list>
 #include <vector>
+#include "Tools.h"
 #include "Combination.h"
 #include "Observable.h"
 
@@ -132,7 +133,7 @@ class Measurement {
     double w;
     m_nuisanceIntNorm = 0;
     //
-    m_nuisanceIndecis.push_back(jj); // save vector
+    m_nuisanceIndecis.push_back(jj); // save null vector
     while (Combination::next_vector(jj,m_nuisanceIndMax)) {
       m_nuisanceIndecis.push_back(jj); // save vector
     }
@@ -140,14 +141,24 @@ class Measurement {
     std::list< OBS::Base * >::iterator itnp = m_nuisancePars.begin();
     //
     //    std::cout << "--> initNuisanceWeights(); nind = " << m_nuisanceIndecis.size() << std::endl;
+    double wt;
     for ( unsigned int i=0; i<m_nuisanceIndecis.size(); i++) {
       w = 1.0;
       itnp = m_nuisancePars.begin();
       //! Calculate w(i,j,...) = f(xi)*dx * g(yj)*dy * ...
       for (int j=0; j<nnpar; j++) {
-	w *= (*itnp)->getIntWeight(m_nuisanceIndecis[i][j]);
+	wt = (*itnp)->getIntWeight(m_nuisanceIndecis[i][j]);
+	w *= wt;
+        // TODO: DEBUG
+        if (i<0) std::cout << "NIND0: par = " << j
+                            << "  weight = " << wt
+                            << ", index = " << m_nuisanceIndecis[i][j]
+                            << ", x = " << (*itnp)->getIntX(m_nuisanceIndecis[i][j])
+                            << std::endl;
 	++itnp;
       }
+      // TODO: Debug info
+      if (i<0) std::cout << "NIND: " << std::setw(6) << i << ". weight = " << w << std::endl;
       m_nuisanceWeights.push_back(w);
       m_nuisanceIntNorm += w;
     }
@@ -506,15 +517,17 @@ class MeasPoisEB : public MeasPois {
       ixbkg = m_nuisanceIndecis[i][m_bkgIndex];
       g = getM(s, m_eff->getIntX(ixeff), m_bkg->getIntX(ixbkg));
       p += m_nuisanceWeights[i]*pdf->getVal(x,g);
-//      if ((s>172.8) && (x<1))
-//	std::cout << "== s(true), e, b, mu = " << s
-//	    << ", " << m_eff->getIntX(ixeff)
-//	    << ", " << m_bkg->getIntX(ixbkg) << ", "
-//	    << g
-//	    << ", p= " << p
-//	    << ", w= " << m_nuisanceWeights[i]
-//	    << ",pdfval = " << pdf->getVal(x,g)
-//	    << std::endl;
+      if (x<0) { // TODO: Debug info - remove when obsolete
+        TOOLS::coutFixed(4,int(i));
+        TOOLS::coutFixed(" s(true), e, b, mu = ",2,s);
+        TOOLS::coutFixed(", ", 4, m_eff->getIntX(ixeff));
+        TOOLS::coutFixed(", ", 4, m_bkg->getIntX(ixbkg));
+        TOOLS::coutFixed(", ", 4, g);
+        TOOLS::coutFixed(", p = ", 4, p);
+        TOOLS::coutFixed(", w = ", 4, m_nuisanceWeights[i]);
+        TOOLS::coutFixed(", pdfval = ", 4, pdf->getVal(x,g));
+        std::cout << std::endl;
+      }
     }
 
     //    std::cout << "calcProb( " << x << ", " << s << " ) = " << p/m_nuisanceIntNorm << std::endl;

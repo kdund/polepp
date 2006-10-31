@@ -53,8 +53,8 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> dMus(      "", "dmus",     "step size in findBestMu",false,0.002,"float",cmd);
     ValueArg<int>    nMus(      "", "nmus",     "maximum number of steps in findBestMu",false,100,"float",cmd);
     //
-    ValueArg<double> threshBS("","threshbs",  "binary search (limit) threshold" ,false,0.001,"float",cmd);
-    ValueArg<double> threshAlpha("","threshalpha",  "threshold for accepting a cl in % of (1-cl)" ,false,0.01,"float",cmd);
+    ValueArg<double> threshBS(   "","threshbs",     "binary search (limit) threshold" ,false,0.0001,"float",cmd);
+    ValueArg<double> threshPrec( "","threshprec",  "threshold for accepting a cl" ,false,0.0001,"float",cmd);
     //
     ValueArg<double> hypTestMin( "","hmin",   "hypothesis test min" ,false,0.0,"float",cmd);
     ValueArg<double> hypTestMax( "","hmax",   "hypothesis test max" ,false,35.0,"float",cmd);
@@ -109,7 +109,7 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     pole->setBkgInt(bkgIntScale.getValue(),bkgIntN.getValue());
     //
     pole->setBSThreshold(threshBS.getValue());
-    pole->setAlphaThreshold(threshAlpha.getValue());
+    pole->setPrecThreshold(threshPrec.getValue());
     //
     pole->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
 
