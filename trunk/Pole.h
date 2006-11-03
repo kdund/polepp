@@ -98,13 +98,14 @@
  *  \b SETUP
  *
  *  Basic
+ *  - setMethod() : Sets the Likelihood ratio method (MBT=2 or FHC2=1)
  *  - setCL() : Confidence limit, default 0.9
  *    the requested confidence [0.0,1.0]
  *  - setNObserved() : Number of observed events
  *  - setEffPdf() : Measured efficiency\n
- *    efficiency distribution (mean,sigma and distribution type ( DISTYPE ))
+ *    efficiency distribution (mean,sigma and distribution type ( PDF::DISTYPE ))
  *  - setBkgPdf() : Measured background\n
- *    background distribution (mean,sigma and distribution type ( DISTYPE ))
+ *    background distribution (mean,sigma and distribution type ( PDF::DISTYPE ))
  *  - setEffBkgCorr() : Correlation between eff and bkg (if applicable)
  *    correlation coefficient [-1.0,1.0]
  *  - setEffObs( double m ) : Set the observed efficiency\n
@@ -119,21 +120,18 @@
  *  - setBkgInt() : Dito, background
  *
  *  Belt construction
- *  - setBelt() : Set the maximum n in the belt construction\n
- *    For large signals and/or events, this value might be increased. 
- *    If the nBelt < 1, then this is automatically selected (see suggestBelt()).
  *  - calcBelt() : Calculates the confidence belt [n1(s,b),n2(s,b)] for all (s,b).
  *  - calcBelt(s,n1,n2,v) : Dito but for a specific (s,b)
  *
  *  Finding \f$s_{best}\f$
  *  - setBestMuStep() : Sets the precision in findBestMu().\n
  *    Default = 0.01 and it should normally be fine.
- *  - setMethod() : sets the Likelihood ratio method (MBT or FHC2)
+ *  - setMethod() : sets 
  *
  *  Hypothesis testing
- *  - setTestHyp() : test range for s+b\n
- *    This sets the range and step size (precision) for finding the limits.\n
- *    The default range is [0.0,35.0] with a step size of 0.01.
+ *  - setTestHyp() : test hypothesis range, $s_{best}$\n
+ *    This sets the range and step size (precision) when calculating the construction.\n
+ *    For limit calculations, this setting has no effect. It is now dynamically set.
  *
  *  Coverage related
  *  - setTrueSignal() : Set the true signal.
@@ -141,11 +139,17 @@
  *    Setting this flag causes the limit calculation to terminate the scan as soon as it is
  *    decided whether the true signal is inside or outside the confidence limit.
  *
- *  Tabulated PDFs
- *  - initPoisson() : Initialises a tabulated poisson.\n
- *    It is not required but it greatly speeds up the coverage calculations.
- *  - initGauss() : Dito but for a gauss pdf.\n
- *    The gain in speed is much less significant (REMOVE???)
+ *  PDFs
+ *  - setPoisson() : Initialises the poisson generator - use PDF::gPoisTab.\n
+ *    Use the tabulated version, PDF::gPoisTab.
+ *  - setGauss() : Ditto but for a gauss pdf.\n
+ *    Use PDF::gGauss
+ *  - setGauss2D() : Ditto but for a 2d gauss pdf.\n
+ *    Use PDF::gGauss2D
+ *  - setLogNormal() : Ditto but for a log normal pdf.\n
+ *    Use PDF::gLogNormal
+ *
+ *  See the files argsPole.cxx and argsCoverage.cxx for examples of usage.
  *
  *  \b RUNNING
  *
@@ -154,13 +158,18 @@
  *  - printLimit() : Prints the calculated limit.
  *
  *  General
+ *  - execute() : Main routine to call. Initialises and runs with the current setup.
  *  - analyseExperiment() : Calculates the limit using the current setup.
  *
  *  Debug
  *  - setVerbose() : Sets verbose level.
  *
- *  \b EXAMPLES
- *  see polelim.cxx (limit calculation) and polecov.cxx (coverage study)
+ *  \b TOOLS
+ *  - polelim.cxx : limit calculation
+ *  - polecov.cxx : coverage calculator
+ *  - polebelt.cxx : confidence belt calculator
+ *  - poleconst.cxx : prints the full construction
+ *    This code prints the likelihood ratios obtained in the $s_{hyp}$:$N_{obs}$ plane.
  *
  * @author Fredrik Tegenfeldt (fredrik.tegenfeldt@cern.ch)
  */

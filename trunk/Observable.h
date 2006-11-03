@@ -67,6 +67,8 @@ namespace OBS {
     void         setRndGen(RND::Random *rndgen)          { m_rndGen = rndgen;}
     virtual void validate()                              { m_valid = ((m_pdf!=0) && (m_rndGen!=0)); }
 
+    virtual double aprioriProb( double x ) { return 1.0;}
+
     // setting integral related
     void setIntNpts(int n)     { m_intNpts = n; }
     void setIntScale(double s) { m_intScale = s; }
@@ -210,7 +212,7 @@ namespace OBS {
 	m_intTotal = 1.0;
       } else {
 	for (int i=0; i<np-1; i++) {
-	  f = getPdfVal(m_intX[i]);
+	  f = getPdfVal(m_intX[i])*aprioriProb(m_intX[i]);
 	  dx = static_cast<double>(m_intX[i+1]-m_intX[i]); // might be lognormal!
 	  m_intWeight[i] = f*dx;
 	  m_intTotal += m_intWeight[i];
@@ -480,19 +482,36 @@ namespace OBS {
 
   class ObservablePois : public BaseType<int> {
   public:
-    ObservablePois():BaseType<int>("poisson","Poisson observable") {this->m_dist=PDF::DIST_POIS;};
-    ObservablePois(PDF::Poisson *pdf, RND::Random *rndGen, const char *name, const char *desc=0):BaseType<int>(pdf,rndGen,name,desc) {};
-    ObservablePois(PDF::PoisTab *pdf, RND::Random *rndGen, const char *name, const char *desc=0):BaseType<int>(pdf,rndGen,name,desc) {};
+    ObservablePois():BaseType<int>("poisson","Poisson observable") {this->m_dist=PDF::DIST_POIS; m_excludeZero=false;}
+    ObservablePois(PDF::Poisson *pdf, RND::Random *rndGen, const char *name, const char *desc=0):BaseType<int>(pdf,rndGen,name,desc) { m_excludeZero=false;}
+    ObservablePois(PDF::PoisTab *pdf, RND::Random *rndGen, const char *name, const char *desc=0):BaseType<int>(pdf,rndGen,name,desc) { m_excludeZero=false;}
     ObservablePois(const ObservablePois & other) {
       copy(other);
+      m_excludeZero = other.getExcludeZeroFlag();
     }
     virtual ~ObservablePois() {};
 
     ObservablePois const & operator=(ObservablePois const & rh) {
       copy(rh);
+      m_excludeZero = rh.getExcludeZeroFlag();
       return *this;
     }
     //
+    void setExcludeZero() {
+      m_excludeZero = true;
+    }
+    void setIncludeZero() {
+      m_excludeZero = false;
+    }
+    const bool getExcludeZeroFlag() const { return m_excludeZero; }
+
+    double aprioriProb( double x ) { // currently a simple implementation for poisson
+      double rval = 1.0;
+      if ((m_dist==PDF::DIST_POIS) && (m_excludeZero)) {
+        if (x<0.5) rval = 0.0;
+      }
+      return rval;
+    }
     void setPdfMean(double m)  { this->m_mean = m;   this->m_sigma = (m>0 ? sqrt(m):0.0); }
     void setPdfSigma(double m) { this->m_mean = m*m; this->m_sigma=m; }
     int rnd() {return (this->m_valid ? this->m_rndGen->poisson(this->m_mean):0);}
@@ -501,6 +520,8 @@ namespace OBS {
       ObservablePois *obj = new ObservablePois(*this);
       return obj;
     }
+  protected:
+    bool m_excludeZero;
   };
 
   class ObservableFlat : public BaseType<double> {

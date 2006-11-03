@@ -558,7 +558,7 @@ int Pole::calcLimit(double s, double & prec) {
       }
       if (m_verbose>9) {
         std::cout << "RL[" << i << "] = " << m_lhRatio[i]
-                  << ", RLmax[" << k << "] = " << m_lhRatio[k]
+                  << ", RL[Nobs=" << k << "] = " << m_lhRatio[k]
                   << ", sumP = " << m_sumProb << std::endl;
       }
     }

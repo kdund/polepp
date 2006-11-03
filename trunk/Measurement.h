@@ -391,6 +391,9 @@ class MeasPoisEB : public MeasPois {
     m_eff->setPdfSigma(sigma);
     m_eff->setPdfMean(eff);
     m_eff->setName("efficiency");
+    if (m_eff->getPdfDist()==PDF::DIST_POIS) {
+      dynamic_cast<OBS::ObservablePois *>(m_eff)->setExcludeZero();
+    }
   
     updNuisanceIndex();
   }

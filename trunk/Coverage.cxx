@@ -215,7 +215,7 @@ void Coverage::outputCoverageResult(const int flag) { //output coverage result
   if (flag==1) { // status (intermediate result)
     header = "STATUS: ";
   } else {       // final result
-    header = "DATA: ";
+    header = "COVERAGE: ";
   }
   std::cout << header.c_str();
   TOOLS::coutFixed(6,m_pole->getTrueSignal()); std::cout << "    ";
