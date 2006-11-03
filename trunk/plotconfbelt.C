@@ -1,30 +1,30 @@
 {
   gROOT->Reset();
   //
-  TFile f("confbelt.root");
+  TFile f("confbelt.dat");
   //
-  TTree *tree = f.Get("name");
+  TTree *tree = new TTree("confbeltTree", "confbelt");
+  tree->ReadFile("confbelt.dat");
+  tree->Draw("shyp:N1:N2:P","","goff");
 
-  //
-  // var000 - signal hyp
-  // var001 - N1
-  // var002 - N2
-  // var003 - P(s|N1,N2)
-  //
-  //
-  //
-  //
-  tree->Draw("var000:var001:var002:var003","","goff");
   Long64_t nent = tree->GetEntries();
+  if (nent==0) {
+    std::cout << "Error: no entries in tree! Check input file (confbelt.dat)" << std::endl;
+    return;
+  }
   Double_t smin = TMath::MinElement(nent, tree->GetV1());
   Double_t smax = TMath::MaxElement(nent, tree->GetV1());
   Double_t nmin = TMath::MinElement(nent, tree->GetV2());
   Double_t nmax = TMath::MaxElement(nent, tree->GetV3());
+  Double_t wmin = TMath::MinElement(nent, tree->GetV4());
+  Double_t wmax = TMath::MaxElement(nent, tree->GetV4());
   Double_t s,w;
   Double_t n,n1,n2;
   Int_t nb;
   //
   TH2F *hist = new TH2F("confbelt","confbelt",int(nmax-nmin)+1,nmin,nmax,nent,smin,smax);
+  hist->SetMinimum(wmin);
+  hist->SetMaximum(wmax);
 
   for (int i=0; i<nent; i++) {
     s  = *(tree->GetV1()+i);

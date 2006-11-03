@@ -1,16 +1,20 @@
 {
   gROOT->Reset();
   //
-  TFile f("construct.root");
-  //
-  TTree *tree = f.Get("name");
-
-  tree->Draw("var000:var001:var002:var003","","goff");
+  TTree *tree = new TTree("probTree", "probability");
+  tree->ReadFile("construct.dat");
+  tree->Draw("shyp:N:RL:P","","goff");
   Long64_t nent = tree->GetEntries();
+  if (nent==0) {
+    std::cout << "Error: no entries in tree! Check input file (construct.dat)" << std::endl;
+    return;
+  }
   Double_t smin = TMath::MinElement(nent, tree->GetV1());
   Double_t smax = TMath::MaxElement(nent, tree->GetV1());
   Double_t nmin = TMath::MinElement(nent, tree->GetV2());
   Double_t nmax = TMath::MaxElement(nent, tree->GetV2());
+  Double_t wmin = TMath::MinElement(nent, tree->GetV4());
+  Double_t wmax = TMath::MaxElement(nent, tree->GetV4());
   Double_t s,n,w,sp;
   Double_t ds;
   //
@@ -24,6 +28,8 @@
   }
   Int_t    nsbins = int((smax-smin)/ds)+1;
   TH2F *hist = new TH2F("prob","P(N|s)",int(nmax-nmin)+1,nmin,nmax,nsbins,smin,smax);
+  hist->SetMinimum(wmin);
+  hist->SetMaximum(wmax);
 
   for (int i=0; i<nent; i++) {
     s = *(tree->GetV1()+i);
