@@ -17,7 +17,7 @@ VPATH= $(OBJDIR)
 INCLUDES += -I./  
 ROOTSYS  ?= ERROR_RootSysIsNotDefined
 
-TOOLLIST = polelim.cxx polecov.cxx polebelt.cxx exptest.cxx plotexp.cxx poleconst.cxx polepow.cxx
+TOOLLIST = polelim.cxx polecov.cxx polebelt.cxx exptest.cxx plotexp.cxx poleconst.cxx polepow.cxx obstest.cxx
 LIBLIST  = Pole.cxx  Coverage.cxx Random.cxx Pdf.cxx Combination.cxx Tools.cxx
 ARGLIST  = argsPole.cxx argsCoverage.cxx
 SKIPLIST = Combine.cxx Power.cxx Tabulated.cxx pdftst.cxx polecomb.cxx plotexp.cxx poleconst.cxx polepow.cxx
@@ -67,6 +67,8 @@ polebelt:	polebelt.o argsPole.o
 poleconst:	poleconst.o argsPole.o
 		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
 exptest:	exptest.o
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
+obstest:	obstest.o argsPole.o
 		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
 
 # Explicit rule for args*.o
