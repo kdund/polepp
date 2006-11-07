@@ -546,6 +546,23 @@ namespace OBS {
     }
   };
 
+  // Correlated variables - UNDER DEVELOPMENT
+  class Correlated {
+  public:
+    Correlated() {}
+    ~Correlated() {}
+    //
+    bool  add(Base *obs) { return false;}
+    Base *find(const char *name) {return 0;}
+    bool  setCorrelation(const char *v1, const char *v2, double c) {return false;}
+    //
+    void rnd() {} // generate random observation
+
+  private:
+    std::vector<Base *> m_observables;
+    std::vector< std::vector<double> > m_correlations;
+  };
+
   inline Base *makeObservable(PDF::DISTYPE dist) {
     Base *obs=0;
     switch (dist) {
