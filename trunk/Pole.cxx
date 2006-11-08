@@ -1007,9 +1007,15 @@ bool Pole::scanLowerLimit( double mustart, double p0 ) {
         std::cout << "*** WARNING calcLimit() failed when scanning for lower limit! Infinite or long loop encountered - limit at 1000" << std::endl;
       }
     }
-    if ((m_lowerLimitFound) && (m_verbose>1)) {
-      std::cout << "*** Lower limit scan: limit from full scan; dir = " << dir << " dmu = " << dmu <<  " and sL = " << m_lowerLimit << std::endl;
+  }
+  if (m_verbose>1) {
+    std::cout << "***" << std::endl;
+    if (m_lowerLimitFound) {
+      std::cout << "*** Lower limit scan: s(lower) = " << m_lowerLimit << std::endl;
+    } else {
+      std::cout << "*** Lower limit scan: NO LOWER LIMIT FOUND! " << std::endl;
     }
+    std::cout << "***" << std::endl;
   }
   return m_lowerLimitFound;
 }
@@ -1166,8 +1172,14 @@ bool Pole::scanUpperLimit( double mustart, double p0 ) {
       std::cout << "calcLimit() failed when scanning for UL! Infinite or long loop encountered - limit at 1000" << std::endl;
     }
   }
-  if ((m_upperLimitFound) && (m_verbose>1)) {
-    std::cout << "*** Upper limit scan: limit obtained from full scan; dir = " << dir << " dmu = " << dmu <<  " and sU = " << m_upperLimit << std::endl;
+  if (m_verbose>1) {
+    std::cout << "***" << std::endl;
+    if (m_upperLimitFound) {
+      std::cout << "*** Upper limit scan: s(lower) = " << m_upperLimit << std::endl;
+    } else {
+      std::cout << "*** Upper limit scan: NO UPPER LIMIT FOUND! " << std::endl;
+    }
+    std::cout << "***" << std::endl;
   }
   return m_upperLimitFound;
 }

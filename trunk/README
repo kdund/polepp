@@ -559,8 +559,10 @@ A few scripts exists which will do the processing and plotting.
 3. plotconst.C
    Reads <construct.dat> and plots the likelihood ratio construction in (s_hyp,N) plane
 
-4. plotbelt.C
-   Reads <confbelt.dat> and plots the confidence belt
+4. plotconfbelt.C
+   Reads <confbelt.dat> and plots the confidence belt.
+   Takes as arguments (Nobs, lower limit, upper limit).
+   If given, the intersection lines are drawn -> useful to verify result.
 
 5. plotprob.C
    Reads <construct.dat> and plots the probability at each point in (s_hyp,N) plane
