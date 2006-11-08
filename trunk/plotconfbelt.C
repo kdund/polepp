@@ -1,4 +1,5 @@
-{
+void plotconfbelt( int nobs=-1, double limin=0, double limax=0) {
+
   gROOT->Reset();
   //
   TFile f("confbelt.dat");
@@ -22,7 +23,7 @@
   Double_t n,n1,n2;
   Int_t nb;
   //
-  TH2F *hist = new TH2F("confbelt","confbelt",int(nmax-nmin)+1,nmin,nmax,nent,smin,smax);
+  TH2F *hist = new TH2F("confbelt","confbelt",int(nmax-nmin),nmin,nmax,nent,smin,smax);
   hist->SetMinimum(wmin);
   hist->SetMaximum(wmax);
 
@@ -42,5 +43,17 @@
   hist->GetXaxis()->SetTitle("N");
   hist->GetYaxis()->SetTitle("s_{hyp}");
   hist->Draw("colz");
-
+  if (nobs>=0) {
+    TLine *nobsLine = new TLine( nobs, smin, nobs, smax );
+    nobsLine->Draw();
+    if (limax>limin) {
+      TLine *uppLine  = new TLine( nmin, limax, nmax, limax );
+      TLine *lowLine  = new TLine( nmin, limin, nmax, limin );
+      uppLine->Draw();
+      lowLine->Draw();
+      std::cout << "Plotting confidence limits. Verify that lines really intersect the belt at the correct positions!" << std::endl;
+    } else {
+      std::cout << "WARNING: Upper and lower limits don't make sense!" << std::endl;
+    }
+  }
 }
