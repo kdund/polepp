@@ -56,45 +56,6 @@
  *
  *  @brief The main class containing the methods for calculating limits.
  *  
- *  This class calculates confidence intervals for
- *  a Poisson process with background using a frequentist confidence belt
- *  construction.
- *  It assumes that the measurement can be described as follows:
- *  \f[N_{obs} = \epsilon s + b\f]
- *  where
- *  - \f$N_{obs}\f$ = number of observed events (Poisson)
- *  - \f$\epsilon\f$ = measured efficiency with a known (or assumed) distribution
- *  - \f$s\f$ = unknown signal for which the limits are to be found
- *  - \f$b\f$ = measured background with a known (or assumed) distribution
- *
- *  The PDF used for describing the number of observed events is:  
- *  \f[
- *  q(n)_{s+b} =  
- *  \frac{1}{2\pi\sigma_{b}\sigma_{\epsilon}} \times
- *  \intop_0^{\infty}\intop_0^{\infty}p(n)_{b+ 
- *  \epsilon's}\;\;
- *  f_{b,\sigma_b}(b')\;\;
- *  g_{\epsilon,\sigma_{\epsilon}}(\epsilon')\;\;
- *  db'd\epsilon'
- *  \f]
- *  where \f$f()\f$ and \f$g()\f$ are the PDF for the background and efficiency respectively.
- *
- *  In order to find the lower and upper limits, a so called confidence belt is constructed.
- *  For each value of \f$s\f$, \f$n_1\f$ and \f$n_2\f$ are found such that
- *  \f$\sum_{n=n_1}^{n_2} q(n)_{s+b} = 1 - \alpha\f$ where \f$1-\alpha\f$ is the confidence limit.
- *  The confidence belt is then given by the set \f$[n_1(s+b,\alpha),n_2(s+b,\alpha)]\f$.
- *  An upper and lower limit is found by finding the intersection of the vertical line \f$n = N_{obs}\f$
- *  and the boundaries of the belt (not exactly true due to the discreteness of a Poisson).
- *
- *  However, the confidence belt is not unambigously defined. A specific ordering scheme is required.
- *  The method used for selecting \f$n_1\f$ and
- *  \f$n_2\f$ is based on likelihood ratios (aka Feldman & Cousins). For each n, a \f$s_{best}\f$ is found that
- *  will maximise the likelihood \f$\mathcal{L}(n)_{s+b}\f$ (mathematically it's just \f$q(n)_{s+b}\f$,
- *  but here it's not used as a PDF but rather as a hypothesis). For a fixed s, a likelihood ratio is calculated
- *  \f[R(n,s)_{\mathcal{L}} = \frac{\mathcal{L}_{s+b}(n)}{\mathcal{L}_{s_{best}+b}(n)}\f]
- *  and the n are included in the sum starting with the highest rank (ratio) and continuing with decreasing rank until
- *  the sum (ref) equals the requested confidence.
- *
  *  \b SETUP
  *
  *  Basic
@@ -120,8 +81,7 @@
  *  - setBkgInt() : Dito, background
  *
  *  Belt construction
- *  - calcBelt() : Calculates the confidence belt [n1(s,b),n2(s,b)] for all (s,b).
- *  - calcBelt(s,n1,n2,v) : Dito but for a specific (s,b)
+ *  - calcBelt() : Calculates the confidence belt [n1(s,b),n2(s,b)]
  *
  *  Finding \f$s_{best}\f$
  *  - setBestMuStep() : Sets the precision in findBestMu().\n
@@ -130,7 +90,7 @@
  *
  *  Hypothesis testing
  *  - setTestHyp() : test hypothesis range, $s_{best}$\n
- *    This sets the range and step size (precision) when calculating the construction.\n
+ *    This sets the range and step size (precision) when calculating the construction or confidence belt.\n
  *    For limit calculations, this setting has no effect. It is now dynamically set.
  *
  *  Coverage related
@@ -300,7 +260,7 @@ public:
     m_validBestMu = false;
   }
   //! set eff,bkg correlation...
-  void setEffPdfBkgCorr(double corr)    { m_measurement.setBEcorr(corr); }
+  void setEffBkgPdfCorr(double corr)    { m_measurement.setBEcorr(corr); }
 
   //! set the integral range for efficiency
   /*!
@@ -629,7 +589,7 @@ inline const double Pole::getSbest(int n) const {
 
 /*!
   Calculates the likelihood of the best fit signal to the given number of observations.
-  For RLMETHOD::RL_MBT it will use the result from findBestMu().
+  For RLMETHOD::RL_FHC2 it will use the result from findBestMu().
   For RLMETHOD::RL_MBT it will use Poisson(n,g) where g = (n>bkg ? n : bkg ).
  */
 inline const double Pole::getLsbest(int n) const {
