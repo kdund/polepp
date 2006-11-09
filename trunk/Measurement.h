@@ -187,6 +187,7 @@ class Measurement {
   const double rndObs() { OBS::BaseType<T> *p = static_cast< OBS::BaseType<T> * >(m_observable); return (*p)(); }
   //
   virtual const double getM(double s) const =0;
+  virtual const double getPdfM(double s) const =0;
   virtual const double getSignal() const =0;
   virtual const double getSignalUnc() const =0;
   virtual const double calcProb(T x, double s) const =0;
@@ -203,9 +204,11 @@ class Measurement {
       (*it)->setObservedRnd(); // set to a random value according to pdf
     }
     //
-    // get the new average to be used
+    // get the average to be used - should always be the same
+    // since N(obs) is a poisson from the true e*s+b
     //
-    double mean = this->getM(m_trueSignal);
+    double mean = this->getPdfM(m_trueSignal);
+
     m_observable->setPdfMean(mean);
     //
     // ...and then the observable
@@ -290,9 +293,10 @@ class MeasPois : public Measurement<int> {
 
 //  const int    getNObserved() const { return getObsVal(); }
 
-  const double getM(double s) const { return 0;}
-  const double getSignal()    const { return 0;}
-  const double getSignalUnc() const { return 0;}
+  const double getM(double s)    const { return 0;}
+  const double getPdfM(double s) const { return 0;}
+  const double getSignal()       const { return 0;}
+  const double getSignalUnc()    const { return 0;}
   const double calcProb(int x, double s) const {return 0;}
  protected:
   virtual void initObservable() {
@@ -469,10 +473,17 @@ class MeasPoisEB : public MeasPois {
     return m_effScale*eff*s + m_bkgScale*bkg;
   }
 
+  const double getPdfM(double s) const {
+    double e,b;
+    e = m_eff->getPdfMean()*m_effScale;
+    b = m_bkg->getPdfMean()*m_bkgScale;
+    return e*s + b;
+  }
+
   const double getSignal() const {
     double e,b;
     e = m_eff->getObservedValue()*m_effScale;
-    b = m_bkg->getObservedValue()*m_bkgScale;;
+    b = m_bkg->getObservedValue()*m_bkgScale;
     double dn = static_cast<OBS::Base *>(m_observable)->getObservedValue() - b;
     if (dn<0.0) dn=0.0;
     return (e>0 ? dn/e : 0);
