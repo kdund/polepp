@@ -54,9 +54,12 @@ SCRIPTLIST = log2confbelt.csh log2construct.csh log2coverage.csh plotconfbelt.C 
 PACKAGELIST = $(LIBCPPLIST) $(TOOLCPPLIST) $(HLIST) $(ARGLIST) $(SCRIPTLIST) \
 		Makefile Makefile.arch release.notes Doxyfile README
 
+DOCLIST     = $(LIBCPPLIST) $(TOOLCPPLIST) $(HLIST) $(ARGLIST) $(SCRIPTLIST) \
+		release.notes README
+
 # rules to compile tools
 
-tools: $(TOOLELIST)
+tools:          $(TOOLELIST)
 
 polelim:	polelim.o argsPole.o
 		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
@@ -70,6 +73,11 @@ exptest:	exptest.o
 		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
 obstest:	obstest.o argsPole.o
 		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
+
+# documentation
+
+docs:           Doxyfile ${DOCLIST}
+		doxygen
 
 # Explicit rule for args*.o
 argsPole.o:     argsPole.cxx
