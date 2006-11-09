@@ -48,7 +48,7 @@ TOOLOLIST=$(patsubst %.cxx,%.o,$(TOOLCPPLIST))
 TOOLELIST=$(patsubst %.cxx,%,$(TOOLCPPLIST))
 
 # list of scripts
-SCRIPTLIST = log2confbelt.csh log2construct.csh plotconfbelt.C plotconst.C plotprob.C
+SCRIPTLIST = log2confbelt.csh log2construct.csh log2coverage.csh plotconfbelt.C plotconst.C plotprob.C plotcov.C
 
 # list of files for package
 PACKAGELIST = $(LIBCPPLIST) $(TOOLCPPLIST) $(HLIST) $(ARGLIST) $(SCRIPTLIST) \
