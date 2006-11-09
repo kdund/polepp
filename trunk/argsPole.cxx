@@ -97,7 +97,7 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     pole->setBkgObs();
 
     pole->checkEffBkgDists();
-    pole->setEffPdfBkgCorr(beCorr.getValue());
+    pole->setEffBkgPdfCorr(beCorr.getValue());
 
     pole->setTrueSignal(sTrue.getValue());
     pole->setUseCoverage(false); //coverage.getValue());

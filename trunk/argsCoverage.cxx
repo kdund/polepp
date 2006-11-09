@@ -109,7 +109,7 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     pole->setBkgObs();
 
     pole->checkEffBkgDists();
-    pole->setEffPdfBkgCorr(beCorr.getValue());
+    pole->setEffBkgPdfCorr(beCorr.getValue());
 
     pole->setTrueSignal(sMin.getValue());
 
