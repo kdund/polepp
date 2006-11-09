@@ -207,8 +207,8 @@ void Coverage::outputCoverageResult(const int flag) { //output coverage result
   if (firstCall) {
     //
     std::cout << "#==================================================================================================================" << std::endl;
-    std::cout << "#     Signal    |     Efficiency       |      Background       |      Coverage         |    Loops    |    Time " << std::endl;
-    std::cout << "#               | mean        sigma    |  mean        sigma    |  mean        sigma    | done    max |    [ms] " << std::endl;
+    std::cout << "#         Signal    |     Efficiency       |      Background       |      Coverage         |    Loops    |    Time " << std::endl;
+    std::cout << "#                   | mean        sigma    |  mean        sigma    |  mean        sigma    | done    max |    [ms] " << std::endl;
     std::cout << "#==================================================================================================================" << std::endl;
     firstCall = false;
   }
@@ -422,6 +422,7 @@ void Coverage::dumpExperiments(std::string name, bool limits) {
   if (limits) {
     dumpLimits = (m_UL.size() == sz);
   }
+  //
   *os << "#" << std::endl;
   *os << "# N             = " << m_nLoops << std::endl;
   *os << "# s_true        = " << m_sTrue.min() << std::endl;
@@ -438,9 +439,12 @@ void Coverage::dumpExperiments(std::string name, bool limits) {
   *os << "#" << std::endl;
   *os << "# N_obs   Efficiency     Background" << std::endl;
   *os << "#-----------------------------------" << std::endl;
+
 #if __GNUC__ > 2
   for (i=0; i<sz; i++) {
-    *os << std::fixed
+
+    *os << "COVSTAT: "
+        << std::fixed
 	<< std::setprecision(0)
 	<< m_nobsStat[i] << '\t'
 	<< m_pole->getEffPdfDist() << '\t'
@@ -464,7 +468,8 @@ void Coverage::dumpExperiments(std::string name, bool limits) {
   }
 #else
   for (i=0; i<sz; i++) {
-    *os << m_nobsStat[i] << '\t'
+    *os << "COVSTAT: "
+        << m_nobsStat[i] << '\t'
 	<< m_effStat[i] << '\t'
         << m_bkgStat[i] <<
     if (dumpLimits) {
