@@ -27,7 +27,7 @@
     i++;
   }
   Int_t    nsbins = int((smax-smin)/ds)+1;
-  TH2F *hist = new TH2F("construct","construct",int(nmax-nmin)+1,nmin,nmax,nsbins,smin,smax);
+  TH2F *hist = new TH2F("construct","construct",int(nmax-nmin),nmin,nmax,nsbins,smin,smax);
   hist->SetMinimum(wmin);
   hist->SetMaximum(wmax);
   for (int i=0; i<nent; i++) {
