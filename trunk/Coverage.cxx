@@ -550,7 +550,7 @@ void Coverage::doLoop() {
     for (ie=0; ie<m_effTrue.n(); ie++) { // loop over eff true
       m_pole->setEffPdfMean( m_effTrue.getVal(ie) );
       for (ib=0; ib<m_bkgTrue.n(); ib++) { // loop over bkg true
-      m_pole->setEffPdfMean( m_effTrue.getVal(ie) );
+        m_pole->setEffPdfMean( m_effTrue.getVal(ie) );
         m_pole->setBkgPdfMean( m_bkgTrue.getVal(ib) );
         //
         // Reset various counters

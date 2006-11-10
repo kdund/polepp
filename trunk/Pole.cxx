@@ -1499,10 +1499,19 @@ bool Pole::calcCoverageLimit() {
   calcNMin();
   if (getNObserved()<m_rejs0N1) {
     m_coversTruth = false;
+    if (m_verbose>2) {
+      std::cout << "Coverage limit: true s = " << getTrueSignal() << " not inside belt since Nobs = "
+                << getNObserved() << " and N1(s=0) = " << m_rejs0N1 << std::endl;
+    }
   } else {
     calcLimit(getTrueSignal());
     m_coversTruth = (m_sumProb<m_cl); // s(true) inside belt - p(s)<cl
+    if (m_verbose>2) {
+      std::cout << "Coverage limit: true s = " << getTrueSignal() << (m_coversTruth ? " ":" not ")
+                << "inside belt since sumprob = " << m_sumProb << " and cl = " << m_cl << std::endl;
+    }
   }
+  if (m_verbose>3) m_measurement.dump();
   return true;
 }
 
@@ -1694,7 +1703,6 @@ void Pole::printLimit(bool doTitle) {
     TOOLS::coutFixed(6,getBkgObs());      std::cout << "\t";
     TOOLS::coutFixed(6,getBkgPdfSigma()); std::cout << "\t";
     TOOLS::coutFixed(6,m_scaleLimit*m_lowerLimit);     std::cout << "\t";
-    TOOLS::coutFixed(6,m_scaleLimit*m_upperLimit);     std::cout << std::endl;
   }
   if (simple) {
     std::cout << std::endl;

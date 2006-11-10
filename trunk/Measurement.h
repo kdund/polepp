@@ -165,9 +165,14 @@ class Measurement {
     //    std::cout << "--> initNuisanceWeights(); norm = " << m_nuisanceIntNorm << std::endl;
   }
   //
-  void dump() const {
+  virtual void dump() const {
     std::cout << "-----------MEASUREMENT------------------------\n";
     if (m_observable) m_observable->dump();
+    for (std::list< OBS::Base * >::const_iterator it = m_nuisancePars.begin();
+	 it !=  m_nuisancePars.end();
+       ++it) {
+      (*it)->dump();
+    }
     std::cout << "----------------------------------------------\n";
   }
   //

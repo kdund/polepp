@@ -52,7 +52,7 @@ void processArgs(int argc, char *argv[]) {
     gPole.setBkgPdf( bkgMean.getValue(), bkgSigma.getValue(), static_cast<PDF::DISTYPE>(bkgDist.getValue()) );
     gPole.setBkgObs();
     gPole.checkEffBkgDists();
-    gPole.setEffPdfBkgCorr(beCorr.getValue());
+    gPole.setEffBkgPdfCorr(beCorr.getValue());
 
     gPole.setTrueSignal(strue.getValue());
     //
