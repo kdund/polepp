@@ -586,7 +586,7 @@ int Pole::calcLimit(double s, double & prec) {
   //  double diffOpt = 1.0 - ((1.0-m_sumProb)/(1.0-m_cl));
   int rval;
   if (fabs(diff)<m_thresholdPrec) rval = 0;                // match!
-  else                             rval = (diff>0 ? +1:-1); // need still more precision
+  else                            rval = (diff>0 ? +1:-1); // need still more precision
   prec = (nsum>0 ? fabs(diff) : -1.0 );
   if (m_verbose>3) {
     std::cout << "s = " << s
@@ -1123,10 +1123,10 @@ bool Pole::scanUpperLimit( double mustart, double p0 ) {
   precMin = 100000.0;
   while (!done) {
     mutest = (mulow+muhigh)/2.0;
-    if (m_verbose>1)
-      std::cout << "*** Upper limit scan: test at mutest  = " << mutest
-                << " mulow,muhigh = " << mulow << " , " << muhigh
-                << std::endl;
+    //    if (m_verbose>1)
+//       std::cout << "*** Upper limit scan: test at mutest  = " << mutest
+//                 << " mulow,muhigh = " << mulow << " , " << muhigh
+//                 << std::endl;
     //      dmu = fabs(muhigh-mulow)/(muhigh+mulow);
     dmu = 2.0*fabs(prevmu-mutest)/(prevmu+mutest);
     dir = calcLimit(mutest,prec);
@@ -1139,9 +1139,10 @@ bool Pole::scanUpperLimit( double mustart, double p0 ) {
       }
     }
     if (m_verbose>1)
-      std::cout << "*** Upper limit scan: got dir = " << dir
-                << " , P(s) = " << m_sumProb
-                << " and prec = " << prec
+      std::cout << "*** Upper limit scan: test at " << mutest
+                << " gave dir = " << dir
+                << " , precision = " << prec
+                << " and prob = " << m_sumProb
                 << std::endl;
     if ((dir==0) || (dmu<m_thresholdBS)) { // see comment above for lower limit
       if (m_verbose>1) {
@@ -1702,7 +1703,9 @@ void Pole::printLimit(bool doTitle) {
     TOOLS::coutFixed(6,getEffPdfSigma()); std::cout << "\t";
     TOOLS::coutFixed(6,getBkgObs());      std::cout << "\t";
     TOOLS::coutFixed(6,getBkgPdfSigma()); std::cout << "\t";
-    TOOLS::coutFixed(6,m_scaleLimit*m_lowerLimit);     std::cout << "\t";
+    TOOLS::coutFixed(6,m_scaleLimit*m_lowerLimit); std::cout << "\t";
+    TOOLS::coutFixed(6,m_scaleLimit*m_upperLimit);
+    std::cout << "\n";
   }
   if (simple) {
     std::cout << std::endl;
