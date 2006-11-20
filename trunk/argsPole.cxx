@@ -51,7 +51,7 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> beCorr(    "", "corr",     "corr(bkg,eff)",false,0.0,"float",cmd);
    //
     ValueArg<double> dMus(      "", "dmus",     "step size in findBestMu",false,0.002,"float",cmd);
-    ValueArg<int>    nMus(      "", "nmus",     "maximum number of steps in findBestMu",false,100,"float",cmd);
+    ValueArg<int>    nMus(      "", "nmus",     "maximum number of steps in findBestMu",false,20,"float",cmd);
     //
     ValueArg<double> threshBS(   "","threshbs",     "binary search (limit) threshold" ,false,0.0001,"float",cmd);
     ValueArg<double> threshPrec( "","threshprec",  "threshold for accepting a cl" ,false,0.0001,"float",cmd);
