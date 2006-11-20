@@ -33,4 +33,82 @@ namespace Combination {
     int elem = int(vec.size())-1;
     return add(vec,elem,vmax);
   }
+
+  inline int makeIndexVector( int nelem, int imax, std::vector< std::vector<int> > & nvec) {
+    //
+    // Make a collection of vectors, each having <nelem> elements.
+    // Each vector consists of indecis in the range [0..imax]
+    //
+    nvec.clear();
+    std::vector< int > jj;
+    jj.resize(nelem,0);
+    nvec.push_back(jj);  
+    while (Combination::next_vector(jj,imax)) {
+      nvec.push_back(jj);
+    }
+    //
+    // sort them
+    //
+    std::sort(nvec.begin(),nvec.end());
+    return nvec.size();
+  }
+
+  inline int makeIndexVector( const std::vector<int> & imax, std::vector< std::vector<int> > & nvec) {
+    //
+    // Make a collection of vectors, each having <imax.size()> elements.
+    // The element <i> of a given vector has index range given by [ 0..imax(i) ]
+    //
+    const unsigned int nelem = imax.size();
+    nvec.clear();
+    //
+    std::vector< int > jj;
+    jj.resize(nelem,0);
+    nvec.push_back(jj);
+    while (Combination::next_vector(jj,imax)) {
+      nvec.push_back(jj);
+    }
+    //
+    // sort them
+    //
+    std::sort(nvec.begin(),nvec.end());
+    
+    return nvec.size();
+  }
+
+  int getIndexVector(std::vector<int> & nvec, std::vector< std::vector<int> > & allVectors) {
+    std::vector<int> nmax =  allVectors.back();     // vector containg the maximum index of all elements
+    unsigned int nsize = allVectors.front().size(); // number of points
+    unsigned int nFullSize = allVectors.size();     // number of vectors
+    //
+    if (nvec.size() != nsize) {
+      std::cerr << "WARNING: Input vector of faulty size (" << nvec.size() << " <> " << nsize << ")\n";
+      return -1;
+    }
+    //
+    // Find index in array of vectors matching the given vector
+    //
+    unsigned int ofs = 0;
+    unsigned int npp=0;
+    int nvecInd;
+    for (unsigned int i=0; i<nsize; i++) {
+      nvecInd = nsize-i-1;
+      if (i==0) {
+        npp=1;
+      } else {
+        npp *= nmax[nvecInd+1]+1;
+      }
+      if (nvec[nvecInd]>int(nmax[nvecInd])) {
+        std::cout << "WARNING: Too large element in input vector (" << nvec[nvecInd] << " > " << nmax[nvecInd] << ")\n";
+        std::cout << "         " << nvecInd << ",  nsize = " << nsize << ",  nmax = " << nmax[i] << std::endl;
+        return -1;
+      }
+      ofs += npp*(nvec[nvecInd]);
+    }
+    if (ofs>=nFullSize) {
+      std::cout << "ERROR: Offset too large - input vector not in range or...bug? Ofs = " << ofs << std::endl;
+      return -1;
+    }
+    return ofs;
+  }
+
 };
