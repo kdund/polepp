@@ -18,7 +18,7 @@ INCLUDES += -I./
 ROOTSYS  ?= ERROR_RootSysIsNotDefined
 
 TOOLLIST = polelim.cxx polecov.cxx polebelt.cxx exptest.cxx plotexp.cxx poleconst.cxx polepow.cxx obstest.cxx
-LIBLIST  = Pole.cxx  Coverage.cxx Random.cxx Pdf.cxx Combination.cxx Tools.cxx
+LIBLIST  = Pole.cxx  Coverage.cxx Random.cxx Pdf.cxx Tools.cxx
 ARGLIST  = argsPole.cxx argsCoverage.cxx
 SKIPLIST = Combine.cxx Power.cxx Tabulated.cxx pdftst.cxx polecomb.cxx plotexp.cxx poleconst.cxx polepow.cxx
 SKIPLIBLIST  = $(SKIPLIST) $(TOOLLIST) $(ARGLIST)
@@ -34,7 +34,8 @@ default: shlib
 
 
 # List of all include files
-HLIST   = $(filter-out $(SKIPHLIST),$(wildcard *.h))
+ALLINC  := *.h *.icc
+HLIST   = $(filter-out $(SKIPHLIST),$(ALLINC))
 
 # source for library
 LIBCPPLIST   =  $(filter-out $(SKIPLIBLIST),$(LIBLIST))
