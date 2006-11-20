@@ -1711,7 +1711,7 @@ void Pole::printLimit(bool doTitle) {
     TOOLS::coutFixed(6,getBkgPdfSigma()); std::cout << "\t";
     TOOLS::coutFixed(6,m_scaleLimit*m_lowerLimit); std::cout << "\t";
     TOOLS::coutFixed(6,m_scaleLimit*m_upperLimit);
-    std::cout << "\n";
+    std::cout << std::endl;
   }
   if (simple) {
     std::cout << std::endl;
