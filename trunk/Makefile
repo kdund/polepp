@@ -1,7 +1,7 @@
  ######################################################################
  # Project: Pole++                                                    #
  ###################################################################### 
-.SUFFIXES: .cxx .h .o
+.SUFFIXES: .cxx .h .icc .o
 MAKEFLAGS = --no-print-directory -r -s
 #MAKEFLAGS = --warn-undefined-variables --debug
 
