@@ -72,7 +72,7 @@ class Measurement {
       for (std::list< OBS::Base * >::const_iterator it = m_nuisancePars.begin();
 	   it !=  m_nuisancePars.end();
 	   ++it) {
-	newList.push_back((*it)->clone());
+        newList.push_back(OBS::clone(*it));
       }
     }
   }
@@ -328,9 +328,9 @@ class MeasPoisEB : public MeasPois {
       m_eff=0;
       m_bkg=0;
       eff = other.getEff();
-      if (eff) m_eff = eff->clone();
+      if (eff) m_eff = OBS::clone(eff);
       bkg = other.getBkg();
-      if (bkg) m_bkg = bkg->clone();
+      if (bkg) m_bkg = OBS::clone(bkg);
       m_effScale = other.getEffScale();
       m_bkgScale = other.getBkgScale();
     }
