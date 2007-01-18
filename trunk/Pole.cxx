@@ -1105,9 +1105,21 @@ bool Pole::scanUpperLimit( double mustart, double p0 ) {
 //           muminFound = true;
 //         }
 //      } else {             // N(obs) inside belt
-        if (cn>0) { // check direction
-          if (prec>prevPrec) { // if precision is degraded => we're going in the wrong direction
-            usescale = (usescale>1.0 ? muscaleDown:muscaleUp);
+        if (dir==-1) {
+          usescale = muscaleUp;
+        } else {
+          if (cn>0) { // check direction
+            if (prec>prevPrec) { // if precision is degraded => we're going in the wrong direction
+              usescale = (usescale>1.0 ? muscaleDown:muscaleUp);
+            }
+          }
+        }
+        if (dir==1) { // prob > cl
+          if (mumaxFound) {
+            if (mumax>mutest) mumax = mutest;
+          } else {
+            mumaxFound = true;
+            mumax = mutest;
           }
         }
         if (prec<precMin) { // save best precision
@@ -1119,7 +1131,9 @@ bool Pole::scanUpperLimit( double mustart, double p0 ) {
         done = false;
         // check the precision
         if (cn>1) {
-          done = (prec>prevPrec);
+          if (mumaxFound) {
+            done = (prec>prevPrec);
+          }
         }
         // step up counter of ok mu
         cn++;
@@ -1154,7 +1168,7 @@ bool Pole::scanUpperLimit( double mustart, double p0 ) {
       }
     }
   }
-  muhigh = muRoughLim;
+  muhigh = mumax;//muRoughLim;
   //
   // found a rough upper limit, now go down
   // binary search start range is [ mulow = mustart, muhigh ]
@@ -1166,6 +1180,7 @@ bool Pole::scanUpperLimit( double mustart, double p0 ) {
   cn = 0;
   done = false;
   prevmu = mustart;  // start point
+  prevmu = mumin;  // start point
   precMin = 100000.0;
   while (!done) {
     mutest = (mulow+muhigh)/2.0;
