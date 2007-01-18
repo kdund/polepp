@@ -1048,6 +1048,10 @@ bool Pole::scanUpperLimit( double mustart, double p0 ) {
   double mutest;
   double muRoughLim;
   double dmu;
+  double mumax=-1.0;  // maximum mu established
+  bool   mumaxFound = false;
+  double mumin=-1.0;
+  double muminFound=false;
   //
   // Start at muhigh.
   // calcLimit returns:
@@ -1068,30 +1072,49 @@ bool Pole::scanUpperLimit( double mustart, double p0 ) {
   muRoughLim = mutest;
   while (!done) {
     dir = calcLimit(mutest,prec);
-    if (m_verbose>1)
+    if (m_verbose>1) {
       std::cout << "*** Upper limit scan: test at " << mutest
                 << " gave dir = " << dir
                 << " , precision = " << prec
                 << " and prob = " << m_sumProb
                 << std::endl;
+      std::cout << "*** Upper limit scan: established range of mu = [ "
+                << (muminFound ? muRoughLim:-1.0) << " : "
+                << (mumaxFound ? mumax:-1.0) << " ]" << std::endl;
+    }
     if (prec<0) { // mutest is exactly at mubest -> too low; scale up!
       usescale = muscaleUp;
     } else {
       if (dir==-2) {       // mutest too high, N(obs)<belt!
         usescale = muscaleDown;
+        if (mumaxFound) {
+           if (mumax>mutest) mumax = mutest;
+        } else {
+           mumaxFound = true;
+           mumax = mutest;
+        }
       } else if (dir==2) { //mutest too low, N(obs)>belt! Should not really happen!?
         usescale = muscaleUp;
-      } else if (dir==-1) {// sumprob<cl -> mutest too low -> find the lowest mu giving muprob<cl
-        usescale = muscaleUp;
-      } else {             // N(obs) inside belt
+      } else {
+//         if (dir==-1) {// sumprob<cl -> mutest too low -> find the lowest mu giving muprob<cl
+//         usescale = muscaleUp;
+//         if (prec<precMin) { // save best precision TODO: this appears below also -> FIX THIS!
+//           precMin = prec;
+//           muRoughLim = mutest;
+//           mumin = mutest;
+//           muminFound = true;
+//         }
+//      } else {             // N(obs) inside belt
         if (cn>0) { // check direction
           if (prec>prevPrec) { // if precision is degraded => we're going in the wrong direction
             usescale = (usescale>1.0 ? muscaleDown:muscaleUp);
           }
         }
-        if (prec<precMin) {
+        if (prec<precMin) { // save best precision
           precMin = prec;
           muRoughLim = mutest;
+          mumin = mutest;
+          muminFound = true;
         }
         done = false;
         // check the precision
@@ -1112,6 +1135,23 @@ bool Pole::scanUpperLimit( double mustart, double p0 ) {
     if (!done) {
       prevmu = mutest;
       mutest *= usescale;
+      // check if new mutest is outside established region
+      if (mumaxFound) {
+         if (mutest>mumax) {
+            mutest=(mumax+prevmu)/2.0;
+         }
+      }
+      if (muminFound) {
+         if (mutest<mumin) {
+            mutest=(mumin+prevmu)/2.0;
+         }
+      }
+      dmu = 2.0*fabs(prevmu-mutest)/(prevmu+mutest);
+      if (dmu<m_thresholdBS) {
+        done = true;
+        if (m_verbose>1)
+          std::cout << "*** Upper limit scan: rough scan stopped; change in best mu is small" << std::endl;
+      }
     }
   }
   muhigh = muRoughLim;
