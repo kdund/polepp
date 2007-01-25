@@ -123,7 +123,7 @@ void Pole::exeFromFile() {
           std::cout << n << "\t" << y << "\t" << z << "\t" << t << "\t" << u  << std::endl;
         }
         if (u<50) {
-          double scale=100;
+          double scale=1;
           u *= scale;
           t *= scale;
           y *= scale;
@@ -1027,6 +1027,225 @@ bool Pole::scanLowerLimit( double mustart, double p0 ) {
 }
 
 
+// bool Pole::scanUpperLimit( double mustart, double p0 ) {
+//   //
+//   if (!m_lowerLimitFound) return false;
+//   //
+//   // Scan for upper limit
+//   //
+//   const double muscaleUp=1.1;
+//   const double muscaleDown=0.95;
+//   bool   done     = false;
+//   int    dir      = -1;
+//   double mulow    = mustart;
+//   double muhigh   = 2.0*(mustart+1.0)-m_lowerLimit; // pick an initial upper limit
+//   double usescale = muscaleUp;
+//   double prevmu   = muhigh;
+//   double prec     = 0;
+//   double prevPrec = 100000.0;
+//   double precMin  = 100000.0;
+//   int    cn       = 0;
+//   double mutest;
+//   double muRoughLim;
+//   double dmu;
+//   double mumax=-1.0;  // maximum mu established
+//   bool   mumaxFound = false;
+//   double mumin=-1.0;
+//   double muminFound=false;
+//   //
+//   // Start at muhigh.
+//   // calcLimit returns:
+//   //---------------------------------------------
+//   // dir | prec | action
+//   //---------------------------------------------
+//   //  -  | <0   | sumProb==0, muhigh at s_best
+//   // +1  | >0   | sumProb>cl
+//   // -1  | <0   | sumProb<cl
+//   //  0  |  0   | sumProb = cl (within precision)
+//   // +2  |  1   | N(obs)>belt
+//   // -2  |  1   | N(obs)<belt
+//   //---------------------------------------------
+//   //
+//   if (m_verbose>1)
+//     std::cout << "*** Upper limit scan: find a rough limit, starting at " << muhigh << std::endl;
+//   mutest = muhigh;
+//   muRoughLim = mutest;
+//   while (!done) {
+//     dir = calcLimit(mutest,prec);
+//     if (m_verbose>1) {
+//       std::cout << "*** Upper limit scan: test at " << mutest
+//                 << " gave dir = " << dir
+//                 << " , precision = " << prec
+//                 << " and prob = " << m_sumProb
+//                 << std::endl;
+//       std::cout << "*** Upper limit scan: established range of mu = [ "
+//                 << (muminFound ? muRoughLim:-1.0) << " : "
+//                 << (mumaxFound ? mumax:-1.0) << " ]" << std::endl;
+//     }
+//     if (prec<0) { // mutest is exactly at mubest -> too low; scale up!
+//       usescale = muscaleUp;
+//     } else {
+//       if (dir==-2) {       // mutest too high, N(obs)<belt!
+//         usescale = muscaleDown;
+//         if (mumaxFound) {
+//            if (mumax>mutest) mumax = mutest;
+//         } else {
+//            mumaxFound = true;
+//            mumax = mutest;
+//         }
+//       } else if (dir==2) { //mutest too low, N(obs)>belt! Should not really happen!?
+//         usescale = muscaleUp;
+//       } else {
+// //         if (dir==-1) {// sumprob<cl -> mutest too low -> find the lowest mu giving muprob<cl
+// //         usescale = muscaleUp;
+// //         if (prec<precMin) { // save best precision TODO: this appears below also -> FIX THIS!
+// //           precMin = prec;
+// //           muRoughLim = mutest;
+// //           mumin = mutest;
+// //           muminFound = true;
+// //         }
+// //      } else {             // N(obs) inside belt
+//         if (dir==-1) {
+//           usescale = muscaleUp;
+//         } else {
+//           if (cn>0) { // check direction
+//             if (prec>prevPrec) { // if precision is degraded => we're going in the wrong direction
+//               usescale = (usescale>1.0 ? muscaleDown:muscaleUp);
+//             }
+//           }
+//         }
+//         if (dir==1) { // prob > cl
+//           if (mumaxFound) {
+//             if (mumax>mutest) mumax = mutest;
+//           } else {
+//             mumaxFound = true;
+//             mumax = mutest;
+//           }
+//         }
+//         if (prec<precMin) { // save best precision
+//           precMin = prec;
+//           muRoughLim = mutest;
+//           mumin = mutest;
+//           muminFound = true;
+//         }
+//         done = false;
+//         // check the precision
+//         if (cn>1) {
+//           if (mumaxFound) {
+//             done = (prec>prevPrec);
+//           }
+//         }
+//         // step up counter of ok mu
+//         cn++;
+//         prevPrec = prec;
+//       }
+//       // check for infinite loop
+//       if ((!done) && (cn>100)) {
+//         done = true;
+//         std::cout << "*** WARNING infinite (?) loop when scanning for the rough upper limit!" << std::endl;
+//       }
+//     }
+//     // continue if not done
+//     if (!done) {
+//       prevmu = mutest;
+//       mutest *= usescale;
+//       // check if new mutest is outside established region
+//       if (mumaxFound) {
+//          if (mutest>mumax) {
+//             mutest=(mumax+prevmu)/2.0;
+//          }
+//       }
+//       if (muminFound) {
+//          if (mutest<mumin) {
+//             mutest=(mumin+prevmu)/2.0;
+//          }
+//       }
+//       dmu = 2.0*fabs(prevmu-mutest)/(prevmu+mutest);
+//       if (dmu<m_thresholdBS) {
+//         done = true;
+//         if (m_verbose>1)
+//           std::cout << "*** Upper limit scan: rough scan stopped; change in best mu is small" << std::endl;
+//       }
+//     }
+//   }
+//   muhigh = mumax;//muRoughLim;
+//   //
+//   // found a rough upper limit, now go down
+//   // binary search start range is [ mulow = mustart, muhigh ]
+//   //
+//   if (m_verbose>1) {
+//     std::cout << "*** Upper limit scan: found a rough limit at " << muhigh << std::endl;
+//     std::cout << "*** Upper limit scan: binary search" << std::endl;
+//   }
+//   cn = 0;
+//   done = false;
+//   prevmu = mustart;  // start point
+//   prevmu = mumin;  // start point
+//   precMin = 100000.0;
+//   while (!done) {
+//     mutest = (mulow+muhigh)/2.0;
+//     //    if (m_verbose>1)
+// //       std::cout << "*** Upper limit scan: test at mutest  = " << mutest
+// //                 << " mulow,muhigh = " << mulow << " , " << muhigh
+// //                 << std::endl;
+//     //      dmu = fabs(muhigh-mulow)/(muhigh+mulow);
+//     dmu = 2.0*fabs(prevmu-mutest)/(prevmu+mutest);
+//     dir = calcLimit(mutest,prec);
+//     if (!(prec<0)) {
+//       if (prec<precMin) {
+//         precMin           = prec;
+//         m_upperLimitNorm  = m_scanBeltNorm;
+//         m_upperLimit      = mutest;
+//         m_upperLimitPrec  = prec;
+//       }
+//     }
+//     if (m_verbose>1)
+//       std::cout << "*** Upper limit scan: test at " << mutest
+//                 << " gave dir = " << dir
+//                 << " , precision = " << prec
+//                 << " and prob = " << m_sumProb
+//                 << std::endl;
+//     if ((dir==0) || (dmu<m_thresholdBS)) { // see comment above for lower limit
+//       if (m_verbose>1) {
+//         if (dir==0) {
+//           std::cout << "*** Upper limit scan: scan stopped since sufficient precision is reached!"
+//                     << std::endl;
+//           std::cout << "*** Upper limit scan: precision = " << prec << " < " << m_thresholdPrec
+//                     << std::endl;
+//         } else if (dmu<m_thresholdBS) {
+//           std::cout << "*** Upper limit scan: scan stopped since change in mutest is small enough!"
+//                     << std::endl;
+//           std::cout << "*** Upper limit scan: delta mu = " << dmu << " < " << m_thresholdBS
+//                     << std::endl;
+//         }
+//       }
+//       done = true;
+//       m_upperLimitFound = true;
+//     } else if ((dir==-2) ||  (dir==1)) { // too high
+//       muhigh = mutest;
+//     } else if ((dir==-1) || (dir==0)) { // too low
+//       mulow = mutest;
+//     }
+//     prevmu   = mutest;
+//     prevPrec = prec;
+//     cn++;
+//     if (cn>1000) { // TODO: change this to a more smart check
+//       done=true;
+//       std::cout << "calcLimit() failed when scanning for UL! Infinite or long loop encountered - limit at 1000" << std::endl;
+//     }
+//   }
+//   if (m_verbose>1) {
+//     std::cout << "***" << std::endl;
+//     if (m_upperLimitFound) {
+//       std::cout << "*** Upper limit scan: s(lower) = " << m_upperLimit << std::endl;
+//     } else {
+//       std::cout << "*** Upper limit scan: NO UPPER LIMIT FOUND! " << std::endl;
+//     }
+//     std::cout << "***" << std::endl;
+//   }
+//   return m_upperLimitFound;
+// }
+
 bool Pole::scanUpperLimit( double mustart, double p0 ) {
   //
   if (!m_lowerLimitFound) return false;
@@ -1055,16 +1274,16 @@ bool Pole::scanUpperLimit( double mustart, double p0 ) {
   //
   // Start at muhigh.
   // calcLimit returns:
-  //---------------------------------------------
-  // dir | prec | action
-  //---------------------------------------------
-  //  -  | <0   | sumProb==0, muhigh at s_best
-  // +1  | >0   | sumProb>cl
-  // -1  | <0   | sumProb<cl
-  //  0  |  0   | sumProb = cl (within precision)
-  // +2  |  1   | N(obs)>belt
-  // -2  |  1   | N(obs)<belt
-  //---------------------------------------------
+  //--------------------------------------------------------
+  // dir | prec | description                     | action
+  //--------------------------------------------------------
+  //  -  | <0   | sumProb==0, muhigh at s_best    | up
+  // +1  | >0   | sumProb>cl                      | down
+  // -1  | >0   | sumProb<cl                      | up
+  //  0  |  0   | sumProb = cl (within precision) | done!
+  // +2  |  1   | N(obs)>belt - mu too low        | up
+  // -2  |  1   | N(obs)<belt - mu too high       | down
+  //--------------------------------------------------------
   //
   if (m_verbose>1)
     std::cout << "*** Upper limit scan: find a rough limit, starting at " << muhigh << std::endl;
@@ -1078,72 +1297,44 @@ bool Pole::scanUpperLimit( double mustart, double p0 ) {
                 << " , precision = " << prec
                 << " and prob = " << m_sumProb
                 << std::endl;
+    }
+    // which direction?
+    bool scaleup   = ((prec<0) || (dir==2) || (dir==-1));
+    bool scaledown = (((dir==1) || (dir==-2)) && (prec>0)) || (!scaleup);
+    if (m_verbose>1) {
+      std::cout << "*** Upper limit scan: scaling " << (scaleup ? "up":"down") << std::endl;
+    }
+    if (scaleup) {
+      usescale = muscaleUp;
+      if (muminFound) {
+        if (mumin<mutest) mumin = mutest;
+      } else {
+        muminFound = true;
+        mumin = mutest;
+      }
+    }
+    if (scaledown) {
+      usescale = muscaleDown;
+      if (mumaxFound) {
+        if (mumax>mutest) mumax = mutest;
+      } else {
+        mumaxFound = true;
+        mumax = mutest;
+      }
+    }
+    if (m_verbose>1) {
       std::cout << "*** Upper limit scan: established range of mu = [ "
-                << (muminFound ? muRoughLim:-1.0) << " : "
+                << (muminFound ? mumin:-1.0) << " : "
                 << (mumaxFound ? mumax:-1.0) << " ]" << std::endl;
     }
-    if (prec<0) { // mutest is exactly at mubest -> too low; scale up!
-      usescale = muscaleUp;
-    } else {
-      if (dir==-2) {       // mutest too high, N(obs)<belt!
-        usescale = muscaleDown;
-        if (mumaxFound) {
-           if (mumax>mutest) mumax = mutest;
-        } else {
-           mumaxFound = true;
-           mumax = mutest;
-        }
-      } else if (dir==2) { //mutest too low, N(obs)>belt! Should not really happen!?
-        usescale = muscaleUp;
-      } else {
-//         if (dir==-1) {// sumprob<cl -> mutest too low -> find the lowest mu giving muprob<cl
-//         usescale = muscaleUp;
-//         if (prec<precMin) { // save best precision TODO: this appears below also -> FIX THIS!
-//           precMin = prec;
-//           muRoughLim = mutest;
-//           mumin = mutest;
-//           muminFound = true;
-//         }
-//      } else {             // N(obs) inside belt
-        if (dir==-1) {
-          usescale = muscaleUp;
-        } else {
-          if (cn>0) { // check direction
-            if (prec>prevPrec) { // if precision is degraded => we're going in the wrong direction
-              usescale = (usescale>1.0 ? muscaleDown:muscaleUp);
-            }
-          }
-        }
-        if (dir==1) { // prob > cl
-          if (mumaxFound) {
-            if (mumax>mutest) mumax = mutest;
-          } else {
-            mumaxFound = true;
-            mumax = mutest;
-          }
-        }
-        if (prec<precMin) { // save best precision
-          precMin = prec;
-          muRoughLim = mutest;
-          mumin = mutest;
-          muminFound = true;
-        }
-        done = false;
-        // check the precision
-        if (cn>1) {
-          if (mumaxFound) {
-            done = (prec>prevPrec);
-          }
-        }
-        // step up counter of ok mu
-        cn++;
-        prevPrec = prec;
-      }
-      // check for infinite loop
-      if ((!done) && (cn>100)) {
-        done = true;
-        std::cout << "*** WARNING infinite (?) loop when scanning for the rough upper limit!" << std::endl;
-      }
+
+    done = (muminFound && mumaxFound);
+    // step up counter of ok mu
+    cn++;
+    // check for infinite loop
+    if ((!done) && (cn>1000)) {
+      done = true;
+      std::cout << "*** WARNING infinite (?) loop when scanning for the rough upper limit!" << std::endl;
     }
     // continue if not done
     if (!done) {
@@ -1168,13 +1359,14 @@ bool Pole::scanUpperLimit( double mustart, double p0 ) {
       }
     }
   }
-  muhigh = mumax;//muRoughLim;
+  mulow  = mumin;
+  muhigh = mumax;
   //
   // found a rough upper limit, now go down
   // binary search start range is [ mulow = mustart, muhigh ]
   //
   if (m_verbose>1) {
-    std::cout << "*** Upper limit scan: found a rough limit at " << muhigh << std::endl;
+    std::cout << "*** Upper limit scan: upper limit in range [ " << mumin << " , " << mumax << " ]" << std::endl;
     std::cout << "*** Upper limit scan: binary search" << std::endl;
   }
   cn = 0;
