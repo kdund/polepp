@@ -32,9 +32,9 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     ValueArg<int>    nObs(      "","nobs",     "number observed events",false,1,"int",cmd);
     ValueArg<double> confLevel( "","cl",       "confidence level",false,0.9,"float",cmd);
     ValueArg<double> sTrue(     "","strue",   "s_true, only used if -C is active",false,1.0,"float",cmd);
-    //    SwitchArg        coverage(  "C","coverage", "For coverage studies",false,cmd);
     ValueArg<int>    method(    "m","method",     "method (1 - FHC2 (def), 2 - MBT)",false,1,"int",cmd);
-    SwitchArg        noTabulated("K","tab","Do not use tabulated poisson",false,cmd);
+    SwitchArg        noTabulated("K","tab","Do not use tabulated poisson",false);
+    cmd.add(noTabulated);
     //
     ValueArg<double> minProb( "","minp",       "minimum probability",false,-1.0,"float",cmd);
     //
