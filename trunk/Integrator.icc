@@ -1,0 +1,129 @@
+//
+// Integrator inline implementation
+//
+Integrator::Integrator():
+   m_gslRange(0),
+   m_ncalls(10000)
+{
+}
+
+Integrator::~Integrator()
+{
+   if (m_gslRange) gsl_rng_free(m_gslRange);
+}
+
+void Integrator::setFunction( double (* f)(double * x, size_t dim, void * params) ) {
+   m_gslMonteFun.f = f;
+}
+
+void Integrator::setFunctionDim( size_t dim ) {
+   m_gslMonteFun.dim = dim;
+}
+
+void Integrator::setFunctionParams( void * params ) {
+   m_gslMonteFun.params = params;
+}
+
+void Integrator::setIntRanges( std::vector<double> & xl, std::vector<double> & xu ) {
+   m_intXL = xl;
+   m_intXU = xu;
+}
+
+inline void Integrator::setNcalls( unsigned int nc ) {
+   m_ncalls = nc;
+}
+
+void Integrator::initialize() {
+   gsl_rng_env_setup();
+   const gsl_rng_type *T = gsl_rng_default;
+   m_gslRange = gsl_rng_alloc(T);
+}
+
+double Integrator::result() {
+   return m_result;
+}
+
+double Integrator::error() {
+   return m_error;
+}
+
+//////////////////////////////////////////////////////////////////
+IntegratorVegas::IntegratorVegas():
+   Integrator(),
+   m_gslVegasState(0)
+{
+}
+
+IntegratorVegas::~IntegratorVegas() {
+   if (m_gslVegasState) gsl_monte_vegas_free(m_gslVegasState);
+}
+
+void IntegratorVegas::initialize() {
+   Integrator::initialize();
+   m_gslVegasState = gsl_monte_vegas_alloc(m_gslMonteFun.dim);
+}
+
+void IntegratorVegas::go( void *params ) {
+   gsl_monte_vegas_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
+                              m_gslMonteFun.dim, m_ncalls,
+                              m_gslRange, m_gslVegasState,
+                              &m_result, &m_error);
+}
+
+double IntegratorVegas::chisq() {
+   return m_gslVegasState->chisq;
+}
+
+//////////////////////////////////////////////////////////////////
+IntegratorPlain::IntegratorPlain():
+   Integrator(),
+   m_gslPlainState(0)
+{
+}
+
+IntegratorPlain::~IntegratorPlain() {
+   if (m_gslPlainState) gsl_monte_plain_free(m_gslPlainState);
+}
+
+void IntegratorPlain::initialize() {
+   Integrator::initialize();
+   m_gslPlainState = gsl_monte_plain_alloc(m_gslMonteFun.dim);
+}
+
+void IntegratorPlain::go( void *params ) {
+   gsl_monte_plain_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
+                              m_gslMonteFun.dim, m_ncalls,
+                              m_gslRange, m_gslPlainState,
+                              &m_result, &m_error);
+}
+
+double IntegratorPlain::chisq() {
+   return 0;
+}
+
+//////////////////////////////////////////////////////////////////
+IntegratorMiser::IntegratorMiser():
+   Integrator(),
+   m_gslMiserState(0)
+{
+}
+
+IntegratorMiser::~IntegratorMiser() {
+   if (m_gslMiserState) gsl_monte_miser_free(m_gslMiserState);
+}
+
+void IntegratorMiser::initialize() {
+   Integrator::initialize();
+   m_gslMiserState = gsl_monte_miser_alloc(m_gslMonteFun.dim);
+}
+
+void IntegratorMiser::go( void *params ) {
+   gsl_monte_miser_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
+                              m_gslMonteFun.dim, m_ncalls,
+                              m_gslRange, m_gslMiserState,
+                              &m_result, &m_error);
+}
+
+double IntegratorMiser::chisq() {
+   return 0;
+}
