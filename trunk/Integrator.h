@@ -21,9 +21,15 @@ class Integrator {
    inline void setFunctionParams( void * params );
    inline void setIntRanges( std::vector<double> & xl, std::vector<double> & xu );
    inline void setNcalls( unsigned int nc );
+   inline void addTabPar( size_t i, double xmin, double xmax, double step );
+   inline void setTabParamsVal( std::vector<int> & tabind );
+   //
+   inline void clrTable();
    //
    inline virtual void initialize();
-   inline virtual void go( void *params )=0;
+   inline virtual void initTable();
+   inline virtual void tabulate();
+   inline virtual void go( void *params );
    inline virtual double chisq()=0;
    inline double result();
    inline double error();
@@ -34,6 +40,15 @@ class Integrator {
    gsl_monte_function  m_gslMonteFun; // structure for GSL MC integration
    std::vector<double> m_intXL;       // lower integration range for each integrand
    std::vector<double> m_intXU;       // idem, upper
+
+   std::vector<size_t> m_tabIndex;    // index of tabulated var
+   std::vector<double> m_tabMin;      // minimum of tabulated value
+   std::vector<double> m_tabMax;      // maximum
+   std::vector<double> m_tabStep;     // step size
+   std::vector<int>    m_tabNsteps;   // number of steps
+   std::vector<double> m_tabValues;   // the actual table
+   bool                m_tabulated;   // true if tabulate() is called successfully
+
 
    double m_result;                   // result of integration
    double m_error;                    // error of idem

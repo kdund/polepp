@@ -187,6 +187,7 @@ namespace PDF {
     //
     void setMean(  const double m)  { Base::setMean(m);  setMinMax(m,getSigma()); }
     void setSigma( const double m)  { Base::setSigma(m); setMinMax(getMean(),m); }
+    void setRange( double xmin, double xmax ) { setMeanSigma(xmin,xmax); }
 
     inline const double getMin() const { return m_min; }
     inline const double getMax() const { return m_max; }
@@ -199,6 +200,13 @@ namespace PDF {
 
     inline const double raw(const double x, const double f) const;
     inline const double raw(const double x, const double f, const double xmin, const double xmax) const;
+
+    inline void setMeanSigma(double xmin, double xmax) {
+      Base::SetMean((xmax+xmin)/2.0);
+      Base::SetSigma((xmax-xmin)/sqrt(12.0));
+      m_min = xmin;
+      m_max = xmax;
+    }
 
     inline void setMinMax(double mean, double sigma) {
       calcMinMax(mean,sigma,m_min,m_max);

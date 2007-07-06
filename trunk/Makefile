@@ -11,7 +11,7 @@ include Makefile.arch
 PACKAGE=Pole++
 LIBVERS=.1
 LD_LIBRARY_PATH:=.:$(ROOTSYS)/lib:$(LD_LIBRARY_PATH)
-OBJDIR=/opt/scratch/obj
+OBJDIR=/opt/scratch/${PACKAGE}/obj
 DEPDIR=$(OBJDIR)/dep
 VPATH= $(OBJDIR)
 INCLUDES += -I./  
@@ -26,6 +26,7 @@ SKIPTOOLLIST = $(SKIPLIST) $(LIBLIST)
 SKIPHLIST = Tabulated.h
 LIBFILE      = lib$(PACKAGE).a${LIBVERS}
 SHLIBFILE    = lib$(PACKAGE).so${LIBVERS}
+GSLLIB       = -lgsl -lgslcblas
 
 UNAME = $(shell uname)
 
@@ -72,8 +73,10 @@ poleconst:	poleconst.o argsPole.o
 		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
 exptest:	exptest.o
 		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
-obstest:	obstest.o argsPole.o
+obstest:	obstest.o
 		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
+gsltest:	gsltest.o
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(GSLLIB) $(SHLIBFILE)  -o $@
 
 # documentation
 

@@ -24,6 +24,7 @@ namespace RND {
     double logNormalLN(double logMean, double logSigma);
     int    poisson(double mean);
     double flat(double mean, double sigma=1.0);
+    double flatRange(double xmin, double xmax);
     double gamma(double mean, double sigma);
     double general(int npts, double *x, double xmin, double xmax, double *f, double fmin, double fmax);
     const unsigned int getSeed() const {return m_seed;}

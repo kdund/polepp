@@ -102,6 +102,10 @@ namespace RND {
     return rndm()*dx*2.0 + xmin;
   }
   
+  double Random::flatRange(double xmin, double xmax) {
+    double dx = xmax-xmin;
+    return rndm()*dx+xmin;
+  }
   double Random::general(int npts, double *xvec, double xmin, double xmax, double *fvec, double fmin, double fmax) {
     double dx = xmax-xmin;
     double du = fmax-fmin;
