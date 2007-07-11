@@ -243,9 +243,16 @@ namespace OBS {
     //
     inline ObservableFlat const & operator=(ObservableFlat const & rh);
     //
+
+    inline void setPdfMean(double m);
+    inline void setPdfSigma(double s);
+    inline void setPdfRange(double xmin, double xmax);
     inline double rnd();
 
     inline ObservableFlat *clone() const;
+  private:
+    double m_xmin;
+    double m_xmax;
   };
 
   // Correlated variables - UNDER DEVELOPMENT

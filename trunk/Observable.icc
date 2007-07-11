@@ -63,10 +63,10 @@ namespace OBS {
   void         Base::unlock()                                { m_locked = false; }
   void         Base::setPdf(PDF::Base *pdf)                  { m_pdf = pdf; m_dist = ((pdf==0) ? PDF::DIST_NONE:pdf->getDist());}
   void         Base::setPdfDist(const PDF::DISTYPE dist)     { if (m_pdf==0) m_dist = dist; }
-  void Base::setPdfMean(double m)                    { m_mean = m; }
-  void Base::setPdfSigma(double m)                   { m_sigma = m; } //if (m_pdf) m_pdf->setSigma(m); }
+  void         Base::setPdfMean(double m)                    { m_mean = m; }
+  void         Base::setPdfSigma(double m)                   { m_sigma = m; } //if (m_pdf) m_pdf->setSigma(m); }
   void         Base::setRndGen(RND::Random *rndgen)          { m_rndGen = rndgen;}
-  void Base::validate()                              { m_valid = ((m_pdf!=0) && (m_rndGen!=0)); }
+  void         Base::validate()                              { m_valid = ((m_pdf!=0) && (m_rndGen!=0)); }
 
   double Base::aprioriProb( double x ) { return 1.0;}
 
@@ -534,9 +534,26 @@ namespace OBS {
     BaseType<double>::copy(rh);
     return *this;
   }
-  //
+
+  void ObservableFlat::setPdfMean(double m)  {
+    Base::setPdfMean(m);
+    TOOLS::calcFlatRange(this->m_mean,this->m_sigma,m_xmin,m_xmax);
+  }
+  void ObservableFlat::setPdfSigma(double s) {
+    Base::setPdfSigma(s);
+    TOOLS::calcFlatRange(this->m_mean,this->m_sigma,m_xmin,m_xmax);
+  }
+  void ObservableFlat::setPdfRange(double xmin, double xmax) {
+    m_xmin = xmin;
+    m_xmax = xmax;
+    double mean,sigma;
+    TOOLS::calcFlatMeanSigma(xmin,xmax,mean,sigma);
+    Base::setPdfMean(mean);
+    Base::setPdfSigma(sigma);
+  }
+
   double ObservableFlat::rnd() {
-    return (m_valid ? m_rndGen->flat(m_mean,m_sigma):0);
+    return (m_valid ? m_rndGen->flatRange(m_xmin,m_xmax):0);
   }
 
   ObservableFlat *ObservableFlat::clone() const {

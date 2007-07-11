@@ -5,6 +5,7 @@
 #include <vector>
 #include <cmath>
 #include "Random.h"
+#include "Tools.h"
 
 /*!
   
@@ -202,24 +203,18 @@ namespace PDF {
     inline const double raw(const double x, const double f, const double xmin, const double xmax) const;
 
     inline void setMeanSigma(double xmin, double xmax) {
-      Base::SetMean((xmax+xmin)/2.0);
-      Base::SetSigma((xmax-xmin)/sqrt(12.0));
+      double mean, sigma;
+      TOOLS::calcFlatMeanSigma(xmin,xmax,mean,sigma);
+      Base::setMean(mean);
+      Base::setSigma(sigma);
       m_min = xmin;
       m_max = xmax;
     }
 
     inline void setMinMax(double mean, double sigma) {
-      calcMinMax(mean,sigma,m_min,m_max);
+      TOOLS::calcFlatRange(mean,sigma,m_min,m_max);
       m_val = calcVal(m_min,m_max);
       //      std::cout << "Flat: " << m_val << " , " << m_min << " , " << m_max << std::endl;
-    }
-
-    inline void calcMinMax(double mean, double sigma, double & xmin, double & xmax) const {
-      const double d = sqrt(12.0);
-      double wh = 0.5*d*sigma;
-      xmin = mean-wh;
-      xmax = mean+wh;
-      if (xmax<xmin) xmax=xmin;
     }
 
     inline const double calcVal(double xmin, double xmax) const {
@@ -790,7 +785,7 @@ namespace PDF {
   inline const double Flat::getVal(const double x, const double mean, const double sigma) const {
     //    std::cout << "Flat: getVal() " << std::endl;
     double xmin,xmax,f;
-    calcMinMax(mean,sigma,xmin,xmax);
+    TOOLS::calcFlatRange(mean,sigma,xmin,xmax);
     f = calcVal(xmin,xmax);
     double rval = raw(x,f,xmin,xmax);
     //    std::cout << " : x = " << x << " , f = " << f << " , range = " << xmin << " - " << xmax << " ==> " << rval << std::endl;

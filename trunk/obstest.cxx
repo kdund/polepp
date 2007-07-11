@@ -15,18 +15,59 @@ double getPositive( OBS::ObservableGauss *obs ) {
    return r;
 }
 
-void pixelOccupancy( int neve ) {
+void pixelOccupancy( int neve, double prob ) {
+   const int npixTot=1000;
    OBS::ObservablePois *npix    = dynamic_cast<OBS::ObservablePois *>(OBS::makeObservable(PDF::DIST_POIS));
    OBS::ObservableFlat *whatpix = dynamic_cast<OBS::ObservableFlat *>(OBS::makeObservable(PDF::DIST_FLAT));
+   double mean = npixTot*prob;
+   std::cout << "N(events)       = " << neve << std::endl;
+   std::cout << "N(pixels)       = " << npixTot << std::endl;
+   std::cout << "N(bad pix) mean = " << mean << std::endl;
+   npix->setPdfMean(mean);
+   whatpix->setPdfRange(0,npixTot-1);
    int npixObs;
    int pixInd;
-   const int npixTot=100;
+   int npsum=0;
+   double p0sum=0;
+   double p1sum=0;
+   double p1psum=0;
    std::vector<int> occupancy(npixTot,0);
-   for (int i=0; i<neve; i++) {
-      npixObs = npix->rnd();
-      pixInd = whatpix->rnd();
-      
+   for (int i=0; i<neve; i++) { // loop over events
+      npixObs = npix->rnd();    // get N bad pixels
+      if (npixObs>npixTot) npixObs=npixTot;
+      npsum += npixObs;
+      for (int p=0; p<npixObs; p++) { // fill bad pixels
+         pixInd = static_cast<int>(whatpix->rnd()+0.5);
+         occupancy[pixInd]++;
+      }      
+      int n0=0;
+      int n1=0;
+      int n1p=0;
+      for (int i=0; i<npixTot; i++) {
+         if (occupancy[i]==0) {
+            n0++;
+         } else {
+            n1p++;
+            if (occupancy[i]==1) n1++;
+         }
+      }
+      p0sum  += double(n0)/double(npixTot);
+      p1sum  += double(n1)/double(npixTot);
+      p1psum += double(n1p)/double(npixTot);
+      occupancy.clear();
+      occupancy.resize(npixTot,0);
    }
+   
+   p0sum /= double(neve);
+   p1sum /= double(neve);
+   p1psum /= double(neve);
+
+   double praw = exp(log(p0sum)/double(mean-1));
+   std::cout << "average number of bad pixels = " << double(npsum)/double(neve) << std::endl;
+   std::cout << "p(0)  = " << p0sum << std::endl;
+   std::cout << "p(1)  = " << p1sum << std::endl;
+   std::cout << "p(>1) = " << p1psum << std::endl;
+   std::cout << "praw  = " << 1.0-praw << std::endl;
 }
 
 void makeToyMC( int neve, int what ) {
@@ -326,16 +367,21 @@ void makeSample2(int neve, int what) {
 int main(int argc, char *argv[]) {
   int neve=100;
   int what=0; // generate both sig and bkg
+  double val=0;
   if (argc>1) {
     neve = atoi(argv[1]);
   }
   if (argc>2) {
     what = atoi(argv[2]);
   }
+  if (argc>3) {
+    val = atof(argv[3]);
+  }
   if (what>1) what=1;
   if (what<-1) what=-1;
 
-  makeToyMC(neve,what);
+  pixelOccupancy(neve,val);
+  //  makeToyMC(neve,what);
   //  makeSample1(neve,what);
   //  makeSample2(neve,what);
   //  makeSampleGG(neve);

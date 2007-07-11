@@ -201,6 +201,7 @@ void poleTst()
    timer.start();
    plainInt.tabulate();
    timer.stop();
+   
    timer.printUsedClock(0);
    timer.start();
    plainInt.go();

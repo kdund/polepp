@@ -3,7 +3,9 @@
 #include <iostream>
 #include <iomanip>
 #include <ctime>
+#include <cmath>
 #include <string>
+
 
 namespace TOOLS {
   inline const char *yesNo(bool var);
@@ -15,6 +17,8 @@ namespace TOOLS {
   void makeTimeStamp( std::string & stamp );
   void makeTimeStamp( std::string & stamp, time_t time );
   void makeTimeStamp( std::string & stamp, struct tm *time );
+  inline void calcFlatRange( double mean, double sigma, double & xmin, double & xmax );
+  inline void calcFlatMeanSigma( double xmin, double xmax,  double &mean, double & sigma );
   class Timer {
   public:
     Timer():m_runningTime(false),m_runningClock(false)  {}
@@ -56,6 +60,18 @@ namespace TOOLS {
     clock_t m_stopClock;
   };
 };
+
+void TOOLS::calcFlatRange( double mean, double sigma, double & xmin, double & xmax ) {
+  const double d = sqrt(12.0);
+  double wh = 0.5*d*sigma;
+  xmin = mean-wh;
+  xmax = mean+wh;
+}
+
+void TOOLS::calcFlatMeanSigma(double xmin, double xmax, double & mean, double & sigma) {
+  mean  = (xmax+xmin)/2.0;
+  sigma = (xmax-xmin)/sqrt(12.0);
+}
 
 
 const char * TOOLS::yesNo(bool var) {
@@ -106,6 +122,8 @@ void TOOLS::coutFixed(int precision, int val) {
   sprintf(&fmt[0],"%%%dd",precision);
   printf(fmt,val);
 }
+
+
 #endif
 
 #endif

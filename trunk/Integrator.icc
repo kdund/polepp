@@ -67,6 +67,10 @@ inline void Integrator::initTable() {
    for (size_t i=0; i<m_tabIndex.size(); i++) {
       std::cout << "nsteps = " << m_tabNsteps[i] << std::endl;
       ntot *= m_tabNsteps[i];
+      m_tabXvalInd.push_back( m_tabXvalues.size() );
+      for (int ip=0; ip<m_tabNsteps[i]; ip++) {
+         m_tabXvalues.push_back(m_tabMin[i] + m_tabStep[i]*static_cast<double>(ip));
+      }
    }
    m_tabValues.resize(ntot,0);
    //
@@ -80,6 +84,7 @@ inline void Integrator::clrTable() {
    m_tabMax.clear();
    m_tabStep.clear();
    m_tabNsteps.clear();
+   m_tabXvalues.clear();
    m_tabValues.clear();
    m_tabulated = false;
 }
@@ -123,11 +128,36 @@ void Integrator::tabulate() {
       go(0);
       m_tabValues[iv] = result();
       std::cout << "( "
-                << tabCounters[0] << ", "
-                << tabCounters[1] << " ) => " <<  m_tabValues[iv] << std::endl;
+                << tabCounters[1] << ", "
+                << tabCounters[0] << " ) => " <<  m_tabValues[iv] << std::endl;
    }
    m_tabulated = true;
    std::cout << "TABULATE done!" << std::endl;
+}
+
+double Integrator::getValue( std::vector<double> & tabParams ) {
+   double val;
+//    size_t npars = tabParams.size();
+//    double x0,x1;
+//    size_t valind;
+//    size_t firstind;
+//    size_t lastind;
+//    std::vector<double>::const_iterator valIt;
+//    std::vector<double>::const_iterator firstIt;
+//    std::vector<double>::const_iterator lastIt;
+//    for (size_t i=0; i<npars; i++) {
+//       //      firstIt = m_tabXvalues[m_tabXvalInd[i]]
+//       //      lastIt  = (i<npars ? &m_tabXvalues[m_tabXvalInd[i+1]]:m_tabXvalues.end());
+//       //      valIt = std::find_if( firstIt, lastIt, std::bind2nd(std::greater_equal<double>(), tabParams[i]));
+//       //      valind = valIt-firstind;
+//       firstind = m_tabXvalInd[i];
+//       lastind  = (i<npars ? m_tabXvalInd[i+1]:m_tabXvalues.size());
+//       // binary search for index where X[ind]<tabParams[i]<X[ind+1]
+//       valind = gsl_interp_bsearch (&m_tabXvalues[firstind], tabParams[i], firstind, lastind);
+//       std::cout << "valind = " << valind << " ; x = " << tabParams[i]
+//                 << "x range: " << m_tabXvalues[firstind] << " - " << m_tabXvalues[lastind] << std::endl;
+//    }
+   return val;
 }
 
 void Integrator::go( void *params ) {

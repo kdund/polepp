@@ -9,6 +9,7 @@
 #include <gsl/gsl_monte_plain.h>
 #include <gsl/gsl_monte_miser.h>
 #include <gsl/gsl_monte_vegas.h>
+#include <gsl/gsl_interp.h>
 
 
 class Integrator {
@@ -25,6 +26,8 @@ class Integrator {
    inline void setTabParamsVal( std::vector<int> & tabind );
    //
    inline void clrTable();
+
+   inline double getValue( std::vector<double> & tabParams );
    //
    inline virtual void initialize();
    inline virtual void initTable();
@@ -46,6 +49,8 @@ class Integrator {
    std::vector<double> m_tabMax;      // maximum
    std::vector<double> m_tabStep;     // step size
    std::vector<int>    m_tabNsteps;   // number of steps
+   std::vector<double> m_tabXvalues;  // tabulated X for each parameter
+   std::vector<int>    m_tabXvalInd;  // first index in above vector for param [i]
    std::vector<double> m_tabValues;   // the actual table
    bool                m_tabulated;   // true if tabulate() is called successfully
 
