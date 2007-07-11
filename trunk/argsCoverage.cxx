@@ -30,13 +30,13 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     ValueArg<double> confLevel( "","cl",       "confidence level",false,0.9,"float",cmd);
 
     ValueArg<int>    method(    "m","method",     "method (1 - FHC2 (def), 2 - MBT)",false,1,"int",cmd);
-    SwitchArg        noTabulated("K","notab","Do not use tabulated poisson",false);
+    SwitchArg        noTabulated("K","notab","do not use tabulated poisson",false);
     cmd.add(noTabulated);
     //
-    SwitchArg        doStats("C","stats", "Collect statistics",false);
+    SwitchArg        doStats("C","stats", "collect statistics",false);
     cmd.add(doStats);
-    SwitchArg        doFixSig("S","fixsig", "Fixed meas. n_observed",false,cmd);
-    cmd.add(doFisSig);
+    SwitchArg        doFixSig("S","fixsig", "fixed meas. N(observed)",false);
+    cmd.add(doFixSig);
 
     ValueArg<double> minProb( "","minp",       "minimum probability",false,-1.0,"float",cmd);
     //

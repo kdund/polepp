@@ -2,7 +2,6 @@
 #include <fstream>
 #include <iomanip>
 #include <signal.h>
-#include <tclap/CmdLine.h> // Command line parser
 #include "Coverage.h"
 #include "Tools.h"
 

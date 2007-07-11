@@ -11,7 +11,7 @@ include Makefile.arch
 PACKAGE=Pole++
 LIBVERS=.1
 LD_LIBRARY_PATH:=.:$(ROOTSYS)/lib:$(LD_LIBRARY_PATH)
-OBJDIR=/opt/scratch/${PACKAGE}/obj
+OBJDIR=/work/scratch/${PACKAGE}/obj
 DEPDIR=$(OBJDIR)/dep
 VPATH= $(OBJDIR)
 INCLUDES += -I./  
