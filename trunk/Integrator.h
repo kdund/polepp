@@ -1,5 +1,6 @@
 #ifndef INTEGRATOR_H
 #define INTEGRATOR_H
+
 #include <iostream>
 #include <vector>
 #include <cmath>

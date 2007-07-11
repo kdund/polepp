@@ -1,3 +1,6 @@
+#ifndef OBSERVABLE_H
+#define OBSERVABLE_H
+
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -288,3 +291,4 @@ namespace OBS {
 };
 
 #include "Observable.icc"
+#endif

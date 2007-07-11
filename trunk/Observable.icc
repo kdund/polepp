@@ -1,10 +1,7 @@
-#include <iostream>
-#include <vector>
-#include <cmath>
-#include "Random.h"
-#include "Pdf.h"
-#include "Range.h"
+#ifdef OBSERVABLE_H
 
+#ifndef OBSERVABLE_ICC
+#define OBSERVABLE_ICC
 
 namespace OBS {
 
@@ -620,4 +617,6 @@ namespace OBS {
 
 };
 
+#endif
 
+#endif
