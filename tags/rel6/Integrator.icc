@@ -1,0 +1,255 @@
+//
+// Integrator inline implementation
+//
+Integrator::Integrator():
+   m_gslRange(0),
+   m_ncalls(10000),
+   m_tabulated(false)
+{
+}
+
+Integrator::~Integrator()
+{
+   if (m_gslRange) gsl_rng_free(m_gslRange);
+}
+
+void Integrator::setFunction( double (* f)(double * x, size_t dim, void * params) ) {
+   m_gslMonteFun.f = f;
+}
+
+void Integrator::setFunctionDim( size_t dim ) {
+   m_gslMonteFun.dim = dim;
+}
+
+void Integrator::setFunctionParams( void * params ) {
+   m_gslMonteFun.params = params;
+}
+
+void Integrator::setIntRanges( std::vector<double> & xl, std::vector<double> & xu ) {
+   m_intXL = xl;
+   m_intXU = xu;
+}
+
+inline void Integrator::setNcalls( unsigned int nc ) {
+   m_ncalls = nc;
+}
+
+inline void Integrator::addTabPar( size_t i, double xmin, double xmax, double step ) {
+   if (std::find(m_tabIndex.begin(), m_tabIndex.end(), i )!=m_tabIndex.end()) {
+      std::cout << "parameter " << i << " is already added" << std::endl;
+      return;
+   }
+   m_tabIndex.push_back(i);
+   m_tabMin.push_back(xmin);
+   m_tabMax.push_back(xmax);
+   m_tabStep.push_back(step);
+   std::cout << "x range = " << xmin << ":" << xmax << "   step = " << step << std::endl;
+   m_tabNsteps.push_back(static_cast<int>(((xmax-xmin)/step)+0.5)+1);
+   m_tabulated = false;
+}
+
+inline void Integrator::setTabParamsVal( std::vector<int> & tabind ) {
+   if (m_gslMonteFun.params==0) return;
+   //
+   double *parptr = static_cast<double *>(m_gslMonteFun.params);
+   for (size_t i=0; i<tabind.size(); i++) { // loops over all tabulated pars
+      size_t ind = m_tabIndex[i]; // which par is it
+      parptr[ind] = m_tabMin[ind] + m_tabStep[ind]*tabind[i]; // set par value = xmin+dx*ix
+   }
+}
+
+inline void Integrator::initTable() {
+   int ntot;
+   if (m_tabulated) return; // already tabulated
+   if (m_tabIndex.size()<1) return; // empty table
+   ntot = 1;
+   size_t nind = m_tabIndex.size();
+   for (size_t i=0; i<m_tabIndex.size(); i++) {
+      std::cout << "nsteps = " << m_tabNsteps[i] << std::endl;
+      ntot *= m_tabNsteps[i];
+      m_tabXvalInd.push_back( m_tabXvalues.size() );
+      for (int ip=0; ip<m_tabNsteps[i]; ip++) {
+         m_tabXvalues.push_back(m_tabMin[i] + m_tabStep[i]*static_cast<double>(ip));
+      }
+   }
+   m_tabValues.resize(ntot,0);
+   //
+   std::cout << "Table init: N ind= " << nind << std::endl;
+   std::cout << "Table init: N pnt= " << ntot << std::endl;
+}
+
+inline void Integrator::clrTable() {
+   m_tabIndex.clear();
+   m_tabMin.clear();
+   m_tabMax.clear();
+   m_tabStep.clear();
+   m_tabNsteps.clear();
+   m_tabXvalues.clear();
+   m_tabValues.clear();
+   m_tabulated = false;
+}
+
+void Integrator::initialize() {
+   gsl_rng_env_setup();
+   const gsl_rng_type *T = gsl_rng_default;
+   m_gslRange = gsl_rng_alloc(T);
+}
+
+void Integrator::tabulate() {
+   if (m_tabulated) return;
+   initTable();
+
+   std::vector<int> tabCounters;
+   size_t npars = m_tabIndex.size();
+   tabCounters.resize(npars,0);
+   //
+   bool done;
+   size_t  ic;
+   std::cout << "TABULATE loop" << std::endl;
+   for (size_t iv=0; iv<m_tabValues.size(); iv++) {
+      // use tabCounters to set input though params
+      // increment counters
+      done = false;
+      ic=0;
+      if (iv>0) { // first one is zero-vector
+         while (!done) {
+            tabCounters[ic]++;
+            if (tabCounters[ic]>= m_tabNsteps[ic]) {
+               tabCounters[ic]=0;
+               ic++;
+               if (ic>=npars) done = true;
+            } else {
+               done = true;
+            }
+         }
+      }
+      // now tabCounters contains the indecis for the current point
+      setTabParamsVal( tabCounters );
+      go(0);
+      m_tabValues[iv] = result();
+      std::cout << "( "
+                << tabCounters[1] << ", "
+                << tabCounters[0] << " ) => " <<  m_tabValues[iv] << std::endl;
+   }
+   m_tabulated = true;
+   std::cout << "TABULATE done!" << std::endl;
+}
+
+double Integrator::getValue( std::vector<double> & tabParams ) {
+   double val;
+//    size_t npars = tabParams.size();
+//    double x0,x1;
+//    size_t valind;
+//    size_t firstind;
+//    size_t lastind;
+//    std::vector<double>::const_iterator valIt;
+//    std::vector<double>::const_iterator firstIt;
+//    std::vector<double>::const_iterator lastIt;
+//    for (size_t i=0; i<npars; i++) {
+//       //      firstIt = m_tabXvalues[m_tabXvalInd[i]]
+//       //      lastIt  = (i<npars ? &m_tabXvalues[m_tabXvalInd[i+1]]:m_tabXvalues.end());
+//       //      valIt = std::find_if( firstIt, lastIt, std::bind2nd(std::greater_equal<double>(), tabParams[i]));
+//       //      valind = valIt-firstind;
+//       firstind = m_tabXvalInd[i];
+//       lastind  = (i<npars ? m_tabXvalInd[i+1]:m_tabXvalues.size());
+//       // binary search for index where X[ind]<tabParams[i]<X[ind+1]
+//       valind = gsl_interp_bsearch (&m_tabXvalues[firstind], tabParams[i], firstind, lastind);
+//       std::cout << "valind = " << valind << " ; x = " << tabParams[i]
+//                 << "x range: " << m_tabXvalues[firstind] << " - " << m_tabXvalues[lastind] << std::endl;
+//    }
+   return val;
+}
+
+void Integrator::go( void *params ) {
+   std::cout << "WARNING: should not be called! Must be overloaded Integrator::go()" << std::endl;
+}
+
+double Integrator::result() {
+   return m_result;
+}
+
+double Integrator::error() {
+   return m_error;
+}
+
+
+//////////////////////////////////////////////////////////////////
+IntegratorVegas::IntegratorVegas():
+   Integrator(),
+   m_gslVegasState(0)
+{
+}
+
+IntegratorVegas::~IntegratorVegas() {
+   if (m_gslVegasState) gsl_monte_vegas_free(m_gslVegasState);
+}
+
+void IntegratorVegas::initialize() {
+   Integrator::initialize();
+   m_gslVegasState = gsl_monte_vegas_alloc(m_gslMonteFun.dim);
+}
+
+void IntegratorVegas::go( void *params ) {
+   gsl_monte_vegas_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
+                              m_gslMonteFun.dim, m_ncalls,
+                              m_gslRange, m_gslVegasState,
+                              &m_result, &m_error);
+}
+
+double IntegratorVegas::chisq() {
+   return m_gslVegasState->chisq;
+}
+
+//////////////////////////////////////////////////////////////////
+IntegratorPlain::IntegratorPlain():
+   Integrator(),
+   m_gslPlainState(0)
+{
+}
+
+IntegratorPlain::~IntegratorPlain() {
+   if (m_gslPlainState) gsl_monte_plain_free(m_gslPlainState);
+}
+
+void IntegratorPlain::initialize() {
+   Integrator::initialize();
+   m_gslPlainState = gsl_monte_plain_alloc(m_gslMonteFun.dim);
+}
+
+void IntegratorPlain::go( void *params ) {
+   gsl_monte_plain_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
+                              m_gslMonteFun.dim, m_ncalls,
+                              m_gslRange, m_gslPlainState,
+                              &m_result, &m_error);
+}
+
+double IntegratorPlain::chisq() {
+   return 0;
+}
+
+//////////////////////////////////////////////////////////////////
+IntegratorMiser::IntegratorMiser():
+   Integrator(),
+   m_gslMiserState(0)
+{
+}
+
+IntegratorMiser::~IntegratorMiser() {
+   if (m_gslMiserState) gsl_monte_miser_free(m_gslMiserState);
+}
+
+void IntegratorMiser::initialize() {
+   Integrator::initialize();
+   m_gslMiserState = gsl_monte_miser_alloc(m_gslMonteFun.dim);
+}
+
+void IntegratorMiser::go( void *params ) {
+   gsl_monte_miser_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
+                              m_gslMonteFun.dim, m_ncalls,
+                              m_gslRange, m_gslMiserState,
+                              &m_result, &m_error);
+}
+
+double IntegratorMiser::chisq() {
+   return 0;
+}
