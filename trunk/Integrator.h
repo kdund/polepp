@@ -14,50 +14,71 @@
 
 
 class Integrator {
- public:
+public:
+   //! main constructor
    inline Integrator();
+   //! destructor
    inline virtual ~Integrator();
 
+   /*! @name GSL integrator setup */
+   //@{
+   //! set function to be integrated
    inline void setFunction( double (* f)(double * x, size_t dim, void * params) );
+   //! set function dimension
    inline void setFunctionDim( size_t dim );
+   //! set function parameters
    inline void setFunctionParams( void * params );
+   //! set integration ranges
    inline void setIntRanges( std::vector<double> & xl, std::vector<double> & xu );
+   //! set number of calls
    inline void setNcalls( unsigned int nc );
-   inline void addTabPar( size_t i, double xmin, double xmax, double step );
+   //@}
+   /*! @name Tabulating */
+   //@{
+   //! add a parameter to be tabulated
+   inline void addTabPar( size_t ind, double xmin, double xmax, double step );
+   //! set tabulated parameters given a vector of parameter indecis
    inline void setTabParamsVal( std::vector<int> & tabind );
-   //
+   //! clear table
    inline void clrTable();
-
+   //! get the tabulated value with the given parameter vector
    inline double getValue( std::vector<double> & tabParams );
-   //
-   inline virtual void initialize();
+   //! initialize table
    inline virtual void initTable();
+   //! do the tabulation
    inline virtual void tabulate();
+   //@}
+   //! initialize
+   inline virtual void initialize();
+   //! integrate using the given parameters
    inline virtual void go( void *params );
+   //! get chi2
    inline virtual double chisq()=0;
+   //! get result
    inline double result();
+   //! get error
    inline double error();
 
- protected:
-   gsl_rng            *m_gslRange;    // GSL range
-   unsigned int        m_ncalls;      // number of iterations
-   gsl_monte_function  m_gslMonteFun; // structure for GSL MC integration
-   std::vector<double> m_intXL;       // lower integration range for each integrand
-   std::vector<double> m_intXU;       // idem, upper
+protected:
+   gsl_rng            *m_gslRange;    /**< GSL range */
+   unsigned int        m_ncalls;      /**< number of iterations */
+   gsl_monte_function  m_gslMonteFun; /**< structure for GSL MC integration */
+   std::vector<double> m_intXL;       /**< lower integration range for each integrand */
+   std::vector<double> m_intXU;       /**< idem, upper */
 
-   std::vector<size_t> m_tabIndex;    // index of tabulated var
-   std::vector<double> m_tabMin;      // minimum of tabulated value
-   std::vector<double> m_tabMax;      // maximum
-   std::vector<double> m_tabStep;     // step size
-   std::vector<int>    m_tabNsteps;   // number of steps
-   std::vector<double> m_tabXvalues;  // tabulated X for each parameter
-   std::vector<int>    m_tabXvalInd;  // first index in above vector for param [i]
-   std::vector<double> m_tabValues;   // the actual table
-   bool                m_tabulated;   // true if tabulate() is called successfully
+   std::vector<size_t> m_tabIndex;    /**< index of tabulated var */
+   std::vector<double> m_tabMin;      /**< minimum of tabulated value */
+   std::vector<double> m_tabMax;      /**< maximum */
+   std::vector<double> m_tabStep;     /**< step size */
+   std::vector<int>    m_tabNsteps;   /**< number of steps */
+   std::vector<double> m_tabXvalues;  /**< tabulated X for each parameter */
+   std::vector<int>    m_tabXvalInd;  /**< first index in above vector for param [i] */
+   std::vector<double> m_tabValues;   /**< the actual table */
+   bool                m_tabulated;   /**< true if tabulate() is called successfully */
 
 
-   double m_result;                   // result of integration
-   double m_error;                    // error of idem
+   double m_result;                   /**< result of integration */
+   double m_error;                    /**< error of idem */
 };
 
 class IntegratorVegas : public Integrator {
