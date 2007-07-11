@@ -1,0 +1,4 @@
+2007-07-11	Fredrik Tegenfeldt <fredrik.tegenfeldt@cern.ch>
+	* started this file
+	* tagged version as 'rel6' ( not very nice )
+	* incorporates now integrator class - not used by Observable or Pole yet
