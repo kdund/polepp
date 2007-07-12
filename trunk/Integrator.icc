@@ -1,3 +1,7 @@
+#ifdef INTEGRATOR_H
+
+#ifndef INTEGRATOR_ICC
+#define INTEGRATOR_ICC
 //
 // Integrator inline implementation
 //
@@ -253,3 +257,7 @@ void IntegratorMiser::go( void *params ) {
 double IntegratorMiser::chisq() {
    return 0;
 }
+
+#endif
+
+#endif

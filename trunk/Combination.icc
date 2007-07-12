@@ -1,6 +1,6 @@
 #include <iostream>
 namespace Combination {
-  bool add(std::vector<int> & cnt, int elem, int vmax) {
+  template<typename T> bool add(std::vector<T> & cnt, int elem, T vmax) {
     if (elem<0) return false;
     if (elem>int(cnt.size())-1) return false;
     cnt[elem]++;
@@ -12,7 +12,7 @@ namespace Combination {
     return true;
   }
 
-  bool add(std::vector<int> & cnt, int elem, const std::vector<int> & vmax) {
+  template<typename T> bool add(std::vector<T> & cnt, int elem, const std::vector<T> & vmax) {
     if (elem<0) return false;
     if (elem>int(cnt.size())-1) return false;
     cnt[elem]++;
@@ -24,23 +24,23 @@ namespace Combination {
     return true;
   }
 
-  bool next_vector(std::vector<int> & vec, int vmax) {
+  template<typename T> bool next_vector(std::vector<T> & vec, int vmax) {
     int elem = int(vec.size())-1;
     return add(vec,elem,vmax);
   }
 
-  bool next_vector(std::vector<int> & vec, const std::vector<int> & vmax) {
+  template<typename T> bool next_vector(std::vector<T> & vec, const std::vector<T> & vmax) {
     int elem = int(vec.size())-1;
     return add(vec,elem,vmax);
   }
 
-  inline int makeIndexVector( int nelem, int imax, std::vector< std::vector<int> > & nvec) {
+  template<typename T> inline size_t makeIndexVector( int nelem, T imax, std::vector< std::vector<T> > & nvec) {
     //
     // Make a collection of vectors, each having <nelem> elements.
     // Each vector consists of indecis in the range [0..imax]
     //
     nvec.clear();
-    std::vector< int > jj;
+    std::vector<T> jj;
     jj.resize(nelem,0);
     nvec.push_back(jj);  
     while (Combination::next_vector(jj,imax)) {
@@ -53,7 +53,7 @@ namespace Combination {
     return nvec.size();
   }
 
-  inline int makeIndexVector( const std::vector<int> & imax, std::vector< std::vector<int> > & nvec) {
+  template<typename T> inline int makeIndexVector( const std::vector<T> & imax, std::vector< std::vector<T> > & nvec) {
     //
     // Make a collection of vectors, each having <imax.size()> elements.
     // The element <i> of a given vector has index range given by [ 0..imax(i) ]
@@ -61,7 +61,7 @@ namespace Combination {
     const unsigned int nelem = imax.size();
     nvec.clear();
     //
-    std::vector< int > jj;
+    std::vector<T> jj;
     jj.resize(nelem,0);
     nvec.push_back(jj);
     while (Combination::next_vector(jj,imax)) {
@@ -75,10 +75,10 @@ namespace Combination {
     return nvec.size();
   }
 
-  int getIndexVector(std::vector<int> & nvec, std::vector< std::vector<int> > & allVectors) {
-    std::vector<int> nmax =  allVectors.back();     // vector containg the maximum index of all elements
-    unsigned int nsize = allVectors.front().size(); // number of points
-    unsigned int nFullSize = allVectors.size();     // number of vectors
+  template<typename T> int getIndexVector(std::vector<T> & nvec, std::vector< std::vector<T> > & allVectors) {
+    std::vector<T> nmax =  allVectors.back(); // vector containg the maximum index of all elements
+    size_t nsize = allVectors.front().size(); // number of points
+    size_t nFullSize = allVectors.size();     // number of vectors
     //
     if (nvec.size() != nsize) {
       std::cerr << "WARNING: Input vector of faulty size (" << nvec.size() << " <> " << nsize << ")\n";
@@ -87,17 +87,17 @@ namespace Combination {
     //
     // Find index in array of vectors matching the given vector
     //
-    unsigned int ofs = 0;
-    unsigned int npp=0;
+    T ofs=0;
+    T npp=0;
     int nvecInd;
     for (unsigned int i=0; i<nsize; i++) {
       nvecInd = nsize-i-1;
       if (i==0) {
-        npp=1;
+        npp=static_cast<T>(1);
       } else {
         npp *= nmax[nvecInd+1]+1;
       }
-      if (nvec[nvecInd]>int(nmax[nvecInd])) {
+      if (nvec[nvecInd]>nmax[nvecInd]) {
         std::cout << "WARNING: Too large element in input vector (" << nvec[nvecInd] << " > " << nmax[nvecInd] << ")\n";
         std::cout << "         " << nvecInd << ",  nsize = " << nsize << ",  nmax = " << nmax[i] << std::endl;
         return -1;

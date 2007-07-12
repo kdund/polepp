@@ -77,6 +77,8 @@ obstest:	obstest.o
 		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
 gsltest:	gsltest.o
 		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(GSLLIB) $(SHLIBFILE)  -o $@
+pdftst:		pdftst.o
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
 
 # documentation
 

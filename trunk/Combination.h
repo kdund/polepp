@@ -4,14 +4,14 @@
 #include <vector>
 
 namespace Combination {
-  inline bool add(std::vector<int> & cnt, int elem, int vmax);
-  inline bool add(std::vector<int> & cnt, int elem, const std::vector<int> & vmax);
-  inline bool next_vector(std::vector<int> & vec, int vmax);
-  inline bool next_vector(std::vector<int> & vec, const std::vector<int> & vmax);
+  template<typename T> inline bool add(std::vector<T> & cnt, int elem, T vmax);
+  template<typename T> inline bool add(std::vector<T> & cnt, int elem, const std::vector<T> & vmax);
+  template<typename T> inline bool next_vector(std::vector<T> & vec, T vmax);
+  template<typename T> inline bool next_vector(std::vector<T> & vec, const std::vector<T> & vmax);
   //
-  inline int  makeIndexVector( int imax, std::vector< std::vector<int> > & nvec);
-  inline int  makeIndexVector( const std::vector<int> & imax, std::vector< std::vector<int> > & nvec);
-  inline int  getIndexVector(std::vector<int> & nvec, std::vector< std::vector<int> > & allVectors);
+  template<typename T> inline size_t  makeIndexVector( T imax, std::vector< std::vector<T> > & nvec);
+  template<typename T> inline size_t  makeIndexVector( const std::vector<T> & imax, std::vector< std::vector<T> > & nvec);
+  template<typename T> inline int     getIndexVector(std::vector<T> & nvec, std::vector< std::vector<T> > & allVectors);
 
 }; // end of Utils
 
