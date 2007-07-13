@@ -840,10 +840,12 @@ namespace PDF {
 
   inline const double Poisson::rawOrTab(const int n, const double s) const {
     if (isTabulated()) {
+      std::cout << "use tabulated!" << std::endl;
       m_tabVec[0] = s;
       m_tabVec[1] = static_cast<double>(n);
       return m_poisTabulator->getValue( m_tabVec );
     }
+      std::cout << "NOT tabulated!" << std::endl;
     return raw(n,s);
   }
 
@@ -908,13 +910,45 @@ namespace PDF {
 
 template<>
 inline double Tabulator<PDF::Poisson>::calcValue() const {
-  // m_parameter contains:
+  // m_parameters contains:
   // [1] = N
   // [0] = s
-  if (m_parChanged[1] && (!m_parChanged[0]))
+  //  std::cout << "Calling calcValue() : s = " << m_parameters[0] << " ; N = " << m_parameters[1] << std::endl;
+  if (m_parChanged[1] && (!m_parChanged[0])) {
+    //    std::cout << "RAWCACHE!" << std::endl;
     return m_function->rawCacheNP1();
-  else
+  } else {
+    //    std::cout << "RAW!" << std::endl;
     return m_function->raw( static_cast<int>(m_parameters[1]+0.5), m_parameters[0] );
+  }
+  return 0;
+}
+
+template<>
+inline double Tabulator<PDF::Poisson>::interpolate( size_t ind ) const {
+  std::cout << "USING Pois interp" << std::endl;
+  std::cout << "f(N|s) =  " << this->m_tabValues[ind] << " :  N = " << m_parameters[1] << " , s = " << m_parameters[0] << std::endl;
+  // m_parameters contains:
+  // [1] = N
+  // [0] = s
+  //
+  size_t mind = m_parIndex[0];
+  double lmb0 = double(mind)*m_tabStep[0] + m_tabMin[0]; // discretized mean
+  double x = m_parameters[0];
+  double dlmb = x - lmb0;                   // diff relative requested mean
+  double f0   = this->m_tabValues[ind];                  // f() at discretized mean
+  //
+  // Do Taylor expansion around lmb0 to second order
+  //
+  double alpha=0.0;
+  double beta=0.0;
+  if (lmb0>0.0) {
+    alpha = (double(x)/lmb0)-1.0;
+    beta  = double(x)/(lmb0*lmb0);
+  }
+  double corr1 = f0*alpha*dlmb;
+  double corr2 = 0.5*f0*(alpha*alpha - beta)*dlmb*dlmb;
+  return f0 + corr1 + corr2;
 }
 
 #endif

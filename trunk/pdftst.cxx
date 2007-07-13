@@ -149,8 +149,8 @@ int main(int argc, char *argv[]) {
   //  gPois.init(1000000,60,200.0);
   cout << "Timing of gPoisTab init." << endl;
   times(&start);
-  PDF::gPoisTab.setRangeMean( 10000,0.0,100.0);
-  PDF::gPoisTab.setRangeX(96,5);
+  PDF::gPoisTab.setRangeMean( 1000,0.0,10.0);
+  PDF::gPoisTab.setRangeX(100,0);
   PDF::gPoisTab.tabulateOld();
   times(&stop);
   print_time(&start,&stop);
@@ -158,14 +158,16 @@ int main(int argc, char *argv[]) {
   cout << "Timing of gPoisson with tab init." << endl;
   times(&start);
   PDF::gPoisson.initTabulator();
-  PDF::gPoisson.setTabN( 5,100 );
-  PDF::gPoisson.setTabMean( 0.0,100.0,10000 );
+  PDF::gPoisson.setTabN( 0,6 );
+  PDF::gPoisson.setTabMean( 0.0,2.0,5 );
+//   PDF::gPoisson.setTabN( 1,100 );
+//   PDF::gPoisson.setTabMean( 0.0,10.0,1000 );
   PDF::gPoisson.tabulate();
   times(&stop);
   print_time(&start,&stop);
 
 
-  for (int i=0; i<10; i++) {
+  for (int i=0; i<4; i++) {
     std::cout << i << "\t" << PDF::gPoisson.getVal(i,1.0) << "\t" << PDF::gPoisTab.getVal(i,1.0) << std::endl;
   }
 

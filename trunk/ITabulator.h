@@ -53,24 +53,30 @@ protected:
    //! sets the parameter values given
    virtual void setParameters( const std::vector<size_t> & indvec, const std::vector<size_t> & indvecLast) {}
    //! calculate the index in the table for a given vector of values
-   virtual int calcTabIndex( const std::vector<double> & valvec ) const { return 0; }
+   virtual int calcTabIndex( const std::vector<double> & valvec ) { return 0; }
    //! to be called by tabulate() - to be implemented for each specific class
    virtual double calcValue() const {return 0;}
+   //! to be called by getValue() - interpolator - may be either a default function or defined per class
+   virtual double interpolate( size_t ind ) const {return 0;}
 
    //
-   std::vector<double> m_parameters;  /**< vector containing the parameters set in tabulate() and used in calcValue() */
-   std::vector<double> m_parChanged;  /**< flags which parameters were changed since last vector in tabulate()        */
    std::vector<int>    m_tabIndex;    /**< vector of parameter indecis - not used internally, just for external book keeping */
    std::vector<std::string> m_tabName;/**< vector of parameter names - not used internally, just for external book keeping */
    std::vector<double> m_tabMin;      /**< minimum of tabulated value */
    std::vector<double> m_tabMax;      /**< maximum */
    std::vector<double> m_tabStep;     /**< step size */
    std::vector<size_t> m_tabNsteps;   /**< number of steps */
+   std::vector<size_t> m_tabMaxInd;   /**< number of steps - 1 ; not so nice */
    std::vector<double> m_tabValues;   /**< the actual table */
    bool                m_tabulated;   /**< true if tabulate() is called successfully */
 
    std::string         m_name;        /**< name */
    std::string         m_description; /**< brief description */
+
+   std::vector<double> m_parameters;  /**< vector containing the parameters set in tabulate() and used in calcValue() */
+   std::vector<double> m_parChanged;  /**< flags which parameters were changed since last vector in tabulate()        */
+   std::vector<size_t> m_parIndex;    /**< indecis obtained by calcTabIndex() */
+
 };
 
 #endif
