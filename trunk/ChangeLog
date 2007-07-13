@@ -1,3 +1,8 @@
+2007-07-13	Fredrik Tegenfeldt <fredrik.tegenfeldt@cern.ch>
+	* implemented new Tabulator class in polelim
+	* general Tabulator now seems to work
+	* tested for Tabulator<Poisson>
+	
 2007-07-11	Fredrik Tegenfeldt <fredrik.tegenfeldt@cern.ch>
 	* split Measurement.h into .h and .icc files
 
