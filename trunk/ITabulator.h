@@ -23,16 +23,24 @@ public:
    inline ITabulator() {}
    //! destructor
    inline virtual ~ITabulator() {}
+
+   //! set table name
+   virtual void setName( const char *name ) {}
+   //! set table description
+   virtual void setDescription( const char *desc ) {}
+
    //@}
    /*! @name Tabulating */
    //@{
-   virtual void setNparams( size_t npars ) {};
+   virtual void setNparams( size_t npars ) {}
    //! add tabulated parameter def, using step size
    virtual void addTabParStep( const char *name, int index, double xmin, double xmax, double step, int parInd=-1 ) {}
    //! add tabulated parameter def, using N(steps)
    virtual void addTabParNsteps( const char *name, int index, double xmin, double xmax, size_t nsteps, int parInd=-1 ) {}
    //! clear table
    virtual void clrTable() {}
+   //! print table info
+   virtual void printTable() const {}
    //! do the tabulation
    virtual void tabulate() {}
    //! get the tabulated value with the given parameter vector

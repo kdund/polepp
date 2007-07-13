@@ -30,7 +30,7 @@ void Pole::initDefault() {
   m_lowerLimitPrec = -1.0;
   m_upperLimitPrec = -1.0;
   //
-  m_poisson = &PDF::gPoisTab;
+  m_poisson = &PDF::gPoisson;
   m_gauss   = &PDF::gGauss;
   m_gauss2d = &PDF::gGauss2D;
   m_logNorm = &PDF::gLogNormal;

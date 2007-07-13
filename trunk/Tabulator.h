@@ -53,6 +53,10 @@ public:
    inline Tabulator();
    //! destructor
    inline virtual ~Tabulator();
+   //! set table name
+   inline void setName( const char *name );
+   //! set table description
+   inline void setDescription( const char *desc );
    //! set ptr to function of class T
    inline void setFunction(const T *fun);
    //@}
@@ -66,6 +70,8 @@ public:
    inline void addTabParNsteps( const char *name, int index, double xmin, double xmax, size_t nsteps, int parInd=-1 );
    //! clear table
    inline void clrTable();
+   //! print table
+   inline void printTable() const;
    //! do the tabulation
    inline void tabulate();
    //! get the tabulated value with the given parameter vector

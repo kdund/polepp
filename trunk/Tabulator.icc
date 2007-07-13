@@ -16,6 +16,16 @@ Tabulator<T>::~Tabulator() {
 }
 
 template<class T>
+void Tabulator<T>::setName( const char *name ) {
+   if (name) m_name = name;
+}
+
+template<class T>
+void Tabulator<T>::setDescription( const char *description ) {
+   if (description) m_description = description;
+}
+
+template<class T>
 void Tabulator<T>::setFunction(const T *fun) {
    m_function = fun;
 }
@@ -91,18 +101,97 @@ void Tabulator<T>::initTable() {
    m_parameters.resize( m_tabMin.size() );
    m_parChanged.resize( m_tabMin.size(), true );
    m_parIndex.resize( m_tabMin.size() );
+   size_t tabsize = 1;
+   for (size_t i=0; i<m_tabMin.size(); i++) {
+      tabsize *= m_tabNsteps[i];
+   }
+   m_tabValues.resize( tabsize );
+}
+
+template<class T>
+void Tabulator<T>::printTable() const {
+   size_t npars = m_tabMin.size();
+   size_t nsize=0;
+   size_t xminlen=0;
+   size_t xmaxlen=0;
+   size_t steplen=0;
+   size_t nstepslen=0;
+   size_t prec = 2;
+   size_t sz;
+   size_t ntot=1;
+   std::ostringstream xstr;
+
+   std::ios_base::fmtflags old = std::cout.flags();
+
+   for (size_t i=0; i<npars; i++) {
+      if (m_tabName[i].size()>nsize) nsize = m_tabName[i].size();
+      xstr.str("");
+      xstr << std::fixed << std::setprecision(prec) << m_tabMin[i];
+      sz = xstr.str().size();
+      if (sz>xminlen) xminlen=sz;
+      //
+      xstr.str("");
+      xstr << std::fixed << std::setprecision(prec) << m_tabMax[i];
+      sz = xstr.str().size();
+      if (sz>xmaxlen) xmaxlen=sz;
+
+      xstr.str("");
+      xstr << std::fixed << std::setprecision(prec) << m_tabStep[i];
+      sz = xstr.str().size();
+      if (sz>steplen) steplen=sz;
+
+      xstr.str("");
+      xstr << m_tabNsteps[i];
+      sz = xstr.str().size();
+      if (sz>nstepslen) nstepslen=sz;
+      //
+      ntot *= m_tabNsteps[i];
+   }
+
+   std::cout.flags(old);
+   //
+   std::cout << "\n--- TABLE SETTINGS ------------------------------------------------" << std::endl;
+   std::cout << " Table      :  " << m_name        << std::endl;
+   std::cout << " Decription :  " << m_description << std::endl;
+   std::cout << "-------------------------------------------------------------------" << std::endl;
+   std::cout << " " 
+             << std::setw(nsize)      << "Name" << " | "
+             << std::setw(xminlen)    << "Min"  << " | "
+             << std::setw(xmaxlen)    << "Max"  << " | "
+             << std::setw(steplen)    << "Step" << " | "
+             << std::setw(nstepslen)  << "N(steps)"
+             << std::endl;
+   std::cout << "-------------------------------------------------------------------" << std::endl;
+   for (size_t i=0; i<npars; i++) {
+      std::cout << " " << std::setw(nsize) << m_tabName[i] << " | " << std::flush;
+      TOOLS::coutFixed(prec,m_tabMin[i]);
+      std::cout << " | ";
+      TOOLS::coutFixed(prec,m_tabMax[i]);
+      std::cout << " | ";
+      TOOLS::coutFixed(prec,m_tabStep[i]);
+      std::cout << " | ";
+      TOOLS::coutFixed(prec,int(m_tabNsteps[i]));
+      std::cout << std::endl;
+   }
+   std::cout << "-------------------------------------------------------------------" << std::endl;
+
+   size_t memtot = ntot*sizeof(double)/1024;
+   std::cout << " Total size in memory : " << memtot << " kB" << std::endl;
+   std::cout << "-------------------------------------------------------------------\n" << std::endl;
 }
 
 // This will tabulate using calcValue() and the given ranges.
 template<class T>
 void Tabulator<T>::tabulate() {
    initTable();
+   printTable();
    std::vector<size_t> indvec(m_tabMin.size(),0);
    std::vector<size_t> indvecPrev;
    // generate all possible combinations of N(steps)
+   int ind=0;
    do {
       setParameters( indvec, indvecPrev );
-      m_tabValues.push_back( calcValue() );
+      m_tabValues[ind++] = calcValue();
       indvecPrev = indvec;
       //      std::cout << "POIS: " << m_tabValues.back() << std::endl;
    } while (Combination::next_vector(indvec,m_tabMaxInd));
@@ -181,10 +270,10 @@ double Tabulator<T>::calcValue() const {
 template<class T>
 double Tabulator<T>::getValue( const std::vector<double> & parvec ) {
    //   std::cout << "Calling getValue() : " << parvec[0] << " ; " << parvec[1] << std::endl;
+   setParameters(parvec);
    int ind = calcTabIndex( parvec );
    if (ind<0) {
       //      std::cout << "ind<0!" << std::endl;
-      setParameters(parvec);
       return this->calcValue();
    }
    return this->interpolate( ind );
@@ -192,7 +281,7 @@ double Tabulator<T>::getValue( const std::vector<double> & parvec ) {
 
 template<class T>
 double Tabulator<T>::interpolate( size_t ind ) const {
-  std::cout << "DEF INT!" << std::endl;
+   std::cout << "DEF INT!" << std::endl;
   return m_tabValues[ind]; // no interpolation
 }
 

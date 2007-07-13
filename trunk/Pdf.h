@@ -85,6 +85,7 @@ namespace PDF {
     Base(const Base & other) { copy(other); m_statNraw=0; m_statNrawCache=0; m_statNtot=0; m_statNtab=0; m_iTabulator=0; }
     virtual ~Base() { this->printStat(); if (m_iTabulator) delete m_iTabulator;}
     //
+    virtual void clrStat() {  m_statNraw = 0; m_statNrawCache=0; m_statNtot=0; m_statNtab=0; }
     virtual void setMean(double m)  { m_mean  = m; }
     virtual void setSigma(double s) { m_sigma = s; }
     //
@@ -344,7 +345,7 @@ namespace PDF {
       m_poisTabulator->addTabParStep( "N", 1,
                                       static_cast<double>(nmin), static_cast<double>(nmax), 1.0, 1);
     }
-    void setTabMean( double xmin, double xmax, size_t nsteps ) {
+    void setTabMean( size_t nsteps, double xmin, double xmax ) {
       if (m_poisTabulator==0) return;
       if (nsteps<1) return;
       // add parameter:
@@ -840,12 +841,11 @@ namespace PDF {
 
   inline const double Poisson::rawOrTab(const int n, const double s) const {
     if (isTabulated()) {
-      std::cout << "use tabulated!" << std::endl;
+      m_statNtab++;
       m_tabVec[0] = s;
       m_tabVec[1] = static_cast<double>(n);
       return m_poisTabulator->getValue( m_tabVec );
     }
-      std::cout << "NOT tabulated!" << std::endl;
     return raw(n,s);
   }
 
@@ -898,6 +898,7 @@ namespace PDF {
 
 #ifndef PDF_CXX
   extern Poisson  gPoisson;
+  extern Poisson  gPoissonTab;
   extern PoisTab  gPoisTab;
   extern Gauss    gGauss;
   extern GaussTab gGaussTab;
@@ -926,17 +927,21 @@ inline double Tabulator<PDF::Poisson>::calcValue() const {
 
 template<>
 inline double Tabulator<PDF::Poisson>::interpolate( size_t ind ) const {
-  std::cout << "USING Pois interp" << std::endl;
-  std::cout << "f(N|s) =  " << this->m_tabValues[ind] << " :  N = " << m_parameters[1] << " , s = " << m_parameters[0] << std::endl;
+   //  std::cout << "USING Pois interp" << std::endl;
+   //  std::cout << "f(N|s) =  " << this->m_tabValues[ind] << " :  N = " << m_parameters[1] << " , s = " << m_parameters[0] << std::endl;
   // m_parameters contains:
   // [1] = N
   // [0] = s
   //
+  //   return this->m_tabValues[ind];
+
   size_t mind = m_parIndex[0];
   double lmb0 = double(mind)*m_tabStep[0] + m_tabMin[0]; // discretized mean
-  double x = m_parameters[0];
-  double dlmb = x - lmb0;                   // diff relative requested mean
+  double x = m_parameters[1];
+  double dlmb = m_parameters[0] - lmb0;                   // diff relative requested mean
   double f0   = this->m_tabValues[ind];                  // f() at discretized mean
+  //  std::cout << "interp: " << lmb0 << " , "
+  //            << x << std::endl;
   //
   // Do Taylor expansion around lmb0 to second order
   //
@@ -948,6 +953,7 @@ inline double Tabulator<PDF::Poisson>::interpolate( size_t ind ) const {
   }
   double corr1 = f0*alpha*dlmb;
   double corr2 = 0.5*f0*(alpha*alpha - beta)*dlmb*dlmb;
+  //  std::cout << "interp corr: " << corr1 << " , " << corr2 << std::endl;
   return f0 + corr1 + corr2;
 }
 

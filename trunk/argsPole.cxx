@@ -65,10 +65,11 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> bkgIntScale( "","bkgintscale","bkg num sigma in integral", false,5.0,"float",cmd);
     ValueArg<int>    bkgIntN(     "","bkgintn",    "bkg: N points in integral", false,21, "int",cmd);
 
-    ValueArg<double> tabPoisMin( "","poismin",  "minimum mean value in table", false,0.0,"float",cmd);
-    ValueArg<double> tabPoisMax( "","poismax",  "maximum mean value in table", false,100.0,"float",cmd);
-    ValueArg<int>    tabPoisNM(  "","poisnm",   "number of mean value in table", false,100000,"int",cmd);
-    ValueArg<int>    tabPoisNX(  "","poisnx",   "maximum value of N in table", false,200,"int",cmd);
+    ValueArg<double> tabPoisMuMin( "","poismumin", "Poisson table: minimum mean value", false,0.0,"float",cmd);
+    ValueArg<double> tabPoisMuMax( "","poismumax", "Poisson table: maximum mean value", false,100.0,"float",cmd);
+    ValueArg<int>    tabPoisMuN(   "","poismun",   "Poisson table: number of mean value", false,100000,"int",cmd);
+    ValueArg<int>    tabPoisNmin(  "","poisnmin",  "Poisson table: minimum value of N", false,0,"int",cmd);
+    ValueArg<int>    tabPoisNmax(  "","poisnmax",  "Poisson table: maximum value of N", false,200,"int",cmd);
     ValueArg<int>    doVerbose(   "V","verbose", "verbose pole",    false,0,"int",cmd);
 
     ValueArg<std::string> inputFile( "f" ,"infile", "input file with tabulated data: n eff(dist,mean,sigma) bkg(dist,mean,sigma)", false,"","string",cmd);
@@ -77,7 +78,7 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     cmd.parse(argc,argv);
     //
     pole->setVerbose(doVerbose.getValue());
-    pole->setPoisson(&PDF::gPoisTab);
+    pole->setPoisson(&PDF::gPoisson);
     pole->setGauss(&PDF::gGauss);
     pole->setGauss2D(&PDF::gGauss2D);
     pole->setLogNormal(&PDF::gLogNormal);
@@ -116,9 +117,10 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     pole->setMinMuProb(minProb.getValue());
     //
     if (!noTabulated.getValue()) {
-      PDF::gPoisTab.setRangeMean( tabPoisNM.getValue(), tabPoisMin.getValue(), tabPoisMax.getValue() );
-      PDF::gPoisTab.setRangeX(tabPoisNX.getValue()+1,0,tabPoisNX.getValue());
-      PDF::gPoisTab.tabulate();
+      PDF::gPoisson.initTabulator();
+      PDF::gPoisson.setTabMean( tabPoisMuN.getValue(), tabPoisMuMin.getValue(), tabPoisMuMax.getValue() );
+      PDF::gPoisson.setTabN(tabPoisNmin.getValue(),tabPoisNmax.getValue());
+      PDF::gPoisson.tabulate();
     }
   }
   catch (ArgException e) {

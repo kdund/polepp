@@ -47,7 +47,7 @@ void print_time(struct tms *start, struct tms *stop) {
 //   return rval;
 // }
 
-void checkPois() {
+void checkPois(PDF::Base * poisTab, PDF::Base * poisNoTab ) {
 
   //
   double p,ptab,s=0;
@@ -67,7 +67,7 @@ void checkPois() {
   pmax=0;
   smax=0;
   nr=0;
-  int nsig = 100;
+  int nsig = 1000;
   for (int n=0; n<100; n++) {
     dpsum=dpsum2=0;
     smaxn=0;
@@ -76,8 +76,8 @@ void checkPois() {
     ns = RND::gRandom.gauss(ns0,sns0);
     for (int i=0; i<nsig; i++) {
       nr = RND::gRandom.poisson(ns);
-      p = PDF::gPoisson.getVal(nr,ns);
-      ptab = PDF::gPoisTab.getVal(nr,ns);
+      p = poisNoTab->getVal(nr,ns);
+      ptab = poisTab->getVal(nr,ns);
       dp = fabs(2.0*100.0*(p-ptab)/(p+ptab));
       //
       //      if (p>0.00001) {
@@ -101,15 +101,15 @@ void checkPois() {
 //       TOOLS::coutFixed(12,ptab); cout << "   ";
 //       TOOLS::coutFixed(12,dp); cout << endl;
     }
-    cout << "<"; TOOLS::coutFixed(3,nr); cout << "> : ";
-    TOOLS::coutFixed(6,dpmaxn);
-    cout << "%    s = ";
-    TOOLS::coutFixed(6,smaxn);
-    cout << "     p = ";
-    TOOLS::coutFixed(6,pmaxn);
-    cout << "     v = ";
-    TOOLS::coutFixed(6,(dpsum2-(dpsum*dpsum/double(nsig)))/(double(nsig)-1.0));
-    cout << endl;
+//     cout << "<"; TOOLS::coutFixed(3,nr); cout << "> : ";
+//     TOOLS::coutFixed(6,dpmaxn);
+//     cout << "%    s = ";
+//     TOOLS::coutFixed(6,smaxn);
+//     cout << "     p = ";
+//     TOOLS::coutFixed(6,pmaxn);
+//     cout << "     v = ";
+//     TOOLS::coutFixed(6,(dpsum2-(dpsum*dpsum/double(nsig)))/(double(nsig)-1.0));
+//     cout << endl;
     //    
   }
   cout << "Overall max : " << dpmax << "% " << nmax << " " << smax << std::endl;
@@ -144,36 +144,49 @@ void checkPois() {
 // }
 int main(int argc, char *argv[]) {
   //
+  PDF::Poisson poisDum;
+  PDF::Poisson poisNoTab;
+  PDF::Poisson poisTab;
+  PDF::PoisTab poisTabOld(&poisDum);
   PDF::gPrintStat = true;
   static struct tms start,stop;
   //  gPois.init(1000000,60,200.0);
-  cout << "Timing of gPoisTab init." << endl;
+
+  cout << "Timing of old tabulated Poisson init." << endl;
   times(&start);
-  PDF::gPoisTab.setRangeMean( 1000,0.0,10.0);
-  PDF::gPoisTab.setRangeX(100,0);
-  PDF::gPoisTab.tabulateOld();
+  poisTabOld.setRangeMean( 402,600.0,800.0);
+  poisTabOld.setRangeX(201,600);
+//   poisTabOld.setRangeMean( 2,0.0,1.0);
+//   poisTabOld.setRangeX(2,6);
+  poisTabOld.tabulateOld();
   times(&stop);
   print_time(&start,&stop);
 
-  cout << "Timing of gPoisson with tab init." << endl;
+  cout << "Timing of tabulated poisson init." << endl;
   times(&start);
-  PDF::gPoisson.initTabulator();
-  PDF::gPoisson.setTabN( 0,6 );
-  PDF::gPoisson.setTabMean( 0.0,2.0,5 );
-//   PDF::gPoisson.setTabN( 1,100 );
-//   PDF::gPoisson.setTabMean( 0.0,10.0,1000 );
-  PDF::gPoisson.tabulate();
+  poisTab.initTabulator();
+  poisTab.setTabN( 600,800 );
+  poisTab.setTabMean( 402, 600.0,800.0 );
+//   poisTab.setTabN( 1,2 );
+//   poisTab.setTabMean( 0.0,2.0,1000 );
+  poisTab.tabulate();
   times(&stop);
   print_time(&start,&stop);
+  poisTab.clrStat();
+  poisTabOld.clrStat();
 
+  checkPois(&poisTabOld,&poisNoTab);
+  poisNoTab.printStat();
+  poisTabOld.printStat();
+  std::cout << std::endl;
 
-  for (int i=0; i<4; i++) {
-    std::cout << i << "\t" << PDF::gPoisson.getVal(i,1.0) << "\t" << PDF::gPoisTab.getVal(i,1.0) << std::endl;
-  }
+  poisNoTab.clrStat();
 
+  checkPois(&poisTab,&poisNoTab);
+  poisNoTab.printStat();
+  poisTab.printStat();
 
-
-  //  checkPois();
+  PDF::gPrintStat = false;
   //  cout << " p = " << checkPoisTime(false) << endl;;
   //  cout << " p = " << checkPoisTime(true) << endl;;
   //

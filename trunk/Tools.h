@@ -5,6 +5,7 @@
 #include <ctime>
 #include <cmath>
 #include <string>
+#include <sstream>
 
 
 namespace TOOLS {

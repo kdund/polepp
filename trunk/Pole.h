@@ -349,7 +349,7 @@ public:
 
   /*! @name PDF instances */
   //@{
-  void setPoisson(  const PDF::PoisTab   *pdf)  {m_poisson=pdf;}
+  void setPoisson(  const PDF::Poisson   *pdf)  {m_poisson=pdf;}
   void setGauss(    const PDF::Gauss     *pdf)  {m_gauss=pdf;}
   void setGauss2D(  const PDF::Gauss2D   *pdf)  {m_gauss2d=pdf;}
   void setLogNormal(const PDF::LogNormal *pdf)  {m_logNorm=pdf;}
@@ -501,7 +501,7 @@ public:
 
 private:
 
-  const PDF::PoisTab   *m_poisson;
+  const PDF::Poisson   *m_poisson;
   const PDF::Gauss     *m_gauss;
   const PDF::Gauss2D   *m_gauss2d;
   const PDF::LogNormal *m_logNorm;
