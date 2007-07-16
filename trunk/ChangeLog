@@ -1,12 +1,17 @@
-2007-07-13	Fredrik Tegenfeldt <fredrik.tegenfeldt@cern.ch>
+2007-07-13 Fredrik Tegenfeldt <fredrik.tegenfeldt@cern.ch>
+	* intermediate tag before rewriting Observable class
+	*... prepare to remove all integral code in Observable
+	*... and use Integrator+Tabulator<Pole> instead
+	* tagged as rel7
+2007-07-13 Fredrik Tegenfeldt <fredrik.tegenfeldt@cern.ch>
 	* implemented new Tabulator class in polelim
 	* general Tabulator now seems to work
 	* tested for Tabulator<Poisson>
 	
-2007-07-11	Fredrik Tegenfeldt <fredrik.tegenfeldt@cern.ch>
+2007-07-11 Fredrik Tegenfeldt <fredrik.tegenfeldt@cern.ch>
 	* split Measurement.h into .h and .icc files
 
-2007-07-11	Fredrik Tegenfeldt <fredrik.tegenfeldt@cern.ch>
+2007-07-11 Fredrik Tegenfeldt <fredrik.tegenfeldt@cern.ch>
 	* started this file
 	* tagged version as 'rel6' ( not very nice )
 	* incorporates now integrator class - not used by Observable or Pole yet
