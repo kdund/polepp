@@ -8,16 +8,37 @@
 #include "Pdf.h"
 #include "Range.h"
 
-//class Range<int>;
-//class Range<double>;
-// template class Range<int>;
-// template class Range<float>;
-// template class Range<double>;
-//
-//Range<int> gRint;
+/*! @namespace OBS
+  @ brief contains classes for Observable
 
-// NOTE: pdf is given as a pointer and can be manipulated by the object
-//
+  The basic idea is that an Observable should contain:
+  - the observed value
+  - the assumed pdf
+  - the parameters of the assumed pdf
+  - the apriori probability
+  Note that the given pdf is a pointer to a const, i.e the pdf is NEVER modified by Observable.
+
+  The implementation consists of two base classes and specific implementations:
+  - OBS::Base            : virtual base class
+  - OBS::BaseType<T>     : templated base class inheriting from OBS::Base; the <T> is either <double> or <int>
+  - OBS::ObservableGauss : gaussian pdf inheriting from BaseType<double>
+  - OBS::ObservableLogN  : log-normal pdf inheriting from BaseType<double>
+  - OBS::ObservablePois  : poisson pdf inheriting from BaseType<int>
+  - OBS::ObservableFlat  : flat pdf inheriting from BaseType<double>
+
+  The user can then use the class to generate random observations using the given pdf characteristics.
+  {
+     ObservablePois poisObs;
+     poisObs.setPdfUseMean(2.5);
+     obs = poisObs();            // return a random observation
+     obs = poisObs.rnd();        // same
+     poisObs.setObservedRnd();   // set the observation to a random value
+     poisObs.setObservedValue(3);// set the observation to a fixed value
+     poisObs.setObservedValue(); // set the observation to the used mean value of the pdf
+     f   = poisObs(4);          // f = Poisson(4|mu=2.5)
+     
+  An observation can be forced to be locked using Base::lock().
+ */
 namespace OBS {
 
   class Base {
@@ -40,6 +61,7 @@ namespace OBS {
 
     inline void   setObservedValue( double v );
     inline void   setObservedValue( int v );
+
     inline void   getObservedValue( double & v ) const;
     inline void   getObservedValue( int & v ) const;
     inline double getObservedValue() const;
@@ -49,66 +71,31 @@ namespace OBS {
     inline void           setDescription(const char *description);
     inline void           lock();
     inline void           unlock();
-    inline void           setPdf(PDF::Base *pdf);
-    inline void           setPdfDist(const PDF::DISTYPE dist);
-    inline virtual void   setPdfMean(double m);
-    inline virtual void   setPdfSigma(double m);
-    inline void           setRndGen(RND::Random *rndgen);
+    inline void           setPdf(const PDF::Base *pdf);
+    inline virtual void   setPdfUseMean(double m);
+    inline virtual void   setPdfUseSigma(double m);
+    inline void           setRndGen(const RND::Random *rndgen);
     inline virtual void   validate();
-    inline virtual double aprioriProb( double x );
-    // setting integral related
-    inline void setIntNpts(int n);
-    inline void setIntScale(double s);
-    inline void setIntXRange(double xmin, double xmax, double step, int n=0);
-
-    inline virtual double transIntX(double x);
-
-    inline void calcIntRange(double & low, double & high, double mean, double sigma, bool positive=true);
-
-    inline void initInt();
-
-    inline void initInt(double xmin, double xmax, double step, int n=0);
-
-    //! init with zero range
-    inline void initIntConst();
-
-    //! init with default range, given by observed value, sigma and scale
-    inline void initIntegral();
-
-    inline void fillInt();
+    inline virtual double aprioriProb( double x ) const;
 
     // print out
     inline virtual void dump() const;
 
-    inline const double getPdfVal(double val);
+    inline const double getPdfVal(double val) const;
     // accessors
     inline const std::string & getName()        const;
     inline const std::string & getDescription() const;
-    inline const double        getPdfMean()     const;
-    inline const double        getPdfSigma()    const;
-    inline const PDF::DISTYPE  getPdfDist()     const;
-    inline PDF::Base          *getPdf()         const;
-    inline RND::Random        *getRndGen()      const;
+    inline const double        getPdfUseMean()     const;
+    inline const double        getPdfUseSigma()    const;
+    inline const PDF::Base    *getPdf()         const;
+    inline const RND::Random  *getRndGen()      const;
     
     // status
     inline const bool constant() const;
     inline const bool locked()   const;
     inline const bool valid()    const;
 
-    // integral accessors
-    inline const bool                 isIntFilled()       const;
-    inline const double               getIntScale()       const;
-    inline const std::vector<double> *getIntWeight()      const;
-    inline const double               getIntWeight(int i) const;
-    inline const double               getIntegral()       const;
-    inline const Range<double>       *getIntXRange()      const;
-    inline const double               getIntdX()          const;
-    inline const std::vector<double> *getIntX()           const;
-    inline const double               getIntX(int i)      const;
-    inline const double               getIntXmin()        const;
-    inline const double               getIntXmax()        const;
-    inline const int                  getIntN()           const;
-
+    // variable type
     inline virtual bool isInt()    const;
     inline virtual bool isDouble() const;
     inline virtual bool isFloat()  const;
@@ -116,7 +103,7 @@ namespace OBS {
     virtual Base *clone() const = 0;
 
   protected:
-    inline const double  getObsVal() const;
+    inline const double getObsVal() const;
     inline void copy(const Base & other);
     //
     std::string m_name;
@@ -124,25 +111,13 @@ namespace OBS {
     //
     // PDF def + rnd gen
     //
-    PDF::Base *m_pdf;
-    double m_mean;
-    double m_sigma;
-    PDF::DISTYPE m_dist;
-    bool m_locked;
-    bool m_valid;
-    RND::Random *m_rndGen;
-    double m_obsVal; //! copy of BaseType<T>::m_observedValue
-    //
-    // Integral def.
-    //
-    double              m_intScale;  //! range is defined by x+-scale*sigma
-    int                 m_intNpts;   //! requested number of points in integral - NOTE not == actual number of points
-    double              m_intTotal;  //! sum of all f(x)dx
-    bool                m_intFilled; //! true if integral is filled
-    std::vector<double> m_intWeight; //! array containing the weights f(x)dx
-    std::vector<double> m_intX;      //! array of x, always double although X may be from an integer PDF
-    Range<double>       m_intXRange; //! range of x
-
+    const PDF::Base   *m_pdf;    //! pointer to pdf function
+    double             m_mean;   //! used mean value
+    double             m_sigma;  //! used sigma 
+    bool               m_locked; //! flag: if true, the observed value is locked
+    bool               m_valid;  //! flag: true if valid (???)
+    const RND::Random *m_rndGen; //! pointer to random number generator
+    double             m_obsVal; //! copy of BaseType<T>::m_observedValue
   };
 
   template <typename T>
@@ -150,7 +125,6 @@ namespace OBS {
   public:
     inline BaseType();
     inline BaseType(const char *name,const char *desc=0);
-    inline BaseType(PDF::BaseType<T> *pdf, RND::Random *rndgen, const char *name, const char *description=0);
 
     inline BaseType(const BaseType<T> & other);
     inline virtual ~BaseType();
@@ -188,7 +162,7 @@ namespace OBS {
   class ObservableGauss : public BaseType<double> {
   public:
     inline ObservableGauss();
-    inline ObservableGauss(PDF::Gauss *pdf, RND::Random *rndGen, const char *name, const char *desc=0);
+    inline ObservableGauss(const char *name, const char *desc=0);
     inline ObservableGauss(const ObservableGauss & other);
     inline virtual ~ObservableGauss();
     //
@@ -209,15 +183,12 @@ namespace OBS {
     inline ObservableLogN const & operator=(ObservableLogN const & rh);
     inline double rnd();
     inline ObservableLogN *clone() const;
-  protected:
-    inline double transIntX(double x);
   };
 
   class ObservablePois : public BaseType<int> {
   public:
     inline ObservablePois();
-    inline ObservablePois(PDF::Poisson *pdf, RND::Random *rndGen, const char *name, const char *desc=0);
-    inline ObservablePois(PDF::PoisTab *pdf, RND::Random *rndGen, const char *name, const char *desc=0);
+    inline ObservablePois(const char *name, const char *desc=0);
     inline ObservablePois(const ObservablePois & other);
     inline virtual ~ObservablePois();
 
@@ -225,9 +196,9 @@ namespace OBS {
     inline void setExcludeZero();
     inline void setIncludeZero();
     inline bool getExcludeZeroFlag() const;
-    inline double aprioriProb( double x );
-    inline void setPdfMean(double m);
-    inline void setPdfSigma(double m);
+    inline double aprioriProb( double x ) const;
+    inline void setPdfUseMean(double m);
+    inline void setPdfUseSigma(double m);
     inline int rnd();
 
     inline ObservablePois *clone() const;
@@ -247,8 +218,8 @@ namespace OBS {
     inline ObservableFlat const & operator=(ObservableFlat const & rh);
     //
 
-    inline void setPdfMean(double m);
-    inline void setPdfSigma(double s);
+    inline void setPdfUseMean(double m);
+    inline void setPdfUseSigma(double s);
     inline void setPdfRange(double xmin, double xmax);
     inline double rnd();
 

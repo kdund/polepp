@@ -5,17 +5,15 @@
 
 namespace OBS {
 
-  Base::Base():m_pdf(0),m_mean(0),m_sigma(0),m_dist(PDF::DIST_UNDEF),
+  Base::Base():m_pdf(0),m_mean(0),m_sigma(0),
                m_locked(false),m_valid(false),m_rndGen(0),
-               m_obsVal(0),m_intScale(1.0),m_intNpts(1),m_intTotal(0),
-               m_intFilled(false) {
+               m_obsVal(0) {
   }
 
   Base::Base(const char *name, const char *description):
-    m_pdf(0),m_mean(0),m_sigma(0),m_dist(PDF::DIST_UNDEF),
+    m_pdf(0),m_mean(0),m_sigma(0),
     m_locked(false),m_valid(false),m_rndGen(0),
-    m_obsVal(0),m_intScale(1.0),m_intNpts(1),m_intTotal(0),
-    m_intFilled(false) {
+    m_obsVal(0) {
     if (name) m_name=name;
     if (description) m_description=description;
   }
@@ -58,166 +56,13 @@ namespace OBS {
   void         Base::setDescription(const char *description) { m_description=description;}
   void         Base::lock()                                  { m_locked = true; }
   void         Base::unlock()                                { m_locked = false; }
-  void         Base::setPdf(PDF::Base *pdf)                  { m_pdf = pdf; m_dist = ((pdf==0) ? PDF::DIST_NONE:pdf->getDist());}
-  void         Base::setPdfDist(const PDF::DISTYPE dist)     { if (m_pdf==0) m_dist = dist; }
+  void         Base::setPdf(const PDF::Base *pdf)            { m_pdf = pdf; validate(); }
   void         Base::setPdfMean(double m)                    { m_mean = m; }
   void         Base::setPdfSigma(double m)                   { m_sigma = m; } //if (m_pdf) m_pdf->setSigma(m); }
-  void         Base::setRndGen(RND::Random *rndgen)          { m_rndGen = rndgen;}
+  void         Base::setRndGen(const RND::Random *rndgen)    { m_rndGen = rndgen; validate(); }
   void         Base::validate()                              { m_valid = ((m_pdf!=0) && (m_rndGen!=0)); }
 
-  double Base::aprioriProb( double x ) { return 1.0;}
-
-  // setting integral related
-  void Base::setIntNpts(int n)     { m_intNpts = n; }
-  void Base::setIntScale(double s) { m_intScale = s; }
-  void Base::setIntXRange(double xmin, double xmax, double step, int n) {
-    m_intFilled = false;
-    m_intXRange.setRange(xmin,xmax,step,n);
-  }
-
-  double Base::transIntX(double x) { return x; }
-
-  void Base::calcIntRange(double & low, double & high, double mean, double sigma, bool positive)
-  {
-    double dx;
-    const double maxp = 0.9999;
-    int n=0, nprev, nlow, nhigh;
-    double p=0.0;
-    //  PDF::DISTYPE dist = pdf->getDist();
-    //
-    if (m_dist==PDF::DIST_NONE) {
-      low  = mean;
-      high = mean;
-    } else {
-      switch (m_dist) {
-      case PDF::DIST_GAUS2D:
-      case PDF::DIST_GAUS:
-      case PDF::DIST_LOGN:
-        low  = mean - m_intScale*sigma;
-        high = mean + m_intScale*sigma;
-        break;
-      case PDF::DIST_FLAT:
-        dx=sigma*1.73205081; // == sqrt(12)*0.5; ignore scale - always use full range
-        low  = mean-dx;
-        high = mean+dx;
-        break;
-      case PDF::DIST_POIS:
-        nlow  = -1;
-        nhigh = -1;
-        // find min and max range of poisson
-        // this is defined by maxp above
-        // low  : max N for wich sum( p(n) ) < 1.0-maxp
-        // high : min N for wich sum( p(n) ) > maxp
-        while (nhigh<0) {
-          nprev=n;
-          p += PDF::gPoisTab.getVal( n, mean );
-          //          p += pdf->getVal( n, mean );
-          //p += m_pdf->getVal( n, mean );
-          if ((n==0) || (p<(1.0-maxp))) nlow  = n;
-          if (p>maxp)       nhigh = n;
-          n++;
-          if (nprev>n) { // just a STUPID test; can be done better...
-            std::cerr << "Infinite loop caugh in OBS::calcIntRange() for Poisson - brutal exit" << std::endl;
-            exit(-1);
-          }
-        }
-        //
-        m_intNpts = nhigh-nlow+1;
-        //
-        low  = static_cast<double>(nlow);
-        high = static_cast<double>(nhigh);
-        break;
-      default: // ERROR STATE
-        low  = 0;
-        high = 0;
-        std::cerr << "OBS::calcIntRange() -> Unknown pdf type = " << m_dist << std::endl;
-        break;
-      }
-    }
-    if (positive && (low<0)) {
-      high = high-low;
-      low = 0;
-    }
-  }
-  
-  void Base::initInt() {
-    if (m_intXRange.n()<1) return;
-    int np = m_intXRange.n();
-    m_intWeight.resize(np,0.0);
-    m_intX.resize(np,0.0);
-    //
-    double x;
-    for (int i=0; i<np; i++) {
-      x = m_intXRange.getVal(i);
-      x = transIntX(x);
-      m_intX[i] = x; //! for LOGN, the Xrange is in log(x)
-    }
-
-    m_intTotal = 0;
-    m_intFilled = false;
-  }
-
-  void Base::initInt(double xmin, double xmax, double step, int n) {
-    this->setIntXRange(xmin,xmax,step,n);
-    this->initInt();
-  }
-
-  //! init with zero range
-  void Base::initIntConst() {
-    this->initInt(m_obsVal,m_obsVal,0,1);
-  }
-
-  //! init with default range, given by observed value, sigma and scale
-  void Base::initIntegral() {
-    if (this->constant()) { // takes care of DIST_NONE, DIST_UNDEF
-      this->initIntConst();
-    } else {
-      double low;
-      double high;
-      bool pos=true;
-      double mean, sigma;
-      switch ( this->m_dist ) {
-      case PDF::DIST_LOGN:
-        mean = PDF::calcLogMean(m_obsVal,double(m_sigma));
-        sigma = PDF::calcLogSigma(m_obsVal,double(m_sigma));
-        pos = false;
-        break;
-      case PDF::DIST_POIS:
-        mean = m_obsVal;
-        sigma = sqrt((mean>0 ? mean:0.0));
-        pos = true;
-        break;
-      default:
-        mean = m_obsVal;
-        sigma = m_sigma;
-        pos = true;
-      }
-      this->calcIntRange(low,high, mean , sigma, pos);
-      this->initInt(low,high,0,m_intNpts);
-    }
-  }
-
-  void Base::fillInt() {
-    if (m_intFilled) return;
-    int np = int(m_intX.size());
-    double f;
-    //      double dx = static_cast<double>(m_intXRange.step());
-    double dx;
-    m_intTotal=0;
-    if (np<1) return;
-    if (np==1) { // Dirac spike - integral and weight == 1.0
-      m_intWeight[0] = 1.0;
-      m_intTotal = 1.0;
-    } else {
-      for (int i=0; i<np-1; i++) {
-        f = this->getPdfVal(m_intX[i])*this->aprioriProb(m_intX[i]);
-        dx = static_cast<double>(m_intX[i+1]-m_intX[i]); // might be lognormal!
-        m_intWeight[i] = f*dx;
-        m_intTotal += m_intWeight[i];
-      }
-    }
-    m_intFilled = true;
-  }
+  double Base::aprioriProb( double x ) const { return 1.0;}
 
   // print out
   void Base::dump() const {
@@ -225,43 +70,29 @@ namespace OBS {
     std::cout << "--------------------------------------------" << std::endl;
     std::cout << "OBS::Base:dump()" << std::endl;
     std::cout << "Name : " << this->getName() << std::endl;
-    std::cout << "Mean : " << this->getPdfMean() << std::endl;
-    std::cout << "Sigma: " << this->getPdfSigma() << std::endl;
+    std::cout << "Mean : " << this->getPdfUseMean() << std::endl;
+    std::cout << "Sigma: " << this->getPdfUseSigma() << std::endl;
     std::cout << "Dist : " << PDF::distTypeStr(this->getPdfDist()) << std::endl;
     std::cout << "Obs  : " << this->getObsVal() << std::endl;
     std::cout << "--------------------------------------------" << std::endl;
   }
 
-  const double Base::getPdfVal(double val) {
+  const double Base::getPdfVal(double val) const {
     return (this->m_pdf ? (this->m_pdf)->getVal(val,this->m_mean,this->m_sigma):0.0);
   }
   // accessors
   const std::string & Base::getName()        const { return this->m_name;}
   const std::string & Base::getDescription() const { return this->m_description;}
-  const double        Base::getPdfMean()     const { return this->m_mean; } //(m_pdf ? m_pdf->getMean():0); }
-  const double        Base::getPdfSigma()    const { return this->m_sigma; } //(m_pdf ? m_pdf->getSigma():0); }
-  const PDF::DISTYPE  Base::getPdfDist()     const { return this->m_dist; }
-  PDF::Base          *Base::getPdf()         const { return this->m_pdf;}
-  RND::Random        *Base::getRndGen()      const { return this->m_rndGen;}
+  const double        Base::getPdfUseMean()     const { return this->m_mean; } //(m_pdf ? m_pdf->getMean():0); }
+  const double        Base::getPdfUseSigma()    const { return this->m_sigma; } //(m_pdf ? m_pdf->getSigma():0); }
+  const PDF::DISTYPE  Base::getPdfDist()     const { return ( this->m_pdf ? this->m_pdf->getDist:PDF::DIST_UNDEF ); }
+  const PDF::Base    *Base::getPdf()         const { return this->m_pdf;}
+  const RND::Random  *Base::getRndGen()      const { return this->m_rndGen;}
     
   // status
-  const bool Base::constant() const { return (m_locked || (m_dist==PDF::DIST_NONE) || (m_dist==PDF::DIST_UNDEF)); }
+  const bool Base::constant() const { return ( m_locked || ((getPdfDist()==PDF::DIST_NONE) || (getPdfDist==PDF::DIST_UNDEF)) ); }
   const bool Base::locked()   const { return m_locked;}
   const bool Base::valid()    const { return m_valid;}
-
-  // integral accessors
-  const bool                 Base::isIntFilled()       const { return m_intFilled; }
-  const double               Base::getIntScale()       const { return m_intScale; }
-  const std::vector<double> *Base::getIntWeight()      const { return &m_intWeight; }
-  const double               Base::getIntWeight(int i) const { return m_intWeight[i]; }
-  const double               Base::getIntegral()       const { return m_intTotal; }
-  const Range<double>       *Base::getIntXRange()      const { return &m_intXRange; } //! Integration range - log(x) if DIST_LOGN
-  const double               Base::getIntdX()          const { return m_intXRange.step(); }
-  const std::vector<double> *Base::getIntX()           const { return &m_intX; } //! Always x (even for LOGN)
-  const double               Base::getIntX(int i)      const { return m_intX[i]; }
-  const double               Base::getIntXmin()        const { return m_intX.front(); }
-  const double               Base::getIntXmax()        const { return m_intX.back(); }
-  const int                  Base::getIntN()           const { return static_cast<int>(m_intX.size()); }
 
   bool Base::isInt()    const { return false; }
   bool Base::isDouble() const { return false; }
@@ -272,9 +103,8 @@ namespace OBS {
   void Base::copy(const Base & other) {
     if (this != &other) {
       m_pdf    = other.getPdf();
-      m_mean   = other.getPdfMean();
-      m_sigma  = other.getPdfSigma();
-      m_dist   = other.getPdfDist();
+      m_mean   = other.getPdfUseMean();
+      m_sigma  = other.getPdfUseSigma();
       m_obsVal = other.getObsVal();
       m_rndGen = other.getRndGen();
       m_valid  = other.valid();
@@ -298,18 +128,13 @@ namespace OBS {
   template <typename T>
   BaseType<T>::BaseType():Base() {}
   template <typename T>
-  BaseType<T>::BaseType(const char *name,const char *desc):Base(name,desc) {}
-  template <typename T>
-  BaseType<T>::BaseType(PDF::BaseType<T> *pdf, RND::Random *rndgen, const char *name, const char *description):
-    Base(name,description) {
-    this->m_rndGen = rndgen;
-    this->m_valid=((pdf!=0)&&(rndgen!=0));
-    this->setPdf(pdf);
+  BaseType<T>::BaseType( const char *name, const char *desc):
+    Base(name,desc) {
+    // set default rnd gen and pdf
+    this->m_rndGen = &RND::gRandom;
+    this->m_pdf    = 0;
+    this->validate();
     this->setObsVal(0);
-    if (pdf) this->setObsVal(static_cast<T>(this->m_mean));
-    m_intFilled = false;
-    m_intScale = 5.0;
-    m_intNpts  = 20;
   }
 
   template <typename T>
@@ -318,7 +143,7 @@ namespace OBS {
   BaseType<T>::~BaseType() {}
     //
   template <typename T>
-  T BaseType<T>::rnd() { return m_observedValue; }
+  T BaseType<T>::rnd() const { return m_observedValue; }
   //
   template <typename T>
   BaseType<T> const & BaseType<T>::operator=(BaseType<T> const & rh) {
@@ -347,7 +172,7 @@ namespace OBS {
   template <typename T>
   void BaseType<T>::setObservedValue(T val)   { this->setObsVal(val); }
   template <typename T>
-  void BaseType<T>::setObservedValue()        { this->setObsVal(static_cast<T>(this->getPdfMean())); }
+  void BaseType<T>::setObservedValue()        { this->setObsVal(static_cast<T>(this->getPdfUseMean())); }
   //
   template <typename T>
   const double BaseType<T>::getObservedValue()        const { return m_obsVal; }
@@ -360,8 +185,8 @@ namespace OBS {
     std::cout << "--------------------------------------------" << std::endl;
     std::cout << "OBS::BaseType<T>:dump()" << std::endl;
     std::cout << "Name : " << this->getName() << std::endl;
-    std::cout << "Mean : " << this->getPdfMean() << std::endl;
-    std::cout << "Sigma: " << this->getPdfSigma() << std::endl;
+    std::cout << "Mean : " << this->getPdfUseMean() << std::endl;
+    std::cout << "Sigma: " << this->getPdfUseSigma() << std::endl;
     std::cout << "Dist : " << PDF::distTypeStr(this->getPdfDist()) << std::endl;
     std::cout << "Obs  : " << this->getObservedValue() << std::endl;
     std::cout << "--------------------------------------------" << std::endl;
@@ -394,11 +219,15 @@ namespace OBS {
 
 
   ObservableGauss::ObservableGauss():BaseType<double>("gauss","Gaussian observable") {
-    this->m_dist=PDF::DIST_GAUS;
-  };
+    m_pdf    = &PDF::gGauss;
+    validate();
+  }
 
-  ObservableGauss::ObservableGauss(PDF::Gauss *pdf, RND::Random *rndGen, const char *name, const char *desc):
-    BaseType<double>(pdf,rndGen,name,desc) {};
+  ObservableGauss::ObservableGauss(const char *name, const char *desc):
+    BaseType<double>(name,desc) {
+    m_pdf    = &PDF::gGauss;
+    validate();
+  }
 
   ObservableGauss::ObservableGauss(const ObservableGauss & other) {
     BaseType<double>::copy(other);
@@ -421,12 +250,17 @@ namespace OBS {
 
   ////////////////////////////////////////////////////////////
 
-  ObservableLogN::ObservableLogN():BaseType<double>("gauss","Gaussian observable") {
-    m_dist=PDF::DIST_LOGN;
-  };
+  ObservableLogN::ObservableLogN():
+    BaseType<double>("gauss","Gaussian observable") {
+    m_pdf    = &PDF::gLogNormal;
+    validate();
+  }
     
-  ObservableLogN::ObservableLogN(PDF::LogNormal *pdf, RND::Random *rndGen, const char *name, const char *desc):
-    BaseType<double>(pdf,rndGen,name,desc) {};
+  ObservableLogN::ObservableLogN(const char *name, const char *desc):
+    BaseType<double>(name,desc) {
+    m_pdf    = &PDF::gLogNormal;
+    validate();
+  }
 
   ObservableLogN::ObservableLogN(const ObservableLogN & other) {
     BaseType<double>::copy(other);
@@ -448,23 +282,21 @@ namespace OBS {
     return obj;
   }
 
-  double ObservableLogN::transIntX(double x) {
-    return exp(x);
-  }
+//   double ObservableLogN::transIntX(double x) {
+//     return exp(x);
+//   } TODO: THIS NEEDED????
+
   //////////////////////////////////////////////////////////////////
   
   ObservablePois::ObservablePois():BaseType<int>("poisson","Poisson observable") {
-    this->m_dist=PDF::DIST_POIS;
+    m_pdf    = &PDF::gPoisson;
+    validate();
     m_excludeZero=false;
   }
 
-  ObservablePois::ObservablePois(PDF::Poisson *pdf, RND::Random *rndGen, const char *name, const char *desc):
-    BaseType<int>(pdf,rndGen,name,desc) {
-    m_excludeZero=false;
-  }
-
-  ObservablePois::ObservablePois(PDF::PoisTab *pdf, RND::Random *rndGen, const char *name, const char *desc):
-    BaseType<int>(pdf,rndGen,name,desc) {
+  ObservablePois::ObservablePois(const char *name, const char *desc):BaseType<int>(name,desc) {
+    m_pdf    = &PDF::gPoisson;
+    validate();
     m_excludeZero=false;
   }
 
@@ -490,9 +322,9 @@ namespace OBS {
     return m_excludeZero;
   }
 
-  double ObservablePois::aprioriProb( double x ) { // currently a simple implementation for poisson
+  double ObservablePois::aprioriProb( double x ) const { // currently a simple implementation for poisson
     double rval = 1.0;
-    if ((m_dist==PDF::DIST_POIS) && (m_excludeZero)) {
+    if ((getPdfDist()==PDF::DIST_POIS) && (m_excludeZero)) {
       if (x<0.5) rval = 0.0;
     }
     return rval;
@@ -505,7 +337,7 @@ namespace OBS {
     this->m_mean  = m*m;
     this->m_sigma = m;
   }
-  int ObservablePois::rnd() {
+  int ObservablePois::rnd() const {
     return (this->m_valid ? this->m_rndGen->poisson(this->m_mean):0);
   }
 
@@ -517,10 +349,14 @@ namespace OBS {
   ///////////////////////////////////////////////////////////
 
   ObservableFlat::ObservableFlat():BaseType<double>("flat","Flat observable") {
-    m_dist=PDF::DIST_FLAT;
+    m_pdf = &PDF::gFlat;
+    validate();
   }
-  ObservableFlat::ObservableFlat(PDF::Flat *pdf, RND::Random *rndGen, const char *name, const char *desc):
-    BaseType<double>(pdf,rndGen,name,desc) {};
+
+  ObservableFlat::ObservableFlat(const char *name, const char *desc):BaseType<double>(name,desc) {
+    m_pdf = &PDF::gFlat;
+    validate();
+  }
 
   ObservableFlat::ObservableFlat(const ObservableFlat & other) {
     BaseType<double>::copy(other);
@@ -549,7 +385,7 @@ namespace OBS {
     Base::setPdfSigma(sigma);
   }
 
-  double ObservableFlat::rnd() {
+  double ObservableFlat::rnd() const {
     return (m_valid ? m_rndGen->flatRange(m_xmin,m_xmax):0);
   }
 
@@ -566,7 +402,7 @@ namespace OBS {
   bool  Correlated::setCorrelation(const char *v1, const char *v2, double c) {return false;}
   bool  Correlated::setCorrelation(const Base *v1, const Base *v2, double c) {return false;}
     //
-  void  Correlated::rnd() {} // generate random observation
+  void  Correlated::rnd() const {} // generate random observation
 
   //////////////////////////////////////////////////
 

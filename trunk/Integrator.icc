@@ -5,6 +5,8 @@
 //
 // Integrator inline implementation
 //
+
+//
 Integrator::Integrator():
    m_gslRange(0),
    m_ncalls(10000),
@@ -59,6 +61,15 @@ inline void Integrator::setTabParamsVal( std::vector<int> & tabind ) {
    for (size_t i=0; i<tabind.size(); i++) { // loops over all tabulated pars
       size_t ind = m_tabIndex[i]; // which par is it
       parptr[ind] = m_tabMin[ind] + m_tabStep[ind]*tabind[i]; // set par value = xmin+dx*ix
+   }
+}
+
+inline void Integrator::setParameters( std::vector<double> & valvec ) {
+   if (m_gslMonteFun.params==0) return;
+   //
+   double *parptr = static_cast<double *>(m_gslMonteFun.params);
+   for (size_t i=0; i<valvec.size(); i++) { // loops over all values
+      parptr[i] = valvec[i];
    }
 }
 
@@ -129,7 +140,7 @@ void Integrator::tabulate() {
       }
       // now tabCounters contains the indecis for the current point
       setTabParamsVal( tabCounters );
-      go(0);
+      go();
       m_tabValues[iv] = result();
       std::cout << "( "
                 << tabCounters[1] << ", "
@@ -164,7 +175,7 @@ double Integrator::getValue( std::vector<double> & tabParams ) {
    return val;
 }
 
-void Integrator::go( void *params ) {
+void Integrator::go() {
    std::cout << "WARNING: should not be called! Must be overloaded Integrator::go()" << std::endl;
 }
 
@@ -193,7 +204,7 @@ void IntegratorVegas::initialize() {
    m_gslVegasState = gsl_monte_vegas_alloc(m_gslMonteFun.dim);
 }
 
-void IntegratorVegas::go( void *params ) {
+void IntegratorVegas::go() {
    gsl_monte_vegas_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
                               m_gslMonteFun.dim, m_ncalls,
                               m_gslRange, m_gslVegasState,
@@ -220,7 +231,7 @@ void IntegratorPlain::initialize() {
    m_gslPlainState = gsl_monte_plain_alloc(m_gslMonteFun.dim);
 }
 
-void IntegratorPlain::go( void *params ) {
+void IntegratorPlain::go() {
    gsl_monte_plain_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
                               m_gslMonteFun.dim, m_ncalls,
                               m_gslRange, m_gslPlainState,
@@ -247,7 +258,7 @@ void IntegratorMiser::initialize() {
    m_gslMiserState = gsl_monte_miser_alloc(m_gslMonteFun.dim);
 }
 
-void IntegratorMiser::go( void *params ) {
+void IntegratorMiser::go() {
    gsl_monte_miser_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
                               m_gslMonteFun.dim, m_ncalls,
                               m_gslRange, m_gslMiserState,
@@ -256,6 +267,21 @@ void IntegratorMiser::go( void *params ) {
 
 double IntegratorMiser::chisq() {
    return 0;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+template<>
+inline double Tabulator<Integrator>::calcValue() const {
+  // Tabulator parameters in std::vector<double> m_parameters
+  m_function->setParameters( m_parameters );
+  m_function->go();
+  return m_function->result();
+}
+
+template<>
+inline double Tabulator<Integrator>::interpolate( size_t ind ) const {
+  return this->m_tabValues[ind];
 }
 
 #endif

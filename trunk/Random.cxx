@@ -27,7 +27,7 @@ namespace RND {
     }
   }
   
-  double Random::rndm() {
+  double Random::rndm() const {
     //  Machine independent random number generator.
     //  Produces uniformly-distributed floating points between 0 and 1.
     //  Identical sequence on all machines of >= 32 bits.
@@ -44,7 +44,7 @@ namespace RND {
     return rndm();
   }
   
-  int Random::poisson(double mean)
+  int Random::poisson(double mean) const
   {
     // Generates a random integer N according to a Poisson law.
     // Coded from Los Alamos report LA-5061-MS
@@ -66,12 +66,12 @@ namespace RND {
     return N;
   }
   
-  double Random::gamma(double mean, double sigma) {
+  double Random::gamma(double mean, double sigma) const {
     //See algo at http://en.wikipedia.org/wiki/Gamma_distribution#Generating_Gamma_random_variables
     return 0.0;
   }
 
-  double Random::gauss(double mean, double sigma) {
+  double Random::gauss(double mean, double sigma) const {
     //      Return a number distributed following a gaussian with mean and sigma
     
     double x, y, z, result;
@@ -84,29 +84,29 @@ namespace RND {
     return result;
   }
   
-  double Random::logNormal(double mean, double sigma) {
+  double Random::logNormal(double mean, double sigma) const {
     // Return a number distributed following a lognormal with mean and sigma
     double nmean = log(mean*mean/sqrt(sigma*sigma + mean*mean));
     double nsigma = sqrt(log(sigma*sigma/mean/mean+1));
     return exp(gauss() * nsigma + nmean);
   }
 
-  double Random::logNormalLN(double logMean, double logSigma) {
+  double Random::logNormalLN(double logMean, double logSigma) const {
     // Return a number distributed following a lognormal with mean and sigma
     return exp(gauss() * logSigma + logMean);
   }
   
-  double Random::flat(double mean, double sigma) {
+  double Random::flat(double mean, double sigma) const {
     double dx=sigma*1.73205081; // == sqrt(12.0)*0.5 => sigma(flat) = (xmax-xmin)/sqrt(12)
     double xmin = mean-dx;
     return rndm()*dx*2.0 + xmin;
   }
   
-  double Random::flatRange(double xmin, double xmax) {
+  double Random::flatRange(double xmin, double xmax) const {
     double dx = xmax-xmin;
     return rndm()*dx+xmin;
   }
-  double Random::general(int npts, double *xvec, double xmin, double xmax, double *fvec, double fmin, double fmax) {
+  double Random::general(int npts, double *xvec, double xmin, double xmax, double *fvec, double fmin, double fmax) const {
     double dx = xmax-xmin;
     double du = fmax-fmin;
     double x;
