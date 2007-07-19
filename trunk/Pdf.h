@@ -896,21 +896,10 @@ namespace PDF {
 
 //
 
-#ifndef PDF_CXX
-  extern Poisson  gPoisson;
-  extern Poisson  gPoissonTab;
-  extern PoisTab  gPoisTab;
-  extern Gauss    gGauss;
-  extern GaussTab gGaussTab;
-
-  extern Gauss2D   gGauss2D;
-  extern LogNormal gLogNormal;
-  extern Flat      gFlat;
-#endif
 };
 
 template<>
-inline double Tabulator<PDF::Poisson>::calcValue() const {
+inline double Tabulator<PDF::Poisson>::calcValue() {
   // m_parameters contains:
   // [1] = N
   // [0] = s
@@ -926,7 +915,7 @@ inline double Tabulator<PDF::Poisson>::calcValue() const {
 }
 
 template<>
-inline double Tabulator<PDF::Poisson>::interpolate( size_t ind ) const {
+inline double Tabulator<PDF::Poisson>::interpolate( size_t ind ) {
    //  std::cout << "USING Pois interp" << std::endl;
    //  std::cout << "f(N|s) =  " << this->m_tabValues[ind] << " :  N = " << m_parameters[1] << " , s = " << m_parameters[0] << std::endl;
   // m_parameters contains:
@@ -956,5 +945,17 @@ inline double Tabulator<PDF::Poisson>::interpolate( size_t ind ) const {
   //  std::cout << "interp corr: " << corr1 << " , " << corr2 << std::endl;
   return f0 + corr1 + corr2;
 }
+
+#ifndef PDF_CXX
+extern PDF::Poisson  PDF::gPoisson;
+extern PDF::Poisson  PDF::gPoissonTab;
+extern PDF::PoisTab  PDF::gPoisTab;
+extern PDF::Gauss    PDF::gGauss;
+extern PDF::GaussTab PDF::gGaussTab;
+
+extern PDF::Gauss2D   PDF::gGauss2D;
+extern PDF::LogNormal PDF::gLogNormal;
+extern PDF::Flat      PDF::gFlat;
+#endif
 
 #endif

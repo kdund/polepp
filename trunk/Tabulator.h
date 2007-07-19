@@ -63,7 +63,7 @@ public:
    /*! @name Tabulating */
    //@{
    //! set number of tabulated parameters
-   inline void setNTabPar( size_t npars );
+   inline void setTabNPar( size_t npars );
    //! add tabulated parameter def, using step size
    inline void addTabParStep( const char *name, int index, double xmin, double xmax, double step, int parInd=-1 );
    //! add tabulated parameter def, using N(steps)
@@ -76,6 +76,17 @@ public:
    inline void tabulate();
    //! get the tabulated value with the given parameter vector
    inline double getValue( const std::vector<double> & valvec );
+      //! accessors
+   inline const char *getName()        const;
+   inline const char *getDescription() const;
+   inline size_t getTabNPar()    const;
+   inline double getTabMin( size_t pind ) const;
+   inline double getTabMax( size_t pind ) const;
+   inline double getTabStep( size_t pind ) const;
+   inline size_t getTabNsteps( size_t pind ) const;
+   //! check if the table is ok
+   inline bool isTabulated() const;
+
 
 protected:
    inline void setTabPar( const char *name, int index, double min, double max, double step, size_t nsteps, int parInd=-1 );
@@ -90,11 +101,11 @@ protected:
    //! calculate the index in the table for a given vector of values
    inline int calcTabIndex( const std::vector<double> & valvec );
    //! to be called by tabulate() - to be implemented for each specific class
-   inline double calcValue() const;
+   inline double calcValue();
    //! to be called by calcValue() - interpolator - may be either a default function or defined per class
-   inline double interpolate( size_t ind ) const;
+   inline double interpolate( size_t ind );
    
-   const T  *m_function;    /**< pointer to function class */
+   T  *m_function;    /**< pointer to function class */
 };
 
 

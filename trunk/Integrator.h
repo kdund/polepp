@@ -43,6 +43,8 @@ public:
    inline void setFunctionDim( size_t dim );
    //! set function parameters
    inline void setFunctionParams( void * params );
+   //! set parameter values - assumes setFunctionParams has been called
+   inline void setParameters( std::vector<double> & valvec );
    //! set integration ranges
    inline void setIntRanges( std::vector<double> & xl, std::vector<double> & xu );
    //! set number of calls
@@ -55,11 +57,11 @@ public:
    //! integrate using the set parameters - do not use table
    inline virtual void go();
    //! get chi2
-   inline virtual double chisq()=0;
+   inline virtual double chisq() = 0;
    //! get result
-   inline double result();
+   inline double result() const;
    //! get error
-   inline double error();
+   inline double error() const;
    //@}
 
 protected:
@@ -69,8 +71,8 @@ protected:
    std::vector<double> m_intXL;       /**< lower integration range for each integrand */
    std::vector<double> m_intXU;       /**< idem, upper */
 
-   double m_result;                   /**< result of integration */
-   double m_error;                    /**< error of idem */
+   double m_result;           /**< result of integration */
+   double m_error;            /**< error of idem */
 };
 
 /*! @class IntegratorVegas

@@ -17,6 +17,74 @@ namespace TOOLS {
     strftime( ts, 32,"%d/%m/%Y %H:%M:%S",t);
     stamp = ts;
   }
+
+  void calcIntRange(const OBS::Base & obs, double scale, double & xmin, double & xmax ) {
+    const PDF::DISTYPE dist  = obs.getPdfDist();
+    const double       mean  = obs.getObservedValue();
+    const double       sigma = obs.getPdfUseSigma();
+    bool positive = true; // only positive numbers in range
+    double dx;
+    //
+    if (dist==PDF::DIST_NONE) {
+      low  = mean;
+      high = mean;
+    } else {
+      if (dist==PDF::DIST_LOGN) positive = false; // Log normal must allow negative values
+      switch (dist) {
+      case PDF::DIST_GAUS2D:
+      case PDF::DIST_GAUS:
+      case PDF::DIST_LOGN:
+        low  = mean - scale*sigma;
+        high = mean + scale*sigma;
+        break;
+      case PDF::DIST_FLAT:
+        // always full range
+        Tools::calcFlatRange( mean, sigma, low, high );
+        break;
+      case PDF::DIST_POIS:
+        int    n     = 0;
+        int    nlow  = -1;
+        int    nhigh = -1;
+        double ptot  = 0.0;
+        double p;
+
+        const double maxp = 0.9999;
+        const double minp = 1.0-maxp;
+        // find min and max range of poisson
+        // this is defined by maxp above
+        // low  : max N for wich sum( p(n) ) < 1.0-maxp
+        // high : min N for wich sum( p(n) ) > maxp
+        while (nhigh<0) {
+          nprev=n;
+          p = PDF::gPoisson.getVal( n, mean )*obs.aprioiProb(static_cast<double>(n));
+          ptot += p;
+          if ((n==0) && (ptot>minp)) nlow=0;
+          if (nlow<0) {
+            if (ptot<minp) nlow=n;
+          }
+          if (ptot>maxp) nhigh = n;
+          n++;
+          if (nprev>n) { // just a STUPID test; can be done better...
+            std::cerr << "Infinite loop caugh in Tools::calcIntRange() for Poisson - brutal exit" << std::endl;
+            exit(-1);
+          }
+        }
+        //
+        low  = static_cast<double>(nlow);
+        high = static_cast<double>(nhigh);
+        break;
+      default: // ERROR STATE
+        low  = 0;
+        high = 0;
+        std::cerr << "Tools::calcIntRange() -> Unknown pdf type = " << m_dist << std::endl;
+        break;
+      }
+    }
+    if (positive && (low<0)) {
+      high = high-low;
+      low = 0;
+    }
+  }
   //
   // class Timer members
   //

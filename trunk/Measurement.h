@@ -58,12 +58,13 @@ namespace MEAS {
     inline bool removeNuisance(const OBS::Base *nptr);
     inline void copyNuisance(std::list< OBS::Base * > & newList ) const;
 
-    //! initialize integrals of all nuisance parameters
-    inline void initIntNuisance();
-    //! Assumes that all parameters have called OBS::initInt()
-    inline void fillIntNuisance();
-    //! Initialize nuisance weights: f(x)g(y)...dxdy
-    inline void initNuisanceWeights();
+    // REMOVE THESE!!!
+//     //! initialize integrals of all nuisance parameters
+//     inline void initIntNuisance();
+//     //! Assumes that all parameters have called OBS::initInt()
+//     inline void fillIntNuisance();
+//     //! Initialize nuisance weights: f(x)g(y)...dxdy
+//     inline void initNuisanceWeights();
     //
     inline virtual void dump()                     const;
     //

@@ -57,8 +57,8 @@ namespace OBS {
   void         Base::lock()                                  { m_locked = true; }
   void         Base::unlock()                                { m_locked = false; }
   void         Base::setPdf(const PDF::Base *pdf)            { m_pdf = pdf; validate(); }
-  void         Base::setPdfMean(double m)                    { m_mean = m; }
-  void         Base::setPdfSigma(double m)                   { m_sigma = m; } //if (m_pdf) m_pdf->setSigma(m); }
+  void         Base::setPdfUseMean(double m)                 { m_mean = m; }
+  void         Base::setPdfUseSigma(double m)                { m_sigma = m; } //if (m_pdf) m_pdf->setSigma(m); }
   void         Base::setRndGen(const RND::Random *rndgen)    { m_rndGen = rndgen; validate(); }
   void         Base::validate()                              { m_valid = ((m_pdf!=0) && (m_rndGen!=0)); }
 
@@ -83,14 +83,14 @@ namespace OBS {
   // accessors
   const std::string & Base::getName()        const { return this->m_name;}
   const std::string & Base::getDescription() const { return this->m_description;}
-  const double        Base::getPdfUseMean()     const { return this->m_mean; } //(m_pdf ? m_pdf->getMean():0); }
-  const double        Base::getPdfUseSigma()    const { return this->m_sigma; } //(m_pdf ? m_pdf->getSigma():0); }
-  const PDF::DISTYPE  Base::getPdfDist()     const { return ( this->m_pdf ? this->m_pdf->getDist:PDF::DIST_UNDEF ); }
+  const double        Base::getPdfUseMean()  const { return this->m_mean; } //(m_pdf ? m_pdf->getMean():0); }
+  const double        Base::getPdfUseSigma() const { return this->m_sigma; } //(m_pdf ? m_pdf->getSigma():0); }
+  const PDF::DISTYPE  Base::getPdfDist()     const { return ( this->m_pdf ? this->m_pdf->getDist():PDF::DIST_UNDEF ); }
   const PDF::Base    *Base::getPdf()         const { return this->m_pdf;}
   const RND::Random  *Base::getRndGen()      const { return this->m_rndGen;}
     
   // status
-  const bool Base::constant() const { return ( m_locked || ((getPdfDist()==PDF::DIST_NONE) || (getPdfDist==PDF::DIST_UNDEF)) ); }
+  const bool Base::constant() const { return ( m_locked || ((getPdfDist()==PDF::DIST_NONE) || (getPdfDist()==PDF::DIST_UNDEF)) ); }
   const bool Base::locked()   const { return m_locked;}
   const bool Base::valid()    const { return m_valid;}
 
@@ -109,16 +109,8 @@ namespace OBS {
       m_rndGen = other.getRndGen();
       m_valid  = other.valid();
       m_locked = other.locked();
-      m_name   = "Copy of " + other.getName();
-      m_description = other.getDescription();
-      // integral stuff
-      m_intFilled     = other.isIntFilled();
-      m_intWeight     = *(other.getIntWeight());
-      m_intXRange     = *(other.getIntXRange());
-      m_intX          = *(other.getIntX());
-      m_intTotal      = other.getIntegral();
-      m_intScale      = other.getIntScale();
-      m_intNpts       = other.getIntN();
+      m_name   = "COPY_" + other.getName();
+      m_description = "<Copy> : " + other.getDescription();
     }
   }
 
@@ -239,7 +231,7 @@ namespace OBS {
     return *this;
   }
   //
-  double ObservableGauss::rnd() {
+  double ObservableGauss::rnd() const {
     return (this->m_valid ? this->m_rndGen->gauss(this->m_mean,this->m_sigma):0);
   }
 
@@ -272,8 +264,8 @@ namespace OBS {
     return *this;
   }
   //
-  double ObservableLogN::rnd() {
-    PDF::LogNormal *pdf = static_cast<PDF::LogNormal *>(m_pdf);
+  double ObservableLogN::rnd() const {
+    const PDF::LogNormal *pdf = static_cast<const PDF::LogNormal *>(m_pdf);
     return (m_valid ? m_rndGen->logNormalLN(pdf->getLogMean(),pdf->getLogSigma()):0);
   }
 
@@ -329,11 +321,11 @@ namespace OBS {
     }
     return rval;
   }
-  void ObservablePois::setPdfMean(double m)  {
+  void ObservablePois::setPdfUseMean(double m)  {
     this->m_mean = m;
     this->m_sigma = (m>0 ? sqrt(m):0.0);
   }
-  void ObservablePois::setPdfSigma(double m) {
+  void ObservablePois::setPdfUseSigma(double m) {
     this->m_mean  = m*m;
     this->m_sigma = m;
   }
@@ -368,12 +360,12 @@ namespace OBS {
     return *this;
   }
 
-  void ObservableFlat::setPdfMean(double m)  {
-    Base::setPdfMean(m);
+  void ObservableFlat::setPdfUseMean(double m)  {
+    Base::setPdfUseMean(m);
     TOOLS::calcFlatRange(this->m_mean,this->m_sigma,m_xmin,m_xmax);
   }
-  void ObservableFlat::setPdfSigma(double s) {
-    Base::setPdfSigma(s);
+  void ObservableFlat::setPdfUseSigma(double s) {
+    Base::setPdfUseSigma(s);
     TOOLS::calcFlatRange(this->m_mean,this->m_sigma,m_xmin,m_xmax);
   }
   void ObservableFlat::setPdfRange(double xmin, double xmax) {
@@ -381,8 +373,8 @@ namespace OBS {
     m_xmax = xmax;
     double mean,sigma;
     TOOLS::calcFlatMeanSigma(xmin,xmax,mean,sigma);
-    Base::setPdfMean(mean);
-    Base::setPdfSigma(sigma);
+    Base::setPdfUseMean(mean);
+    Base::setPdfUseSigma(sigma);
   }
 
   double ObservableFlat::rnd() const {

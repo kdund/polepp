@@ -85,8 +85,9 @@ namespace OBS {
     // accessors
     inline const std::string & getName()        const;
     inline const std::string & getDescription() const;
-    inline const double        getPdfUseMean()     const;
-    inline const double        getPdfUseSigma()    const;
+    inline const double        getPdfUseMean()  const;
+    inline const double        getPdfUseSigma() const;
+    inline const PDF::DISTYPE  getPdfDist()     const;
     inline const PDF::Base    *getPdf()         const;
     inline const RND::Random  *getRndGen()      const;
     
@@ -129,7 +130,7 @@ namespace OBS {
     inline BaseType(const BaseType<T> & other);
     inline virtual ~BaseType();
     //
-    inline virtual T rnd();
+    inline virtual T rnd() const;
     //
     inline BaseType<T> const & operator=(BaseType<T> const & rh);
     inline BaseType<T> *clone() const;
@@ -168,7 +169,7 @@ namespace OBS {
     //
     inline ObservableGauss const & operator=(ObservableGauss const & rh);
     //
-    inline double rnd();
+    inline double rnd() const;
 
     inline ObservableGauss *clone() const;
   };
@@ -176,12 +177,12 @@ namespace OBS {
   class ObservableLogN : public BaseType<double> {
   public:
     inline ObservableLogN();
-    inline ObservableLogN(PDF::LogNormal *pdf, RND::Random *rndGen, const char *name, const char *desc=0);
+    inline ObservableLogN(const char *name, const char *desc=0);
     inline ObservableLogN(const ObservableLogN & other);
     inline virtual ~ObservableLogN();
     //
     inline ObservableLogN const & operator=(ObservableLogN const & rh);
-    inline double rnd();
+    inline double rnd() const;
     inline ObservableLogN *clone() const;
   };
 
@@ -199,7 +200,7 @@ namespace OBS {
     inline double aprioriProb( double x ) const;
     inline void setPdfUseMean(double m);
     inline void setPdfUseSigma(double m);
-    inline int rnd();
+    inline int rnd() const;
 
     inline ObservablePois *clone() const;
 
@@ -210,7 +211,7 @@ namespace OBS {
   class ObservableFlat : public BaseType<double> {
   public:
     inline ObservableFlat();
-    inline ObservableFlat(PDF::Flat *pdf, RND::Random *rndGen, const char *name, const char *desc=0);
+    inline ObservableFlat(const char *name, const char *desc=0);
     inline ObservableFlat(const ObservableFlat & other);
 
     inline virtual ~ObservableFlat();
@@ -221,7 +222,7 @@ namespace OBS {
     inline void setPdfUseMean(double m);
     inline void setPdfUseSigma(double s);
     inline void setPdfRange(double xmin, double xmax);
-    inline double rnd();
+    inline double rnd() const;
 
     inline ObservableFlat *clone() const;
   private:
@@ -248,7 +249,7 @@ namespace OBS {
     inline bool  setCorrelation(const char *v1, const char *v2, double c);
     inline bool  setCorrelation(const Base *v1, const Base *v2, double c);
     //
-    inline void rnd();
+    inline void rnd() const;
 
   private:
     std::vector<const Base *>          m_observables;

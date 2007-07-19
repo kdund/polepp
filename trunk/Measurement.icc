@@ -212,20 +212,17 @@ namespace MEAS {
   template <typename T> const double Measurement<T>::getPdfM(double s) const      { return 0;}
   template <typename T> const double Measurement<T>::getSignal()       const      { return 0;}
   template <typename T> const double Measurement<T>::getSignalUnc()    const      { return 0;}
-  template <typename T> const double Measurement<T>::calcProb(T x, double s ) const      { return 0;}
   //
   template <typename T> const double Measurement<T>::getTrueSignal()   const      { return m_trueSignal; }
-  //  template <typename T> const T Measurement<T>::getObsVal() const                 { T val=0; if (m_observable) m_observable->getObservedValue(val); return val;}
-  template <typename T> const T Measurement<T>::getObsVal() const                 { T val=0; if (m_observable) m_observable->getObservedValue(val); return val;}
-  template <typename T> const double Measurement<T>::getObsPdfMean() const        { return (m_observable ? m_observable->getPdfMean():0); }
-  template <typename T> const double Measurement<T>::getObsPdfSigma() const       { return (m_observable ? m_observable->getPdfSigma():0); }
+  template <typename T> const T      Measurement<T>::getObsVal() const            { T val=0; if (m_observable) m_observable->getObservedValue(val); return val;}
+  template <typename T> const double Measurement<T>::getObsPdfMean() const        { return (m_observable ? m_observable->getPdfUseMean():0); }
+  template <typename T> const double Measurement<T>::getObsPdfSigma() const       { return (m_observable ? m_observable->getPdfUseSigma():0); }
   template <typename T> const PDF::DISTYPE Measurement<T>::getObsPdfDist() const  { return (m_observable ? m_observable->getPdfDist():0); }
   template <typename T> const OBS::BaseType<T> *Measurement<T>::getObservable() const   { return m_observable; }
   //
   template <typename T> const std::string & Measurement<T>::getName()                      const { return m_name;}
   template <typename T> const std::string & Measurement<T>::getDescription()               const { return m_description;}
   template <typename T> const std::list< OBS::Base * > & Measurement<T>::getNuisanceList() const { return m_nuisancePars; }
-  template <typename T> const double Measurement<T>::getNuisanceIntNorm()                  const { return m_nuisanceIntNorm; }
 
   template <typename T> const double Measurement<T>::rndObs() { OBS::BaseType<T> *p = static_cast< OBS::BaseType<T> * >(m_observable); return (*p)(); }
 
@@ -243,11 +240,12 @@ namespace MEAS {
     }
     //
     // get the average to be used - should always be the same
-    // since N(obs) is a poisson from the true e*s+b
+    // since N(obs) is a poisson from the true e*s+b.
+    // the below call uses the pdf 'true' mean of e and b
     //
     double mean = this->getPdfM(m_trueSignal);
 
-    m_observable->setPdfMean(mean);
+    m_observable->setPdfUseMean(mean);
     //
     // ...and then the observable
     //
@@ -322,7 +320,6 @@ namespace MEAS {
   const double MeasPois::getSignal()       const { return 0;}
   const double MeasPois::getSignalUnc()    const { return 0;}
 
-  const double MeasPois::calcProb(int x, double s) const {return 0;}
 
   // protected
   void MeasPois::initObservable() {
@@ -376,20 +373,21 @@ namespace MEAS {
     if (scale>0) m_bkgScale = scale;
   }
 
-  void MeasPoisEB::setEffInt(double scale, int n) {
-    if (m_eff) {
-      m_eff->setIntNpts(n);
-      m_eff->setIntScale(scale);
-    }
-  }
+  // REMOVE!!!
+//   void MeasPoisEB::setEffInt(double scale, int n) {
+//     if (m_eff) {
+//       m_eff->setIntNpts(n);
+//       m_eff->setIntScale(scale);
+//     }
+//   }
 
-  void MeasPoisEB::setBkgInt(double scale, int n) {
-    if (m_bkg) {
-      m_bkg->setIntNpts(n);
-      m_bkg->setIntScale(scale);
-    }
-  }
-
+//   void MeasPoisEB::setBkgInt(double scale, int n) {
+//     if (m_bkg) {
+//       m_bkg->setIntNpts(n);
+//       m_bkg->setIntScale(scale);
+//     }
+//   }
+//////////////
   void MeasPoisEB::setEffObs(double eff) {
     if (m_eff) {
       m_eff->setObservedValue(eff);
@@ -424,8 +422,8 @@ namespace MEAS {
     }
     if (m_eff==0) 
       m_eff = static_cast<OBS::Base *>(makeNuisance(dist));
-    m_eff->setPdfSigma(sigma);
-    m_eff->setPdfMean(eff);
+    m_eff->setPdfUseSigma(sigma);
+    m_eff->setPdfUseMean(eff);
     m_eff->setName("efficiency");
     if (m_eff->getPdfDist()==PDF::DIST_POIS) {
       dynamic_cast<OBS::ObservablePois *>(m_eff)->setExcludeZero();
@@ -443,17 +441,17 @@ namespace MEAS {
       }
     }
     if (m_bkg==0) m_bkg = static_cast< OBS::Base *>(makeNuisance(dist));
-    m_bkg->setPdfSigma(sigma);
-    m_bkg->setPdfMean(bkg);
+    m_bkg->setPdfUseSigma(sigma);
+    m_bkg->setPdfUseMean(bkg);
     m_bkg->setName("background");
     updNuisanceIndex(); // this will set m_bkgIndex (and m_effIndex if needed)
   }
 
-  void MeasPoisEB::setEffPdfMean(double m)  { if (m_eff) m_eff->setPdfMean(m); }
-  void MeasPoisEB::setEffPdfSigma(double m) { if (m_eff) m_eff->setPdfSigma(m); }
+  void MeasPoisEB::setEffPdfMean(double m)  { if (m_eff) m_eff->setPdfUseMean(m); }
+  void MeasPoisEB::setEffPdfSigma(double m) { if (m_eff) m_eff->setPdfUseSigma(m); }
 
-  void MeasPoisEB::setBkgPdfMean(double m)  { if (m_bkg) m_bkg->setPdfMean(m); }
-  void MeasPoisEB::setBkgPdfSigma(double m) { if (m_bkg) m_bkg->setPdfSigma(m); }
+  void MeasPoisEB::setBkgPdfMean(double m)  { if (m_bkg) m_bkg->setPdfUseMean(m); }
+  void MeasPoisEB::setBkgPdfSigma(double m) { if (m_bkg) m_bkg->setPdfUseSigma(m); }
 
   void MeasPoisEB::setBEcorr(double c) {} // TODO: Need to implement
   //
@@ -470,10 +468,10 @@ namespace MEAS {
     return m_eff;
   }
   const double MeasPoisEB::getEffPdfMean() const {
-    return (m_eff ? m_eff->getPdfMean():0);
+    return (m_eff ? m_eff->getPdfUseMean():0);
   }
   const double MeasPoisEB::getEffPdfSigma() const {
-    return (m_eff ? m_eff->getPdfSigma():0);
+    return (m_eff ? m_eff->getPdfUseSigma():0);
   }
   const PDF::DISTYPE MeasPoisEB::getEffPdfDist() const {
     return (m_eff ? m_eff->getPdfDist():PDF::DIST_UNDEF);
@@ -482,10 +480,10 @@ namespace MEAS {
     return m_bkg;
   }
   const double MeasPoisEB::getBkgPdfMean() const {
-    return (m_bkg ? m_bkg->getPdfMean():0);
+    return (m_bkg ? m_bkg->getPdfUseMean():0);
   }
   const double MeasPoisEB::getBkgPdfSigma() const {
-    return (m_bkg ? m_bkg->getPdfSigma():0);
+    return (m_bkg ? m_bkg->getPdfUseSigma():0);
   }
   const PDF::DISTYPE MeasPoisEB::getBkgPdfDist() const {
     return (m_bkg ? m_bkg->getPdfDist():PDF::DIST_UNDEF);
@@ -518,115 +516,116 @@ namespace MEAS {
     return (e>0 ? dn/e : 0);
   }
 
-  const double MeasPoisEB::calcProbRaw(int x, double s) const {
-    if ((m_eff==0) ||
-        (m_bkg==0) ||
-        (m_observable==0)) {
-      std::cerr << "ERROR: MeasPoisEB() - No eff and/or bkg defined!" << std::endl;
-      return 0.0;
-    }
-    ////// BUG TRAP!
-    if (m_observable->getPdf()==0) {
-      std::cerr << "ERROR: MeasPoisEB() - Observable OK, but with no PDF!" << std::endl;
-      return 0.0;
-    }
-    int ixeff, ixbkg;
-    double p=0;
-    double g;
-    PDF::BaseType<int> *pdf = static_cast<  PDF::BaseType<int> * >(m_observable->getPdf());
-    //////////////// TEMP CODE - FOR DEBUGGING, IN CASE OF BUGS...
-    if (pdf==0) {
-      std::cerr << "ERROR: wrong type of PDF in MeasPoisEB (expected BaseType<int>)!" << std::endl;
-      return 0;
-    }
-    if (m_nuisanceWeights.size() != m_nuisanceIndecis.size()) {
-      std::cerr << "ERROR: nuisance weight and index arrays are not of equal size!" << std::endl;
-      return 0.0;
-    }
-    if (m_nuisanceWeights.size()==0) {
-      std::cerr << "ERROR: nuisance weight and index arrays are not initialized (size zero)!" << std::endl;
-      return 0.0;
-    }
-    for (unsigned int i=0; i<m_nuisanceIndecis.size(); i++) {
-      ixeff = m_nuisanceIndecis[i][m_effIndex];
-      ixbkg = m_nuisanceIndecis[i][m_bkgIndex];
-      g = getM(s, m_eff->getIntX(ixeff), m_bkg->getIntX(ixbkg));
-      p += m_nuisanceWeights[i]*pdf->getVal(x,g);
-      if (x<0) { // TODO: Debug info - remove when obsolete
-        TOOLS::coutFixed(4,int(i));
-        TOOLS::coutFixed(" s(true), e, b, mu = ",2,s);
-        TOOLS::coutFixed(", ", 4, m_eff->getIntX(ixeff));
-        TOOLS::coutFixed(", ", 4, m_bkg->getIntX(ixbkg));
-        TOOLS::coutFixed(", ", 4, g);
-        TOOLS::coutFixed(", p = ", 4, p);
-        TOOLS::coutFixed(", w = ", 4, m_nuisanceWeights[i]);
-        TOOLS::coutFixed(", pdfval = ", 4, pdf->getVal(x,g));
-        std::cout << std::endl;
-      }
-    }
+  // REMOVE!!
+//   const double MeasPoisEB::calcProbRaw(int x, double s) const {
+//     if ((m_eff==0) ||
+//         (m_bkg==0) ||
+//         (m_observable==0)) {
+//       std::cerr << "ERROR: MeasPoisEB() - No eff and/or bkg defined!" << std::endl;
+//       return 0.0;
+//     }
+//     ////// BUG TRAP!
+//     if (m_observable->getPdf()==0) {
+//       std::cerr << "ERROR: MeasPoisEB() - Observable OK, but with no PDF!" << std::endl;
+//       return 0.0;
+//     }
+//     int ixeff, ixbkg;
+//     double p=0;
+//     double g;
+//     PDF::BaseType<int> *pdf = static_cast<  PDF::BaseType<int> * >(m_observable->getPdf());
+//     //////////////// TEMP CODE - FOR DEBUGGING, IN CASE OF BUGS...
+//     if (pdf==0) {
+//       std::cerr << "ERROR: wrong type of PDF in MeasPoisEB (expected BaseType<int>)!" << std::endl;
+//       return 0;
+//     }
+//     if (m_nuisanceWeights.size() != m_nuisanceIndecis.size()) {
+//       std::cerr << "ERROR: nuisance weight and index arrays are not of equal size!" << std::endl;
+//       return 0.0;
+//     }
+//     if (m_nuisanceWeights.size()==0) {
+//       std::cerr << "ERROR: nuisance weight and index arrays are not initialized (size zero)!" << std::endl;
+//       return 0.0;
+//     }
+//     for (unsigned int i=0; i<m_nuisanceIndecis.size(); i++) {
+//       ixeff = m_nuisanceIndecis[i][m_effIndex];
+//       ixbkg = m_nuisanceIndecis[i][m_bkgIndex];
+//       g = getM(s, m_eff->getIntX(ixeff), m_bkg->getIntX(ixbkg));
+//       p += m_nuisanceWeights[i]*pdf->getVal(x,g);
+//       if (x<0) { // TODO: Debug info - remove when obsolete
+//         TOOLS::coutFixed(4,int(i));
+//         TOOLS::coutFixed(" s(true), e, b, mu = ",2,s);
+//         TOOLS::coutFixed(", ", 4, m_eff->getIntX(ixeff));
+//         TOOLS::coutFixed(", ", 4, m_bkg->getIntX(ixbkg));
+//         TOOLS::coutFixed(", ", 4, g);
+//         TOOLS::coutFixed(", p = ", 4, p);
+//         TOOLS::coutFixed(", w = ", 4, m_nuisanceWeights[i]);
+//         TOOLS::coutFixed(", pdfval = ", 4, pdf->getVal(x,g));
+//         std::cout << std::endl;
+//       }
+//     }
 
-    //    std::cout << "calcProb( " << x << ", " << s << " ) = " << p/m_nuisanceIntNorm << std::endl;
-    return p/m_nuisanceIntNorm;
-  }
+//     //    std::cout << "calcProb( " << x << ", " << s << " ) = " << p/m_nuisanceIntNorm << std::endl;
+//     return p/m_nuisanceIntNorm;
+//   }
 
-  const double MeasPoisEB::calcProb(int x, double s) const {
-    if ((m_effIndex<0) ||
-        (m_bkgIndex<0) ||
-        (m_eff==0) ||
-        (m_bkg==0) ||
-        (m_observable==0)) {
-      std::cerr << "ERROR: MeasPoisEB() - No eff and/or bkg defined!" << std::endl;
-      std::cerr << "       EffPtr = " << m_eff << std::endl;
-      std::cerr << "       BkgPtr = " << m_bkg << std::endl;
-      std::cerr << "       EffInd = " << m_effIndex << std::endl;
-      std::cerr << "       BkgInd = " << m_bkgIndex << std::endl;
-      std::cerr << "       Observ = " << m_observable << std::endl;
+//   const double MeasPoisEB::calcProb(int x, double s) const {
+//     if ((m_effIndex<0) ||
+//         (m_bkgIndex<0) ||
+//         (m_eff==0) ||
+//         (m_bkg==0) ||
+//         (m_observable==0)) {
+//       std::cerr << "ERROR: MeasPoisEB() - No eff and/or bkg defined!" << std::endl;
+//       std::cerr << "       EffPtr = " << m_eff << std::endl;
+//       std::cerr << "       BkgPtr = " << m_bkg << std::endl;
+//       std::cerr << "       EffInd = " << m_effIndex << std::endl;
+//       std::cerr << "       BkgInd = " << m_bkgIndex << std::endl;
+//       std::cerr << "       Observ = " << m_observable << std::endl;
 
-      return 0.0;
-    }
-    ////// BUG TRAP!
-    if (m_observable->getPdf()==0) {
-      std::cerr << "ERROR: MeasPoisEB() - Observable OK, but with no PDF!" << std::endl;
-      return 0.0;
-    }
-    int ixeff, ixbkg;
-    double p=0;
-    double g;
-    PDF::BaseType<int> *pdf = static_cast<  PDF::BaseType<int> * >(m_observable->getPdf());
-    //////////////// TEMP CODE - FOR DEBUGGING, IN CASE OF BUGS...
-    if (pdf==0) {
-      std::cerr << "ERROR: wrong type of PDF in MeasPoisEB (expected BaseType<int>)!" << std::endl;
-      return 0;
-    }
-    if (m_nuisanceWeights.size() != m_nuisanceIndecis.size()) {
-      std::cerr << "ERROR: nuisance weight and index arrays are not of equal size!" << std::endl;
-      return 0.0;
-    }
-    if (m_nuisanceWeights.size()==0) {
-      std::cerr << "ERROR: nuisance weight and index arrays are not initialized (size zero)!" << std::endl;
-      return 0.0;
-    }
-    for (unsigned int i=0; i<m_nuisanceIndecis.size(); i++) {
-      ixeff = m_nuisanceIndecis[i][m_effIndex];
-      ixbkg = m_nuisanceIndecis[i][m_bkgIndex];
-      g = getM(s, m_eff->getIntX(ixeff), m_bkg->getIntX(ixbkg));
-      p += m_nuisanceWeights[i]*pdf->getVal(x,g);
-      if (x<0) { // TODO: Debug info - remove when obsolete
-        TOOLS::coutFixed(4,int(i));
-        TOOLS::coutFixed(" s(true), e, b, mu = ",2,s);
-        TOOLS::coutFixed(", ", 4, m_eff->getIntX(ixeff));
-        TOOLS::coutFixed(", ", 4, m_bkg->getIntX(ixbkg));
-        TOOLS::coutFixed(", ", 4, g);
-        TOOLS::coutFixed(", p = ", 4, p);
-        TOOLS::coutFixed(", w = ", 4, m_nuisanceWeights[i]);
-        TOOLS::coutFixed(", pdfval = ", 4, pdf->getVal(x,g));
-        std::cout << std::endl;
-      }
-    }
+//       return 0.0;
+//     }
+//     ////// BUG TRAP!
+//     if (m_observable->getPdf()==0) {
+//       std::cerr << "ERROR: MeasPoisEB() - Observable OK, but with no PDF!" << std::endl;
+//       return 0.0;
+//     }
+//     int ixeff, ixbkg;
+//     double p=0;
+//     double g;
+//     PDF::BaseType<int> *pdf = static_cast<  PDF::BaseType<int> * >(m_observable->getPdf());
+//     //////////////// TEMP CODE - FOR DEBUGGING, IN CASE OF BUGS...
+//     if (pdf==0) {
+//       std::cerr << "ERROR: wrong type of PDF in MeasPoisEB (expected BaseType<int>)!" << std::endl;
+//       return 0;
+//     }
+//     if (m_nuisanceWeights.size() != m_nuisanceIndecis.size()) {
+//       std::cerr << "ERROR: nuisance weight and index arrays are not of equal size!" << std::endl;
+//       return 0.0;
+//     }
+//     if (m_nuisanceWeights.size()==0) {
+//       std::cerr << "ERROR: nuisance weight and index arrays are not initialized (size zero)!" << std::endl;
+//       return 0.0;
+//     }
+//     for (unsigned int i=0; i<m_nuisanceIndecis.size(); i++) {
+//       ixeff = m_nuisanceIndecis[i][m_effIndex];
+//       ixbkg = m_nuisanceIndecis[i][m_bkgIndex];
+//       g = getM(s, m_eff->getIntX(ixeff), m_bkg->getIntX(ixbkg));
+//       p += m_nuisanceWeights[i]*pdf->getVal(x,g);
+//       if (x<0) { // TODO: Debug info - remove when obsolete
+//         TOOLS::coutFixed(4,int(i));
+//         TOOLS::coutFixed(" s(true), e, b, mu = ",2,s);
+//         TOOLS::coutFixed(", ", 4, m_eff->getIntX(ixeff));
+//         TOOLS::coutFixed(", ", 4, m_bkg->getIntX(ixbkg));
+//         TOOLS::coutFixed(", ", 4, g);
+//         TOOLS::coutFixed(", p = ", 4, p);
+//         TOOLS::coutFixed(", w = ", 4, m_nuisanceWeights[i]);
+//         TOOLS::coutFixed(", pdfval = ", 4, pdf->getVal(x,g));
+//         std::cout << std::endl;
+//       }
+//     }
 
-    //    std::cout << "calcProb( " << x << ", " << s << " ) = " << p/m_nuisanceIntNorm << std::endl;
-    return p/m_nuisanceIntNorm;
-  }
+//     //    std::cout << "calcProb( " << x << ", " << s << " ) = " << p/m_nuisanceIntNorm << std::endl;
+//     return p/m_nuisanceIntNorm;
+//   }
 
 };
 

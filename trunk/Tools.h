@@ -7,6 +7,9 @@
 #include <string>
 #include <sstream>
 
+namespace OBS {
+  class Base;
+};
 
 namespace TOOLS {
   inline const char *yesNo(bool var);
@@ -20,6 +23,8 @@ namespace TOOLS {
   void makeTimeStamp( std::string & stamp, struct tm *time );
   inline void calcFlatRange( double mean, double sigma, double & xmin, double & xmax );
   inline void calcFlatMeanSigma( double xmin, double xmax,  double &mean, double & sigma );
+  void calcIntRange(const OBS::Base & obs, double scale,  double & xmin, double & xmax );
+
   class Timer {
   public:
     Timer():m_runningTime(false),m_runningClock(false)  {}

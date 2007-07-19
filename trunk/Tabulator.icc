@@ -31,7 +31,7 @@ void Tabulator<T>::setFunction(const T *fun) {
 }
 
 template<class T>
-void Tabulator<T>::setNTabPar( size_t npars ) {
+void Tabulator<T>::setTabNPar( size_t npars ) {
    m_tabName.resize(npars);
    m_tabIndex.resize(npars);
    m_tabMin.resize(npars);
@@ -262,7 +262,47 @@ void Tabulator<T>::setParameters( const std::vector<size_t> & indvec, const std:
 }
 
 template<class T>
-double Tabulator<T>::calcValue() const {
+const char *Tabulator<T>::getName() const {
+  return m_name.c_str();
+}
+
+template<class T>
+const char *Tabulator<T>::getDescription() const {
+  return m_description.c_str();
+}
+
+template<class T>
+size_t Tabulator<T>::getTabNPar() const {
+  return m_tabMin.size();
+}
+
+template<class T>
+double Tabulator<T>::getTabMin(size_t pind) const {
+  return m_tabMin[pind];
+}
+
+template<class T>
+double Tabulator<T>::getTabMax(size_t pind) const {
+  return m_tabMax[pind];
+}
+
+template<class T>
+double Tabulator<T>::getTabStep(size_t pind) const {
+  return m_tabStep[pind];
+}
+
+template<class T>
+size_t Tabulator<T>::getTabNsteps(size_t pind) const {
+  return m_tabNsteps[pind];
+}
+
+template<class T>
+bool Tabulator<T>::isTabulated() const {
+  return m_tabulated;
+}
+
+template<class T>
+double Tabulator<T>::calcValue() {
    std::cout << "Unspecified type! -> Define calcValue()" << std::endl;
    return 0;
 }
@@ -280,7 +320,7 @@ double Tabulator<T>::getValue( const std::vector<double> & parvec ) {
 }
 
 template<class T>
-double Tabulator<T>::interpolate( size_t ind ) const {
+double Tabulator<T>::interpolate( size_t ind ) {
    std::cout << "DEF INT!" << std::endl;
   return m_tabValues[ind]; // no interpolation
 }

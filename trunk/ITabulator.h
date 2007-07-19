@@ -25,47 +25,56 @@ public:
    inline virtual ~ITabulator() {}
 
    //! set table name
-   virtual void setName( const char *name ) {}
+   virtual void setName( const char *name ) = 0;
    //! set table description
-   virtual void setDescription( const char *desc ) {}
+   virtual void setDescription( const char *desc ) = 0;
 
    //@}
    /*! @name Tabulating */
    //@{
-   virtual void setNparams( size_t npars ) {}
+   virtual void setTabNPar( size_t npars ) = 0;
    //! add tabulated parameter def, using step size
-   virtual void addTabParStep( const char *name, int index, double xmin, double xmax, double step, int parInd=-1 ) {}
+   virtual void addTabParStep( const char *name, int index, double xmin, double xmax, double step, int parInd=-1 ) = 0;
    //! add tabulated parameter def, using N(steps)
-   virtual void addTabParNsteps( const char *name, int index, double xmin, double xmax, size_t nsteps, int parInd=-1 ) {}
+   virtual void addTabParNsteps( const char *name, int index, double xmin, double xmax, size_t nsteps, int parInd=-1 ) = 0;
    //! clear table
-   virtual void clrTable() {}
+   virtual void clrTable() = 0;
    //! print table info
-   virtual void printTable() const {}
+   virtual void printTable() const = 0;
    //! do the tabulation
-   virtual void tabulate() {}
+   virtual void tabulate() = 0;
    //! get the tabulated value with the given parameter vector
    virtual double getValue( const std::vector<double> & tabParams ) { return 0;}
 
+   //! accessors
+   virtual const char *getName()        const = 0;
+   virtual const char *getDescription() const = 0;
+   virtual size_t getTabNPar()    const = 0;
+   virtual double getTabMin( size_t pind ) const = 0;
+   virtual double getTabMax( size_t pind ) const = 0;
+   virtual double getTabStep( size_t pind ) const = 0;
+   virtual size_t getTabNsteps( size_t pind ) const = 0;
+
    //! check if the table is ok
-   bool isTabulated() { return m_tabulated; }
+   virtual bool isTabulated() const = 0;
 
 protected:
    //! set tabulated par
-   virtual void setTabPar( const char *name, int index, double min, double max, double step, size_t nsteps, int parInd=-1 ) {}
+   virtual void setTabPar( const char *name, int index, double min, double max, double step, size_t nsteps, int parInd=-1 ) = 0;
    //! initialize table
-   virtual void initTable() {}
+   virtual void initTable() = 0;
    //! sets the parameter values given
-   virtual void setParameters( const std::vector<double> & valvec ) {}
+   virtual void setParameters( const std::vector<double> & valvec ) = 0;
    //! sets the parameter values given (index)
-   virtual bool setParameters( const std::vector<size_t> & indvec ) { return 0; }
+   virtual bool setParameters( const std::vector<size_t> & indvec ) = 0;
    //! sets the parameter values given
-   virtual void setParameters( const std::vector<size_t> & indvec, const std::vector<size_t> & indvecLast) {}
+   virtual void setParameters( const std::vector<size_t> & indvec, const std::vector<size_t> & indvecLast) = 0;
    //! calculate the index in the table for a given vector of values
-   virtual int calcTabIndex( const std::vector<double> & valvec ) { return 0; }
+   virtual int calcTabIndex( const std::vector<double> & valvec ) = 0;
    //! to be called by tabulate() - to be implemented for each specific class
-   virtual double calcValue() const {return 0;}
+   virtual double calcValue() = 0;
    //! to be called by getValue() - interpolator - may be either a default function or defined per class
-   virtual double interpolate( size_t ind ) const {return 0;}
+   virtual double interpolate( size_t ind ) const = 0;
 
    //
    std::vector<int>    m_tabIndex;    /**< vector of parameter indecis - not used internally, just for external book keeping */
