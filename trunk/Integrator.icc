@@ -154,7 +154,7 @@ inline double Tabulator<Integrator>::calcValue() {
 }
 
 template<>
-inline double Tabulator<Integrator>::interpolate( size_t ind ) {
+inline double Tabulator<Integrator>::interpolate( size_t ind ) const {
   return this->m_tabValues[ind];
 }
 

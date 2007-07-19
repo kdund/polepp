@@ -146,8 +146,8 @@ namespace LIMITS {
 
   struct PoleData {
     const Pole      *polePtr;
-    const PDF::Base *m_pdfEff;
-    const PDF::Base *m_pdfBkg;
+    const PDF::Base *pdfEff;
+    const PDF::Base *pdfBkg;
     int              nobs;
     double           signal;
     double           effObs;
@@ -165,11 +165,11 @@ namespace LIMITS {
 
     void setParameters( std::vector<double> & pars );
 
-    IntegratorMiser *getIntegrator() const;
+    const IntegratorMiser *getIntegrator() const;
     IntegratorMiser &integrator();
     //
     void   go();
-    double result();
+    double result() const;
   private:
     struct PoleData m_poleData;
     IntegratorMiser m_integrator;
@@ -413,7 +413,7 @@ namespace LIMITS {
     /*! @name Calculation of belt, limits, likelihood ratios etc */
     //@{
     //! calculate probability P(N(obs) | signal) using table
-    inline double calcProb( int n, double s ) const;
+    inline double calcProb( int n, double s );
     //! finds all mu_best - only used if the method is RLMETHOD::RL_FHC2
     void findAllBestMu();   // dito for all n (loop n=0; n<m_nMuUsed)
     //! finds the mu_best for the given N
@@ -498,13 +498,13 @@ namespace LIMITS {
 
     const Range<double> *getHypTest()       const { return &m_hypTest; }
     //HERE
-    const double getEffIntMin() const { return m_poleIntTable.getIntXmin(); }
-    const double getEffIntMax() const { return m_measurement.getEff()->getIntXmax(); }
-    const double getBkgIntMin() const { return m_measurement.getBkg()->getIntXmin(); }
-    const double getBkgIntMax() const { return m_measurement.getBkg()->getIntXmax(); }
-    const double getEffIntNorm() const { return m_measurement.getEff()->getIntegral(); }
-    const double getBkgIntNorm() const { return m_measurement.getBkg()->getIntegral(); }
-    const double getIntNorm() const { return m_measurement.getNuisanceIntNorm(); }
+    const double getEffIntMin() const { return m_poleIntTable.getTabMin(m_tabEffInd); }
+    const double getEffIntMax() const { return m_poleIntTable.getTabMax(m_tabEffInd); }
+    const double getBkgIntMin() const { return m_poleIntTable.getTabMin(m_tabBkgInd); }
+    const double getBkgIntMax() const { return m_poleIntTable.getTabMax(m_tabBkgInd); }
+    //    const double getEffIntNorm() const { return m_measurement.getEff()->getIntegral(); }
+    //    const double getBkgIntNorm() const { return m_measurement.getBkg()->getIntegral(); }
+    //    const double getIntNorm() const { return m_poleIntTable.get(); }
     //
     const double  getSbest(int n) const;
     const double  getLsbest(int n) const;
@@ -549,6 +549,8 @@ namespace LIMITS {
 
   private:
 
+    static const int      m_tabEffInd = 0;
+    static const int      m_tabBkgInd = 1;
     const PDF::Poisson   *m_poisson;
     const PDF::Gauss     *m_gauss;
     const PDF::Gauss2D   *m_gauss2d;
@@ -653,7 +655,7 @@ namespace LIMITS {
     m_poleData.signal  = pars[0];
   }
 
-  IntegratorMiser *PoleIntegrator::getIntegrator() const { return & m_integrator; }
+  const IntegratorMiser *PoleIntegrator::getIntegrator() const { return & m_integrator; }
   IntegratorMiser &PoleIntegrator::integrator()          { return   m_integrator; }
   //
   void   PoleIntegrator::go()           { m_integrator.go(); }
@@ -696,39 +698,12 @@ namespace LIMITS {
 
 };
 
-inline double LIMITS::Pole::calcProb( int n, double s ) const {
+inline double LIMITS::Pole::calcProb( int n, double s ) {
   std::vector<double> v(2);
   v[0] = s;
   v[1] = static_cast<double>(n);
-  m_poleTabInt.getValue(v);
+  return m_poleIntTable.getValue(v);
 }
-
-LIMITS::PoleIntegrator::PoleIntegrator( const LIMITS::Pole *pole=0 ) { m_poleData.polePtr = pole; m_integrator.setFunction( this ); }
-LIMITS::PoleIntegrator::~PoleIntegrator() {}
-
-void LIMITS::PoleIntegrator::setPole( const LIMITS::Pole *pole ) { 
-  m_poleData.polePtr = pole;
-  m_poleData.pdfEff  = pole->getEffPdf();
-  m_poleData.pdfBkg  = pole->getBkgPdf();
-  m_poleData.effObs  = pole->getEffObs();
-  m_poleData.deffObs = pole->getEffPdfSigma();
-  m_poleData.bkgObs  = pole->getBkgObs();
-  m_poleData.dbkgObs = pole->getBkgPdfSigma();
-  m_integrator.setFunctionParams( &m_poleData )
-    }
-
-void LIMITS::PoleIntegrator::setParameters( std::vector<double> & pars ) {
-  // parameter [1] = N(obs)
-  // parameter [0] = signal
-  m_poleData.nobs    = static_cast<int>(pars[1]+0.5);
-  m_poleData.signal  = pars[0];
-}
-
-IntegratorMiser *LIMITS::PoleIntegrator::getIntegrator() const { return & m_integrator; }
-IntegratorMiser &LIMITS::PoleIntegrator::integrator()          { return   m_integrator; }
-//
-void   LIMITS::PoleIntegrator::go()           { m_integrator.go(); }
-double LIMITS::PoleIntegrator::result() const { return m_integrator.result(); }
 
 template<>
 inline double Tabulator<LIMITS::PoleIntegrator>::calcValue() {
@@ -737,11 +712,11 @@ inline double Tabulator<LIMITS::PoleIntegrator>::calcValue() {
   // [0] = s
   m_function->setParameters( m_parameters );
   m_function->go();
-  return m_->result();
+  return m_function->result();
 }
 
 template<>
-inline double Tabulator<LIMITS::PoleIntegrator>::interpolate( size_t ind ) {
+inline double Tabulator<LIMITS::PoleIntegrator>::interpolate( size_t ind ) const {
   return m_tabValues[ind];
 }
 #endif

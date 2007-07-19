@@ -44,7 +44,7 @@ public:
    //! do the tabulation
    virtual void tabulate() = 0;
    //! get the tabulated value with the given parameter vector
-   virtual double getValue( const std::vector<double> & tabParams ) { return 0;}
+   virtual double getValue( const std::vector<double> & tabParams ) = 0;
 
    //! accessors
    virtual const char *getName()        const = 0;

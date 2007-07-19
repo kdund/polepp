@@ -320,7 +320,7 @@ double Tabulator<T>::getValue( const std::vector<double> & parvec ) {
 }
 
 template<class T>
-double Tabulator<T>::interpolate( size_t ind ) {
+double Tabulator<T>::interpolate( size_t ind ) const {
    std::cout << "DEF INT!" << std::endl;
   return m_tabValues[ind]; // no interpolation
 }

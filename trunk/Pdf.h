@@ -15,7 +15,13 @@
 #define M_PIl 3.1415926535897932384626433832795029L
 #endif
 
-
+// namespace PDF {
+//    class Poisson;
+// };
+// template<>
+// inline double Tabulator<PDF::Poisson>::calcValue();
+// template<>
+// inline double Tabulator<PDF::Poisson>::interpolate( size_t ind ) const;
 
 namespace PDF {
 #ifdef PDF_CXX
@@ -328,10 +334,10 @@ namespace PDF {
     void initTabulator() {
       if (m_iTabulator) return;
       Base::initTabulator();
-      m_poisTabulator = new Tabulator<PDF::Poisson>("poissontab","tabulated poisson");
+      m_poisTabulator = new Tabulator<Poisson>("poissontab","tabulated poisson");
       m_iTabulator = m_poisTabulator;
       m_poisTabulator->setFunction( this );
-      m_poisTabulator->setNTabPar(2); // two parameters to be tabulated (N, mean)
+      m_poisTabulator->setTabNPar(2); // two parameters to be tabulated (N, mean)
       m_tabVec.resize(2); // vector used by rawOrTab()
     }
     void setTabN( int nmin, int nmax ) {
@@ -896,6 +902,18 @@ namespace PDF {
 
 //
 
+#ifndef PDF_CXX
+   extern Poisson  gPoisson;
+   extern Poisson  gPoissonTab;
+   extern PoisTab  gPoisTab;
+   extern Gauss    gGauss;
+   extern GaussTab gGaussTab;
+   
+   extern Gauss2D   gGauss2D;
+   extern LogNormal gLogNormal;
+   extern Flat      gFlat;
+#endif
+
 };
 
 template<>
@@ -915,7 +933,7 @@ inline double Tabulator<PDF::Poisson>::calcValue() {
 }
 
 template<>
-inline double Tabulator<PDF::Poisson>::interpolate( size_t ind ) {
+inline double Tabulator<PDF::Poisson>::interpolate( size_t ind ) const {
    //  std::cout << "USING Pois interp" << std::endl;
    //  std::cout << "f(N|s) =  " << this->m_tabValues[ind] << " :  N = " << m_parameters[1] << " , s = " << m_parameters[0] << std::endl;
   // m_parameters contains:
@@ -946,16 +964,5 @@ inline double Tabulator<PDF::Poisson>::interpolate( size_t ind ) {
   return f0 + corr1 + corr2;
 }
 
-#ifndef PDF_CXX
-extern PDF::Poisson  PDF::gPoisson;
-extern PDF::Poisson  PDF::gPoissonTab;
-extern PDF::PoisTab  PDF::gPoisTab;
-extern PDF::Gauss    PDF::gGauss;
-extern PDF::GaussTab PDF::gGaussTab;
-
-extern PDF::Gauss2D   PDF::gGauss2D;
-extern PDF::LogNormal PDF::gLogNormal;
-extern PDF::Flat      PDF::gFlat;
-#endif
 
 #endif

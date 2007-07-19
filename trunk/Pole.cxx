@@ -31,7 +31,7 @@ namespace LIMITS {
     double fe = parptr->pdfEff->getVal(k[0], parptr->effObs ,parptr->deffObs);
     double fb = parptr->pdfBkg->getVal(k[1], parptr->bkgObs ,parptr->dbkgObs);
     double lambda = k[0]*parptr->signal  + k[1];
-    double fn = parptr->pole->poisson()->getVal(parptr->nobs,lambda);
+    double fn = parptr->polePtr->poisson()->getVal(parptr->nobs,lambda);
     return fn*fe*fb;
   }
 
@@ -55,7 +55,7 @@ namespace LIMITS {
     m_gslIntNCalls = 10000;
     m_effIntNSigma = 5.0;
     m_bkgIntNSigma = 5.0;
-    m_
+
     //
     m_poisson = &PDF::gPoisson;
     m_gauss   = &PDF::gGauss;
@@ -1932,8 +1932,8 @@ namespace LIMITS {
     m_poleIntTable.setDescription("Table over (n,s) of pole integration");
     m_poleIntTable.setFunction( &m_poleIntegrator );
     m_poleIntTable.setNTabPar(2);
-    m_poleIntTable.addTabParStep("signal",0,smin,smax,sstep,0);
-    m_poleIntTable.addTabParStep("Nobs",  1,nmin,nmax,1.0,  1);
+    m_poleIntTable.addTabParStep("signal",m_tabEffInd,smin,smax,sstep,m_tabEffInd);
+    m_poleIntTable.addTabParStep("Nobs",  m_tabBkgInd,nmin,nmax,1.0,  m_tabBkgInd);
     m_poleIntTable.tabulate();
   }
 

@@ -103,7 +103,7 @@ protected:
    //! to be called by tabulate() - to be implemented for each specific class
    inline double calcValue();
    //! to be called by calcValue() - interpolator - may be either a default function or defined per class
-   inline double interpolate( size_t ind );
+   inline double interpolate( size_t ind ) const;
    
    T  *m_function;    /**< pointer to function class */
 };
