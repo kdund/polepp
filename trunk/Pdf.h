@@ -40,6 +40,9 @@ namespace PDF {
     DIST_LAST,     /*!< Last element before UNDEF */
     DIST_UNDEF=999 /*!< No distrubution defined*/
   };
+  inline bool isConstant( DISTYPE dt) {
+    return ((dt==DIST_UNDEF) || (dt==DIST_NONE));
+  }
   /*!
     Returns a string corresponding to the given DISTYPE.
   */
@@ -336,6 +339,7 @@ namespace PDF {
       Base::initTabulator();
       m_poisTabulator = new Tabulator<Poisson>("poissontab","tabulated poisson");
       m_iTabulator = m_poisTabulator;
+      m_poisTabulator->setVerbose(true);
       m_poisTabulator->setFunction( this );
       m_poisTabulator->setTabNPar(2); // two parameters to be tabulated (N, mean)
       m_tabVec.resize(2); // vector used by rawOrTab()

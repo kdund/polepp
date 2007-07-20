@@ -3,11 +3,11 @@
 #include <iomanip>
 #include "Pole.h"
 
-extern void argsPole(Pole *pole, int argc, char *argv[]);
+extern void argsPole(LIMITS::Pole *pole, int argc, char *argv[]);
 
 int main(int argc, char *argv[]) {
 
-  Pole pole;
+  LIMITS::Pole pole;
   //
   //  processArgs(&pole, argc, argv);
   argsPole(&pole, argc, argv);

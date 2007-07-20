@@ -63,6 +63,9 @@ public:
    //! get error
    inline double error() const;
    //@}
+   //! accessors
+   inline double getIntXmin( size_t pind ) const;
+   inline double getIntXmax( size_t pind ) const;
 
 protected:
    gsl_rng            *m_gslRange;    /**< GSL range */

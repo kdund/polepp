@@ -1,3 +1,5 @@
+#include "Pdf.h"
+#include "Observable.h"
 #include "Tools.h"
 
 namespace TOOLS {
@@ -23,46 +25,45 @@ namespace TOOLS {
     const double       mean  = obs.getObservedValue();
     const double       sigma = obs.getPdfUseSigma();
     bool positive = true; // only positive numbers in range
-    double dx;
+    int    nprev;
+    int    n     = 0;
+    int    nxmin = -1;
+    int    nxmax = -1;
+    double ptot  = 0.0;
+    double p;
+    const double maxp = 0.9999;
+    const double minp = 1.0-maxp;
     //
     if (dist==PDF::DIST_NONE) {
-      low  = mean;
-      high = mean;
+      xmin  = mean;
+      xmax = mean;
     } else {
       if (dist==PDF::DIST_LOGN) positive = false; // Log normal must allow negative values
       switch (dist) {
       case PDF::DIST_GAUS2D:
       case PDF::DIST_GAUS:
       case PDF::DIST_LOGN:
-        low  = mean - scale*sigma;
-        high = mean + scale*sigma;
+        xmin  = mean - scale*sigma;
+        xmax = mean + scale*sigma;
         break;
       case PDF::DIST_FLAT:
         // always full range
-        Tools::calcFlatRange( mean, sigma, low, high );
+        TOOLS::calcFlatRange( mean, sigma, xmin, xmax );
         break;
       case PDF::DIST_POIS:
-        int    n     = 0;
-        int    nlow  = -1;
-        int    nhigh = -1;
-        double ptot  = 0.0;
-        double p;
-
-        const double maxp = 0.9999;
-        const double minp = 1.0-maxp;
         // find min and max range of poisson
         // this is defined by maxp above
-        // low  : max N for wich sum( p(n) ) < 1.0-maxp
-        // high : min N for wich sum( p(n) ) > maxp
-        while (nhigh<0) {
+        // xmin  : max N for wich sum( p(n) ) < 1.0-maxp
+        // xmax : min N for wich sum( p(n) ) > maxp
+        while (nxmax<0) {
           nprev=n;
-          p = PDF::gPoisson.getVal( n, mean )*obs.aprioiProb(static_cast<double>(n));
+          p = PDF::gPoisson.getVal( n, mean )*obs.aprioriProb(static_cast<double>(n));
           ptot += p;
-          if ((n==0) && (ptot>minp)) nlow=0;
-          if (nlow<0) {
-            if (ptot<minp) nlow=n;
+          if ((n==0) && (ptot>minp)) nxmin=0;
+          if (nxmin<0) {
+            if (ptot<minp) nxmin=n;
           }
-          if (ptot>maxp) nhigh = n;
+          if (ptot>maxp) nxmax = n;
           n++;
           if (nprev>n) { // just a STUPID test; can be done better...
             std::cerr << "Infinite loop caugh in Tools::calcIntRange() for Poisson - brutal exit" << std::endl;
@@ -70,19 +71,19 @@ namespace TOOLS {
           }
         }
         //
-        low  = static_cast<double>(nlow);
-        high = static_cast<double>(nhigh);
+        xmin  = static_cast<double>(nxmin);
+        xmax = static_cast<double>(nxmax);
         break;
       default: // ERROR STATE
-        low  = 0;
-        high = 0;
-        std::cerr << "Tools::calcIntRange() -> Unknown pdf type = " << m_dist << std::endl;
+        xmin  = 0;
+        xmax = 0;
+        std::cerr << "Tools::calcIntRange() -> Unknown pdf type = " << dist << std::endl;
         break;
       }
     }
-    if (positive && (low<0)) {
-      high = high-low;
-      low = 0;
+    if (positive && (xmin<0)) {
+      xmax = xmax-xmin;
+      xmin = 0;
     }
   }
   //

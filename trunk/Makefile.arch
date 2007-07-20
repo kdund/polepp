@@ -9,6 +9,7 @@
 ARCH         := $(shell root-config --arch)
 PLATFORM     := $(shell root-config --platform)
 
+OPTFLAG       = 
 CXX           =
 ObjSuf        = o
 SrcSuf        = cxx
@@ -53,9 +54,9 @@ endif
 ifeq ($(ARCH),hurddeb)
 # GNU/Hurd
 CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC
+CXXFLAGS      = $(OPTFLAG) -Wall -fPIC
 LD            = g++
-LDFLAGS       = -O2
+LDFLAGS       = $(OPTFLAG)
 SOFLAGS       = -shared
 endif
 
@@ -183,9 +184,9 @@ endif
 ifeq ($(ARCH),alphaegcs)
 # Alpha/OSF with egcs
 CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC
+CXXFLAGS      = $(OPTFLAG) -Wall -fPIC
 LD            = g++
-LDFLAGS       = -O2
+LDFLAGS       = $(OPTFLAG)
 SOFLAGS       = -Wl,-expect_unresolved,* -shared
 endif
 
@@ -210,18 +211,18 @@ endif
 ifeq ($(ARCH),linuxrh51)
 # Linux with gcc 2.7.2.x
 CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC -Woverloaded-virtual
+CXXFLAGS      = $(OPTFLAG) -Wall -fPIC -Woverloaded-virtual
 LD            = g++
-LDFLAGS       = -O2
+LDFLAGS       = $(OPTFLAG)
 SOFLAGS       = -shared
 endif
 
 ifeq ($(ARCH),linuxrh42)
 # Linux with gcc 2.7.2.x (RedHat 4.2)
 CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC -Woverloaded-virtual
+CXXFLAGS      = $(OPTFLAG) -Wall -fPIC -Woverloaded-virtual
 LD            = g++
-LDFLAGS       = -O2
+LDFLAGS       = $(OPTFLAG)
 SOFLAGS       = -shared
 endif
 
@@ -237,35 +238,35 @@ endif
 ifeq ($(ARCH),linuxdeb2)
 # Linux with gcc 2.7.2.x
 CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC -Woverloaded-virtual
+CXXFLAGS      = $(OPTFLAG) -Wall -fPIC -Woverloaded-virtual
 LD            = g++
-LDFLAGS       = -O2
+LDFLAGS       = $(OPTFLAG)
 SOFLAGS       = -shared
 endif
 
 ifeq ($(ARCH),linuxdeb2ppc)
 # Debian/Linux on the PowerPC
 CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC -Woverloaded-virtual
+CXXFLAGS      = $(OPTFLAG) -Wall -fPIC -Woverloaded-virtual
 LD            = g++
-LDFLAGS       = -O2
+LDFLAGS       = $(OPTFLAG)
 SOFLAGS       = -shared
 endif
 
 ifeq ($(ARCH),linuxsuse6)
 # Linux with gcc 2.7.2.x
 CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC -Woverloaded-virtual
+CXXFLAGS      = $(OPTFLAG) -Wall -fPIC -Woverloaded-virtual
 LD            = g++
-LDFLAGS       = -O2
+LDFLAGS       = $(OPTFLAG)
 SOFLAGS       = -shared
 endif
 
 ifeq ($(ARCH),linux)
 # Linux with egcs, gcc 2.9x, gcc 3.x (>= RedHat 5.2)
 CXX           = g++
-###CXXFLAGS      = -O2 -Wall -fPIC -Woverloaded-virtual
-CXXFLAGS      = -O2 -Wall -fPIC
+###CXXFLAGS      = $(OPTFLAG) -Wall -fPIC -Woverloaded-virtual
+CXXFLAGS      = $(OPTFLAG) -Wall -fPIC
 LD            = g++
 LDFLAGS       = -O
 SOFLAGS       = -shared
@@ -301,18 +302,18 @@ endif
 ifeq ($(ARCH),linuxppcegcs)
 # MkLinux with egcs/glibc
 CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC -Woverloaded-virtual
+CXXFLAGS      = $(OPTFLAG) -Wall -fPIC -Woverloaded-virtual
 LD            = g++
-LDFLAGS       = -O2
+LDFLAGS       = $(OPTFLAG)
 SOFLAGS       = -shared
 endif
 
 ifeq ($(ARCH),linuxia64gcc)
 # Itanium Linux with gcc 2.9x
 CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC -Woverloaded-virtual
+CXXFLAGS      = $(OPTFLAG) -Wall -fPIC -Woverloaded-virtual
 LD            = g++
-LDFLAGS       = -O2
+LDFLAGS       = $(OPTFLAG)
 SOFLAGS       = -shared
 endif
 
@@ -346,9 +347,9 @@ endif
 ifeq ($(ARCH),linuxx8664gcc)
 # AMD Opteron and Intel EM64T (64 bit mode) Linux with gcc 3.x
 CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC -Woverloaded-virtual
+CXXFLAGS      = $(OPTFLAG) -Wall -fPIC -Woverloaded-virtual
 LD            = g++
-LDFLAGS       = -O2
+LDFLAGS       = $(OPTFLAG)
 SOFLAGS       = -shared
 endif
 
@@ -373,9 +374,9 @@ endif
 ifeq ($(ARCH),linuxalphaegcs)
 # Alpha Linux with egcs
 CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC -Woverloaded-virtual
+CXXFLAGS      = $(OPTFLAG) -Wall -fPIC -Woverloaded-virtual
 LD            = g++
-LDFLAGS       = -O2
+LDFLAGS       = $(OPTFLAG)
 SOFLAGS       = -shared
 endif
 
@@ -391,9 +392,9 @@ endif
 ifeq ($(ARCH),mklinux)
 # MkLinux with libc5
 CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC -Woverloaded-virtual
+CXXFLAGS      = $(OPTFLAG) -Wall -fPIC -Woverloaded-virtual
 LD            = g++
-LDFLAGS       = -O2
+LDFLAGS       = $(OPTFLAG)
 SOFLAGS       = -shared
 endif
 
@@ -428,8 +429,8 @@ ifeq ($(ARCH),macosx)
 # MacOS X with cc (GNU cc 2.95.2 and gcc 3.3)
 MACOSX_MINOR := $(shell sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2)
 CXX           = c++
-CXXFLAGS      = -O2 -pipe -Wall -W -Woverloaded-virtual
-LDFLAGS       = -O2 -bind_at_load
+CXXFLAGS      = $(OPTFLAG) -pipe -Wall -W -Woverloaded-virtual
+LDFLAGS       = $(OPTFLAG) -bind_at_load
 # The SOFLAGS will be used to create the .dylib,
 # the .so will be created separately
 DllSuf        = dylib
@@ -452,8 +453,8 @@ ifeq ($(ARCH),macosx64)
 # MacOS X >= 10.4 with gcc 64 bit mode (GNU gcc 4.*)
 MACOSX_MINOR := $(shell sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2)
 CXX           = c++
-CXXFLAGS      = -m64 -O2 -pipe -Wall -W -Woverloaded-virtual
-LDFLAGS       = -m64 -O2 -bind_at_load
+CXXFLAGS      = -m64 $(OPTFLAG) -pipe -Wall -W -Woverloaded-virtual
+LDFLAGS       = -m64 $(OPTFLAG) -bind_at_load
 # The SOFLAGS will be used to create the .dylib,
 # the .so will be created separately
 DllSuf        = dylib
@@ -493,7 +494,7 @@ ExeSuf        = .exe
 DllSuf        = dll
 OutPutOpt     = -out:
 CXX           = cl
-CXXOPT        = -O2
+CXXOPT        = $(OPTFLAG)
 #CXXOPT        = -Z7
 CXXFLAGS      = $(CXXOPT) -G5 -GR -GX -MD -DWIN32 -D_WINDOWS -nologo \
                 -DVISUAL_CPLUSPLUS -D_X86_=1 -D_DLL
@@ -516,7 +517,7 @@ ExeSuf        = .exe
 DllSuf        = dll
 OutPutOpt     = -out:
 CXX           = cl
-CXXOPT        = -O2
+CXXOPT        = $(OPTFLAG)
 #CXXOPT        = -Z7
 CXXFLAGS      = $(CXXOPT) -G5 -GR -GX -MD -DWIN32 -D_WINDOWS -nologo \
                 -DVISUAL_CPLUSPLUS -D_X86_=1 -D_DLL

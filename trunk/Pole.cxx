@@ -26,16 +26,19 @@ namespace LIMITS {
     // params[4] = bkg obs
     // params[5] = bkg obs sigma
 
-    //
     const PoleData *parptr = static_cast<const PoleData *>(params);
-    double fe = parptr->pdfEff->getVal(k[0], parptr->effObs ,parptr->deffObs);
-    double fb = parptr->pdfBkg->getVal(k[1], parptr->bkgObs ,parptr->dbkgObs);
-    double lambda = k[0]*parptr->signal  + k[1];
-    double fn = parptr->polePtr->poisson()->getVal(parptr->nobs,lambda);
+    double effval = (parptr->effIndex<0 ? parptr->effObs : k[parptr->effIndex]);
+    double bkgval = (parptr->bkgIndex<0 ? parptr->bkgObs : k[parptr->bkgIndex]);
+    double fe = (parptr->pdfEff ? parptr->pdfEff->getVal(effval, parptr->effObs ,parptr->deffObs) : 1.0);
+    double fb = (parptr->pdfBkg ? parptr->pdfBkg->getVal(bkgval, parptr->bkgObs ,parptr->dbkgObs) : 1.0);
+    double lambda = effval*parptr->signal  + bkgval;
+    double fn = parptr->pdfObs->getVal(parptr->nobs,lambda);
+    //    std::cout << effval << "   " << bkgval << std::endl;
     return fn*fe*fb;
   }
 
   void Pole::initDefault() {
+    m_cl = 0.90;
     m_thresholdBS    = 0.001;
     m_thresholdPrec = 0.01;
     m_scaleLimit=1.0;
@@ -67,7 +70,9 @@ namespace LIMITS {
     // N = 1
     // eff = 1.0, Gaus(1.0,0.1)
     // bkg = 0.0
+    // be corr=0
     //
+    m_beCorr = 0;
     setNObserved(1);
     setEffPdf(1.0,0.1,PDF::DIST_GAUS);
     setEffObs();
@@ -89,17 +94,25 @@ namespace LIMITS {
     //
     // set test hypothesis range [0,N(obs)+1]
     //
-    setTestHyp(0.0,-1.0,0.01);
+    setHypTestRange(0.0,-1.0,0.01);
     //
     m_validBestMu = false;
+    m_nBelt        = 0;
     m_nBeltUsed    = 5; // not really needed to be set here - set in initBeltArrays()
     m_nBeltMinUsed = m_nBeltUsed; // idem
     m_nBeltMaxUsed = 0;
     //
-    m_poleTabNRange.setRange(1,2*m_nBeltUsed,1);
-    m_poleTabSRange.copy( m_hypTest );
+    m_intTabNRange.setRange(1,2*m_nBeltUsed,1);
+    m_intTabSRange.copy( m_hypTest );
     //
-
+    m_sumProb = 0;
+    m_scanBeltNorm = 0;
+    m_lowerLimit = 0;
+    m_upperLimit = 0;
+    m_maxNorm = 0;
+    m_rejs0P = 0;
+    m_rejs0N1 = 0;
+    m_rejs0N2 = 0;
   }
 
   void Pole::execute() {
@@ -226,8 +239,8 @@ namespace LIMITS {
     return change;
   }
 
-  // void Pole::setTestHyp(double step) {
-  //   std::cout << "ERROR: Should not be called! setTestHyp(step)" << std::endl;
+  // void Pole::setHypTestRange(double step) {
+  //   std::cout << "ERROR: Should not be called! setHypTestRange(step)" << std::endl;
   //   exit(-1);
   //   //
   //   // Find hypothesis test range based on the input measurement
@@ -247,7 +260,7 @@ namespace LIMITS {
   //   m_hypTest.setRange(low,up,step);
   // }
 
-  void Pole::setTestHyp(double low, double high, double step) {
+  void Pole::setHypTestRange(double low, double high, double step) {
     //
     // Set explicitely the test range.
     // * step<=0  => step = (high-low)/100
@@ -1813,7 +1826,7 @@ namespace LIMITS {
     m_upperLimitNorm = 0;
     m_lowerLimitPrec = -1;
     m_upperLimitPrec = -1;
-    m_nBeltUsed = 2.0*getNObserved();
+    m_nBeltUsed = 2*getNObserved();
     if (m_nBeltUsed<2) m_nBeltUsed=2;
     m_nBeltMinLast=0;
     m_nBeltMinUsed=m_nBeltUsed;
@@ -1912,29 +1925,54 @@ namespace LIMITS {
   // }
 
   void Pole::initIntegral() {
-    size_t ndim = 2; // ndim=2 since we integrate over eff and bkg
+    size_t ndim;
+    m_poleIntegrator.setPole( this );
+    int ei = m_poleIntegrator.getEffIndex();
+    int bi = m_poleIntegrator.getBkgIndex();
+    if ( (bi<0) || (ei<0) ) {
+      ndim = 1;
+    } else ndim = 2;
     std::vector<double> xl(ndim);
     std::vector<double> xu(ndim);
-    Tools::calcIntRange( *(m_measurement.getEff()), m_effIntNSigma, xl[0],xu[0] )
-    Tools::calcIntRange( *(m_measurement.getBkg()), m_bkgIntNSigma, xl[1],xu[1] )
-    m_poleIntegrator.setPole( this );
+    if (ei>=0)
+      TOOLS::calcIntRange( *(m_measurement.getEff()), m_effIntNSigma, xl[ei],xu[ei] );
+    if (bi>=0)
+      TOOLS::calcIntRange( *(m_measurement.getBkg()), m_bkgIntNSigma, xl[bi],xu[bi] );
     m_poleIntegrator.integrator().setFunction( poleFun );
     m_poleIntegrator.integrator().setFunctionDim(ndim);
     m_poleIntegrator.integrator().setIntRanges(xl,xu);
-    m_poleIntegrator.integrator().setNCalls(m_gslIntNCalls);
+    m_poleIntegrator.integrator().setNcalls(m_gslIntNCalls);
     std::vector<double> dummy(2,0); // the '2' here refers to dummy[0] = N(obs) and dummy[1] = signal
     m_poleIntegrator.setParameters(dummy); // will also setFunctionParams()
     m_poleIntegrator.integrator().initialize();
   }
 
   void Pole::initTabIntegral() {
+    m_poleIntTable.setVerbose(true);
     m_poleIntTable.setName("PoleIntegratorTable");
     m_poleIntTable.setDescription("Table over (n,s) of pole integration");
     m_poleIntTable.setFunction( &m_poleIntegrator );
-    m_poleIntTable.setNTabPar(2);
-    m_poleIntTable.addTabParStep("signal",m_tabEffInd,smin,smax,sstep,m_tabEffInd);
-    m_poleIntTable.addTabParStep("Nobs",  m_tabBkgInd,nmin,nmax,1.0,  m_tabBkgInd);
+    m_poleIntTable.setTabNPar(2);
+    m_poleIntTable.addTabParStep("signal",
+                                 s_tabSigInd,
+                                 m_intTabSRange.min(),
+                                 m_intTabSRange.max(),
+                                 m_intTabSRange.step(),
+                                 s_tabSigInd);
+    m_poleIntTable.addTabParStep("Nobs",
+                                 s_tabNobsInd,
+                                 static_cast<double>(m_intTabNRange.min()),
+                                 static_cast<double>(m_intTabNRange.max()),
+                                 1.0,
+                                 s_tabNobsInd);
     m_poleIntTable.tabulate();
+
+    std::cout << "TABTST: " << calcProb(0,0.0) << std::endl;;
+    std::cout << "TABTST: " << calcProb(8,1.1) << std::endl;;
+    std::cout << "TABTST: " << calcProb(8,1.2) << std::endl;;
+    std::cout << "TABTST: " << calcProb(8,1.8) << std::endl;;
+    std::cout << "TABTST: " << calcProb(8,1.9) << std::endl;
+    exit(-1);
   }
 
   void Pole::initAnalysis() {
@@ -2061,11 +2099,11 @@ namespace LIMITS {
     std::cout << "----------------------------------------------\n";
     std::cout << " Int. eff. min      : " << getEffIntMin() << std::endl;
     std::cout << " Int. eff. max      : " << getEffIntMax() << std::endl;
-    std::cout << " Int. eff. N pts    : " << getEffIntN() << std::endl;
+    //    std::cout << " Int. eff. N pts    : " << getEffIntN() << std::endl;
     std::cout << "----------------------------------------------\n";
     std::cout << " Int. bkg. min      : " << getBkgIntMin() << std::endl;
     std::cout << " Int. bkg. max      : " << getBkgIntMax() << std::endl;
-    std::cout << " Int. bkg. N pts    : " << getBkgIntN() << std::endl;
+    //    std::cout << " Int. bkg. N pts    : " << getBkgIntN() << std::endl;
     std::cout << "----------------------------------------------\n";
     std::cout << " Binary search thr. : " << m_thresholdBS << std::endl;
     std::cout << " 1-CL threshold     : " << m_thresholdPrec << std::endl;

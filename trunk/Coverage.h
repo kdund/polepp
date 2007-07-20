@@ -1,3 +1,9 @@
+#define DO_COVERAGE
+#undef  DO_COVERAGE
+
+#ifdef DO_COVERAGE
+
+
 #ifndef COVERAGE_H
 #define COVERAGE_H
 //
@@ -116,4 +122,7 @@ private:
   // some timing stuff
   TOOLS::Timer m_timer;
 };
+#endif
+
+
 #endif

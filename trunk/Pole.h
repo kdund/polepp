@@ -75,10 +75,10 @@
  *    see previous
  *
  *  Integration
- *  - setEffInt() : Integration range of efficiency\n
+ *  - setIntEffNSigma() : Integration range of efficiency\n
  *    The integration range must cover the PDF such that the tails are
  *    negligable.
- *  - setBkgInt() : Dito, background
+ *  - setIntBkgNSigma() : Dito, background
  *
  *  Belt construction
  *  - calcBelt() : Calculates the confidence belt [n1(s,b),n2(s,b)]
@@ -89,7 +89,7 @@
  *  - setMethod() : sets 
  *
  *  Hypothesis testing
- *  - setTestHyp() : test hypothesis range, $s_{best}$\n
+ *  - setHypTestRange() : test hypothesis range, $s_{best}$\n
  *    This sets the range and step size (precision) when calculating the construction or confidence belt.\n
  *    For limit calculations, this setting has no effect. It is now dynamically set.
  *
@@ -148,6 +148,9 @@ namespace LIMITS {
     const Pole      *polePtr;
     const PDF::Base *pdfEff;
     const PDF::Base *pdfBkg;
+    const PDF::Base *pdfObs;
+    int              effIndex;
+    int              bkgIndex;
     int              nobs;
     double           signal;
     double           effObs;
@@ -163,16 +166,23 @@ namespace LIMITS {
 
     inline void setPole( const Pole *pole );
 
-    void setParameters( std::vector<double> & pars );
+    inline void setParameters( std::vector<double> & pars );
 
-    const IntegratorMiser *getIntegrator() const;
-    IntegratorMiser &integrator();
+    inline const Integrator *getIntegrator() const;
+    inline Integrator       &integrator();
     //
-    void   go();
-    double result() const;
+    inline void   go();
+    inline double result() const;
+
+    inline int    getEffIndex()  const;
+    inline double getEffIntMin() const;
+    inline double getEffIntMax() const;
+    inline int    getBkgIndex()  const;
+    inline double getBkgIntMin() const;
+    inline double getBkgIntMax() const; 
   private:
     struct PoleData m_poleData;
-    IntegratorMiser m_integrator;
+    IntegratorVegas m_integrator;
   };
 
 
@@ -307,13 +317,22 @@ namespace LIMITS {
       integral range is calculated in initIntegral()
       \param nsigma is the number of sigmas to cover
     */
-    void setEffInt( double nsigma ) { m_effIntNSigma = nsigma; }
+    void setIntEffNSigma( double nsigma ) { m_effIntNSigma = nsigma; }
     //! set the integral range for background
     /*!
       integral range is calculated in initIntegral()
       \param nsigma is the number of sigmas to cover
     */
-    void setBkgInt( double nsigma ) { m_bkgIntNSigma = nsigma; }
+    void setIntBkgNSigma( double nsigma ) { m_bkgIntNSigma = nsigma; }
+
+    //! set the number of calls used by GSL integrator
+    void setIntGslNCalls(int n) { m_gslIntNCalls = n; }
+
+    //! set range in signal for tabulated integral
+    void setIntSigRange( double smin, double smax, int nsteps ) { m_intTabSRange.setRange( smin, smax, 0.0, nsteps ); }
+
+    //! set range in N(obs) for tabulated integral
+    void setIntNobsRange( int nmin, int nmax )  { m_intTabNRange.setRange( nmin, nmax, 1 ); }
 
     //! set a scaling number to scale the output limits
     void setScaleLimit(double s) { m_scaleLimit = (s>0.0 ? s:1.0); }
@@ -354,7 +373,7 @@ namespace LIMITS {
     void setPrecThreshold( double da=0.01)   { m_thresholdPrec = (da>0 ? da:0.01); }
 
     //! set range for mutest in calcBelt() etc (NOT used in the limit calculation)
-    void setTestHyp(double low, double high, double step);
+    void setHypTestRange(double low, double high, double step);
 
     //! set maximum difference from unity in normOK()
     void setNormMaxDiff(double dpmax=0.001) { m_normMaxDiff=dpmax; }
@@ -405,8 +424,6 @@ namespace LIMITS {
     void initIntegral();
     //! init tabulated pole integral
     void initTabIntegral();
-    //! set the number of calls used by GSL integrator
-    void setGslNCalls(int n) { m_gslIntNCalls = n; }
     //@}
 
 
@@ -475,6 +492,8 @@ namespace LIMITS {
     MEAS::MeasPoisEB &       getMeasurement()         { return m_measurement; }
     const int          getNObserved()     const { return m_measurement.getObsVal(); }
 
+    const PDF::Base   *getObsPdf()        const { return m_measurement.getObservable()->getPdf(); }
+
     const PDF::Base   *getEffPdf()        const { return m_measurement.getEff()->getPdf(); }
     const double       getEffObs()        const { return m_measurement.getEffObs(); }
     const double       getEffPdfMean()    const { return m_measurement.getEffPdfMean(); }
@@ -497,11 +516,11 @@ namespace LIMITS {
     const int            getVerbose()       const { return m_verbose; }
 
     const Range<double> *getHypTest()       const { return &m_hypTest; }
-    //HERE
-    const double getEffIntMin() const { return m_poleIntTable.getTabMin(m_tabEffInd); }
-    const double getEffIntMax() const { return m_poleIntTable.getTabMax(m_tabEffInd); }
-    const double getBkgIntMin() const { return m_poleIntTable.getTabMin(m_tabBkgInd); }
-    const double getBkgIntMax() const { return m_poleIntTable.getTabMax(m_tabBkgInd); }
+
+    const double getEffIntMin() const { return m_poleIntegrator.getEffIntMin(); }
+    const double getEffIntMax() const { return m_poleIntegrator.getEffIntMax(); }
+    const double getBkgIntMin() const { return m_poleIntegrator.getBkgIntMin(); }
+    const double getBkgIntMax() const { return m_poleIntegrator.getBkgIntMax(); }
     //    const double getEffIntNorm() const { return m_measurement.getEff()->getIntegral(); }
     //    const double getBkgIntNorm() const { return m_measurement.getBkg()->getIntegral(); }
     //    const double getIntNorm() const { return m_poleIntTable.get(); }
@@ -547,10 +566,13 @@ namespace LIMITS {
     const bool normOK(double p)    const { return (fabs(p-1.0)<m_normMaxDiff); }
     //@}
 
+    static const int      s_intEffInd = 0;
+    static const int      s_intBkgInd = 1;
+    static const int      s_tabSigInd  = 0;
+    static const int      s_tabNobsInd = 1;
+
   private:
 
-    static const int      m_tabEffInd = 0;
-    static const int      m_tabBkgInd = 1;
     const PDF::Poisson   *m_poisson;
     const PDF::Gauss     *m_gauss;
     const PDF::Gauss2D   *m_gauss2d;
@@ -579,8 +601,8 @@ namespace LIMITS {
     double                    m_bkgIntNSigma;   /**< for bkg */
 
     Tabulator<PoleIntegrator> m_poleIntTable;   /**< the table of poleIntegrator   */
-    Range<double>             m_poleTabSRange;  /**< tabulated signal range */
-    Range<int>                m_poleTabNRange;  /**< tabulated N(obs) range */
+    Range<double>             m_intTabSRange;   /**< tabulated signal range */
+    Range<int>                m_intTabNRange;   /**< tabulated N(obs) range */
 
     ////////////////////////////////////////////////////
     //
@@ -640,23 +662,46 @@ namespace LIMITS {
 
   void PoleIntegrator::setPole( const Pole *pole ) {
     m_poleData.polePtr = pole;
+    m_poleData.pdfObs  = pole->getObsPdf();
     m_poleData.pdfEff  = pole->getEffPdf();
     m_poleData.pdfBkg  = pole->getBkgPdf();
     m_poleData.effObs  = pole->getEffObs();
     m_poleData.deffObs = pole->getEffPdfSigma();
     m_poleData.bkgObs  = pole->getBkgObs();
     m_poleData.dbkgObs = pole->getBkgPdfSigma();
+    bool effConst = PDF::isConstant(pole->getEffPdfDist());
+    bool bkgConst = PDF::isConstant(pole->getBkgPdfDist());
+    if (effConst) {
+      m_poleData.effIndex=-1;
+      if (!bkgConst) m_poleData.effIndex=0;
+    }
+    if (bkgConst) {
+      m_poleData.bkgIndex=-1;
+      if (!effConst) m_poleData.effIndex=0;
+    }
+    if ((!effConst) && (!bkgConst)) {
+      m_poleData.effIndex=pole->s_intEffInd;
+      m_poleData.bkgIndex=pole->s_intBkgInd;
+    }
+    
     m_integrator.setFunctionParams( &m_poleData );
   }
   void PoleIntegrator::setParameters( std::vector<double> & pars ) {
-    // parameter [1] = N(obs)
-    // parameter [0] = signal
-    m_poleData.nobs    = static_cast<int>(pars[1]+0.5);
-    m_poleData.signal  = pars[0];
+    // parameter [s_tabNobsInd] = N(obs)
+    // parameter [s_tabSigInd]  = signal
+    m_poleData.nobs    = static_cast<int>(pars[m_poleData.polePtr->s_tabNobsInd]+0.5);
+    m_poleData.signal  = pars[m_poleData.polePtr->s_tabSigInd];
   }
 
-  const IntegratorMiser *PoleIntegrator::getIntegrator() const { return & m_integrator; }
-  IntegratorMiser &PoleIntegrator::integrator()          { return   m_integrator; }
+  const Integrator *PoleIntegrator::getIntegrator() const { return & m_integrator; }
+  Integrator       &PoleIntegrator::integrator()          { return   m_integrator; }
+
+  int    PoleIntegrator::getEffIndex()  const { return m_poleData.effIndex; }
+  double PoleIntegrator::getEffIntMin() const { return (m_poleData.effIndex<0 ? m_poleData.effObs : m_integrator.getIntXmin( m_poleData.effIndex )); }
+  double PoleIntegrator::getEffIntMax() const { return (m_poleData.effIndex<0 ? m_poleData.effObs : m_integrator.getIntXmax( m_poleData.effIndex )); }
+  int    PoleIntegrator::getBkgIndex()  const { return m_poleData.bkgIndex; }
+  double PoleIntegrator::getBkgIntMin() const { return (m_poleData.bkgIndex<0 ? m_poleData.bkgObs : m_integrator.getIntXmin( m_poleData.bkgIndex )); }
+  double PoleIntegrator::getBkgIntMax() const { return (m_poleData.bkgIndex<0 ? m_poleData.bkgObs : m_integrator.getIntXmax( m_poleData.bkgIndex )); }
   //
   void   PoleIntegrator::go()           { m_integrator.go(); }
   double PoleIntegrator::result() const { return m_integrator.result(); }
@@ -700,24 +745,93 @@ namespace LIMITS {
 
 inline double LIMITS::Pole::calcProb( int n, double s ) {
   std::vector<double> v(2);
-  v[0] = s;
-  v[1] = static_cast<double>(n);
+  v[s_tabSigInd] = s;
+  v[s_tabNobsInd] = static_cast<double>(n);
   return m_poleIntTable.getValue(v);
 }
 
 template<>
 inline double Tabulator<LIMITS::PoleIntegrator>::calcValue() {
   // Tabulator parameters in std::vector<double> m_parameters
-  // [1] = N
-  // [0] = s
+  // Pole::s_tabSigInd  = index for s
+  // Pole::s_tabNobsInd = index for N(obs)
   m_function->setParameters( m_parameters );
   m_function->go();
   return m_function->result();
 }
 
 template<>
+inline double Tabulator<LIMITS::PoleIntegrator>::deriv( size_t tabind, size_t parind ) const {
+  if (int(parind)==LIMITS::Pole::s_tabNobsInd) return 0;
+  //
+  size_t nvals = m_tabValues.size();
+  size_t sper = m_tabPeriod[parind];
+  double h = m_tabStep[parind];
+  double f0,fp1,fm1;
+  double rval;
+  f0 = m_tabValues[tabind];
+  std::cout << "period = " << sper << "   h = " << h << "    f0 = " << f0 << std::endl;
+  if (sper>tabind) { // ind-1 does not exist
+    if (tabind+sper<nvals) { // ind+1 is ok
+      fp1 = m_tabValues[tabind+sper];
+      rval = (fp1-f0)/h;
+    } else { // ind+1 is not OK!!!
+      rval = 0;
+    }
+  } else { //
+    fm1 = m_tabValues[tabind-sper];
+    if (tabind+sper<nvals) { // ind+1 is ok
+      fp1 = m_tabValues[tabind+sper];
+      std::cout << "fp1 = " << fp1 << "  fm1 = " << fm1 << std::endl;
+      rval = (fp1-fm1)/(2.0*h);
+    } else { // ind+1 is not OK!!!
+      rval = (f0-fm1)/h;
+    }
+  }
+  return rval;
+}
+
+template<>
+inline double Tabulator<LIMITS::PoleIntegrator>::deriv2( size_t tabind, size_t parind ) const {
+  if (int(parind)==LIMITS::Pole::s_tabNobsInd) return 0;
+  //
+  size_t nvals = m_tabValues.size();
+  size_t sper = m_tabPeriod[parind];
+  double h = m_tabStep[parind];
+  double f0,fp1,fm1;
+  double rval;
+  f0 = m_tabValues[tabind];
+  std::cout << "period = " << sper << "   h = " << h << "    f0 = " << f0 << std::endl;
+  if (sper>tabind) { // ind-1 does not exist
+    if (tabind+sper<nvals) { // ind+1 is ok
+      fp1 = m_tabValues[tabind+sper];
+      rval = (fp1-2.0*f0)/(h*h);
+    } else { // ind+1 is not OK!!!
+      rval = 0;
+    }
+  } else { //
+    fm1 = m_tabValues[tabind-sper];
+    if (tabind+sper<nvals) { // ind+1 is ok
+      fp1 = m_tabValues[tabind+sper];
+      std::cout << "fp1 = " << fp1 << "  fm1 = " << fm1 << std::endl;
+      rval = (fp1+fm1-2.0*f0)/(h*h);
+    } else { // ind+1 is not OK!!!
+      rval = (fm1-2.0*f0)/(h*h); // NOT OK!!!!
+    }
+  }
+  return rval;
+}
+
+template<>
 inline double Tabulator<LIMITS::PoleIntegrator>::interpolate( size_t ind ) const {
-  return m_tabValues[ind];
+  double df     = deriv( ind, LIMITS::Pole::s_tabSigInd ); // derivative wrt S
+  double d2f    = deriv2( ind, LIMITS::Pole::s_tabSigInd ); // derivative2 wrt S
+  double s     = m_parameters[LIMITS::Pole::s_tabSigInd];
+  double f0    = m_tabValues[ind];                  // f() at discretized mean
+  double corr1 = df*s;
+  double corr2 = d2f*s*s/2.0;
+  std::cout << "pole interp: " << f0 << " , " << corr1 << " , " << corr2 << std::endl;
+  return f0 + corr1 + corr2;
 }
 #endif
 

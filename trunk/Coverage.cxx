@@ -12,6 +12,8 @@
 #include "Tools.h"
 #include "Coverage.h"
 
+#ifdef DO_COVERAGE
+
 Coverage::Coverage() {
   m_doneOneLoop = false;
   m_pole = 0;
@@ -748,3 +750,5 @@ void Coverage::doExpTest() {
     }
   }
 }
+
+#endif

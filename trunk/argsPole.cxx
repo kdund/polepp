@@ -7,7 +7,7 @@
 
 
 using namespace TCLAP;
-void argsPole(Pole *pole, int argc, char *argv[]) {
+void argsPole(LIMITS::Pole *pole, int argc, char *argv[]) {
   //
   if (pole==0) return;
 
@@ -60,16 +60,20 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     ValueArg<double> hypTestMax( "","hmax",   "hypothesis test max" ,false,35.0,"float",cmd);
     ValueArg<double> hypTestStep("","hstep",  "hypothesis test step" ,false,0.01,"float",cmd);
     //
-    ValueArg<double> effIntScale( "","effintscale","eff num sigma in integral", false,5.0,"float",cmd);
-    ValueArg<int>    effIntN(     "","effintn",    "eff: N points in integral", false,21, "int",cmd);
-    ValueArg<double> bkgIntScale( "","bkgintscale","bkg num sigma in integral", false,5.0,"float",cmd);
-    ValueArg<int>    bkgIntN(     "","bkgintn",    "bkg: N points in integral", false,21, "int",cmd);
+    ValueArg<double> effIntNSigma( "","effintnsigma","eff num sigma in integral", false,5.0,"float",cmd);
+    ValueArg<double> bkgIntNSigma( "","bkgintnsigma","bkg num sigma in integral", false,5.0,"float",cmd);
+    ValueArg<int>    gslIntNCalls( "","gslintncalls","number of calls in GSL integrator", false,10000,"int",cmd);
+    ValueArg<double> tabPoleSMin( "","tabpolesmin", "Pole table: minimum signal", false,0.0,"float",cmd);
+    ValueArg<double> tabPoleSMax( "","tabpolesmax", "Pole table: maximum signal", false,10.0,"float",cmd);
+    ValueArg<int>    tabPoleSNStep( "","tabpolesn",  "Pole table: number of signals", false,10,"int",cmd);
+    ValueArg<int>    tabPoleNMin( "","tabpolenmin", "Pole table: minimum N(obs)", false, 0,"int",cmd);
+    ValueArg<int>    tabPoleNMax( "","tabpolenmax", "Pole table: maximum N(obs)", false,10,"int",cmd);
 
     ValueArg<double> tabPoisMuMin( "","poismumin", "Poisson table: minimum mean value", false,0.0,"float",cmd);
-    ValueArg<double> tabPoisMuMax( "","poismumax", "Poisson table: maximum mean value", false,100.0,"float",cmd);
-    ValueArg<int>    tabPoisMuN(   "","poismun",   "Poisson table: number of mean value", false,100000,"int",cmd);
+    ValueArg<double> tabPoisMuMax( "","poismumax", "Poisson table: maximum mean value", false,35.0,"float",cmd);
+    ValueArg<int>    tabPoisMuN(   "","poismun",   "Poisson table: number of mean value", false,72,"int",cmd);
     ValueArg<int>    tabPoisNmin(  "","poisnmin",  "Poisson table: minimum value of N", false,0,"int",cmd);
-    ValueArg<int>    tabPoisNmax(  "","poisnmax",  "Poisson table: maximum value of N", false,200,"int",cmd);
+    ValueArg<int>    tabPoisNmax(  "","poisnmax",  "Poisson table: maximum value of N", false,35,"int",cmd);
     ValueArg<int>    doVerbose(   "V","verbose", "verbose pole",    false,0,"int",cmd);
 
     ValueArg<std::string> inputFile( "f" ,"infile", "input file with tabulated data: n eff(dist,mean,sigma) bkg(dist,mean,sigma)", false,"","string",cmd);
@@ -106,13 +110,17 @@ void argsPole(Pole *pole, int argc, char *argv[]) {
     pole->setBestMuStep(dMus.getValue());
     pole->setBestMuNmax(nMus.getValue());
 
-    pole->setEffInt(effIntScale.getValue(),effIntN.getValue());
-    pole->setBkgInt(bkgIntScale.getValue(),bkgIntN.getValue());
+    pole->setIntEffNSigma(effIntNSigma.getValue());
+    pole->setIntBkgNSigma(bkgIntNSigma.getValue());
+    pole->setIntGslNCalls(gslIntNCalls.getValue());
+
+    pole->setIntSigRange( tabPoleSMin.getValue(), tabPoleSMax.getValue(), tabPoleSNStep.getValue());
+    pole->setIntNobsRange(tabPoleNMin.getValue(), tabPoleNMax.getValue());
     //
     pole->setBSThreshold(threshBS.getValue());
     pole->setPrecThreshold(threshPrec.getValue());
     //
-    pole->setTestHyp(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
+    pole->setHypTestRange(hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
 
     pole->setMinMuProb(minProb.getValue());
     //

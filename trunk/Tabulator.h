@@ -58,7 +58,7 @@ public:
    //! set table description
    inline void setDescription( const char *desc );
    //! set ptr to function of class T
-   inline void setFunction(const T *fun);
+   inline void setFunction(T *fun);
    //@}
    /*! @name Tabulating */
    //@{
@@ -72,6 +72,8 @@ public:
    inline void clrTable();
    //! print table
    inline void printTable() const;
+   //! set tabulator verbosity
+   inline void setVerbose(bool v);
    //! do the tabulation
    inline void tabulate();
    //! get the tabulated value with the given parameter vector
@@ -104,6 +106,10 @@ protected:
    inline double calcValue();
    //! to be called by calcValue() - interpolator - may be either a default function or defined per class
    inline double interpolate( size_t ind ) const;
+   //! first derivative
+   inline double deriv( size_t tabind, size_t parind ) const;
+   //! second derivative
+   inline double deriv2( size_t tabind, size_t parind ) const;
    
    T  *m_function;    /**< pointer to function class */
 };

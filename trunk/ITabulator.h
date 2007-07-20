@@ -41,6 +41,8 @@ public:
    virtual void clrTable() = 0;
    //! print table info
    virtual void printTable() const = 0;
+   //! set tabulator verbosity
+   virtual void setVerbose(bool v) = 0;
    //! do the tabulation
    virtual void tabulate() = 0;
    //! get the tabulated value with the given parameter vector
@@ -71,12 +73,18 @@ protected:
    virtual void setParameters( const std::vector<size_t> & indvec, const std::vector<size_t> & indvecLast) = 0;
    //! calculate the index in the table for a given vector of values
    virtual int calcTabIndex( const std::vector<double> & valvec ) = 0;
+   //! calculate the table index of the first position parameter index for the given table index and
    //! to be called by tabulate() - to be implemented for each specific class
    virtual double calcValue() = 0;
    //! to be called by getValue() - interpolator - may be either a default function or defined per class
    virtual double interpolate( size_t ind ) const = 0;
+   //! first derivative
+   virtual double deriv( size_t tabind, size_t parind ) const = 0;
+   //! second derivative
+   virtual double deriv2( size_t tabind, size_t parind ) const = 0;
 
    //
+   bool                m_verbose;     /**< verbose flag */
    std::vector<int>    m_tabIndex;    /**< vector of parameter indecis - not used internally, just for external book keeping */
    std::vector<std::string> m_tabName;/**< vector of parameter names - not used internally, just for external book keeping */
    std::vector<double> m_tabMin;      /**< minimum of tabulated value */
@@ -84,6 +92,7 @@ protected:
    std::vector<double> m_tabStep;     /**< step size */
    std::vector<size_t> m_tabNsteps;   /**< number of steps */
    std::vector<size_t> m_tabMaxInd;   /**< number of steps - 1 ; not so nice */
+   std::vector<size_t> m_tabPeriod;   /**< parameter period */
    std::vector<double> m_tabValues;   /**< the actual table */
    bool                m_tabulated;   /**< true if tabulate() is called successfully */
 

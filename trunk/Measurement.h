@@ -87,7 +87,7 @@ namespace MEAS {
     inline virtual const double getPdfM(double s)       const;
     inline virtual const double getSignal()             const;
     inline virtual const double getSignalUnc()          const;
-    inline virtual const double calcProb(T x, double s) const;
+    //    inline virtual const double calcProb(T x, double s) const;
 
     // generate a random pseudoexperiment and store this in the observed parts of the observables
     inline void generatePseudoExperiment();
@@ -132,7 +132,7 @@ namespace MEAS {
     inline virtual const double getPdfM(double s)         const;
     inline virtual const double getSignal()               const;
     inline virtual const double getSignalUnc()            const;
-    inline virtual const double calcProb(int x, double s) const;
+    //    inline virtual const double calcProb(int x, double s) const;
     //
   protected:
     inline virtual void initObservable();
@@ -186,7 +186,7 @@ namespace MEAS {
     inline virtual const double getM(double s, double eff, double bkg) const;
     inline virtual const double getPdfM(double s)                      const;
     inline virtual const double getSignal()                            const;
-    inline virtual const double calcProb(int x, double s)              const;
+    //    inline virtual const double calcProb(int x, double s)              const;
 
   private:
     OBS::Base *m_eff; //! pointer to efficiency in nuisance params list

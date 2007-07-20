@@ -24,6 +24,8 @@ void Integrator::setFunction( double (* f)(double * x, size_t dim, void * params
 
 void Integrator::setFunctionDim( size_t dim ) {
    m_gslMonteFun.dim = dim;
+   m_intXL.resize(dim);
+   m_intXU.resize(dim);
 }
 
 void Integrator::setFunctionParams( void * params ) {
@@ -41,6 +43,11 @@ void Integrator::setParameters( std::vector<double> & valvec ) {
    for (size_t i=0; i<valvec.size(); i++) { // loops over all values
       parptr[i] = valvec[i];
    }
+}
+
+void Integrator::setIntRanges( std::vector<double> & xl, std::vector<double> & xu ) {
+  m_intXL = xl;
+  m_intXU = xu;
 }
 
 void Integrator::initialize() {
@@ -61,7 +68,13 @@ double Integrator::error() const {
    return m_error;
 }
 
+double Integrator::getIntXmin( size_t pind ) const {
+  return m_intXL[pind];
+}
 
+double Integrator::getIntXmax( size_t pind ) const {
+  return m_intXU[pind];
+}
 //////////////////////////////////////////////////////////////////
 IntegratorVegas::IntegratorVegas():
    Integrator(),

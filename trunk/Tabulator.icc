@@ -5,10 +5,12 @@
 
 template<class T>
 Tabulator<T>::Tabulator(const char *name, const char *desc) : ITabulator(name,desc) {
+  m_verbose = false;
 }
 
 template<class T>
 Tabulator<T>::Tabulator() : ITabulator() {
+  m_verbose = false;
 }
 
 template<class T>
@@ -26,8 +28,13 @@ void Tabulator<T>::setDescription( const char *description ) {
 }
 
 template<class T>
-void Tabulator<T>::setFunction(const T *fun) {
+void Tabulator<T>::setFunction(T *fun) {
    m_function = fun;
+}
+
+template<class T>
+void Tabulator<T>::setVerbose( bool v ) {
+  m_verbose = v;
 }
 
 template<class T>
@@ -39,6 +46,7 @@ void Tabulator<T>::setTabNPar( size_t npars ) {
    m_tabStep.resize(npars);
    m_tabNsteps.resize(npars);
    m_tabMaxInd.resize(npars);
+   m_tabPeriod.resize(npars);
    m_tabulated = false;
 }
 
@@ -92,6 +100,7 @@ void Tabulator<T>::clrTable() {
    m_tabNsteps.clear();
    m_tabValues.clear();
    m_tabMaxInd.clear();
+   m_tabPeriod.clear();
    m_parameters.clear();
    m_parChanged.clear();
 }
@@ -102,8 +111,9 @@ void Tabulator<T>::initTable() {
    m_parChanged.resize( m_tabMin.size(), true );
    m_parIndex.resize( m_tabMin.size() );
    size_t tabsize = 1;
-   for (size_t i=0; i<m_tabMin.size(); i++) {
-      tabsize *= m_tabNsteps[i];
+   for (size_t i=m_tabMin.size(); i>0; i--) {
+      m_tabPeriod[i-1] = tabsize;
+      tabsize *= m_tabNsteps[i-1];
    }
    m_tabValues.resize( tabsize );
 }
@@ -148,7 +158,6 @@ void Tabulator<T>::printTable() const {
       ntot *= m_tabNsteps[i];
    }
 
-   std::cout.flags(old);
    //
    std::cout << "\n--- TABLE SETTINGS ------------------------------------------------" << std::endl;
    std::cout << " Table      :  " << m_name        << std::endl;
@@ -178,6 +187,7 @@ void Tabulator<T>::printTable() const {
    size_t memtot = ntot*sizeof(double)/1024;
    std::cout << " Total size in memory : " << memtot << " kB" << std::endl;
    std::cout << "-------------------------------------------------------------------\n" << std::endl;
+   std::cout.flags(old);
 }
 
 // This will tabulate using calcValue() and the given ranges.
@@ -192,6 +202,13 @@ void Tabulator<T>::tabulate() {
    do {
       setParameters( indvec, indvecPrev );
       m_tabValues[ind++] = calcValue();
+      if (m_verbose) {
+        std::cout << "TAB: " << std::flush;
+        for (size_t i=0; i<indvec.size(); i++) {
+          std::cout << m_parameters[i] << "   " << std::flush;
+        }
+        std::cout << m_tabValues[ind-1] << std::endl;
+      }
       indvecPrev = indvec;
       //      std::cout << "POIS: " << m_tabValues.back() << std::endl;
    } while (Combination::next_vector(indvec,m_tabMaxInd));
@@ -200,6 +217,7 @@ void Tabulator<T>::tabulate() {
 
 template<class T>
 int Tabulator<T>::calcTabIndex( const std::vector<double> & valvec ) {
+   if (!m_tabulated) return -1;
    bool fail=false;
    int rval=0;
    size_t ind;
@@ -229,6 +247,8 @@ int Tabulator<T>::calcTabIndex( const std::vector<double> & valvec ) {
 template<class T>
 bool Tabulator<T>::setParameters( const std::vector<size_t> & indvec ) {
    if (indvec.size()!=m_tabMin.size()) return false; // FAIL!
+   m_parameters.resize(indvec.size());
+   m_parChanged.resize(indvec.size());
    for (size_t i=0; i<m_tabMin.size(); i++) {
       if (indvec[i]<m_tabNsteps[i]) {
          m_parameters[i] = m_tabMin[i] + static_cast<double>(indvec[i])*m_tabStep[i];
@@ -242,6 +262,7 @@ bool Tabulator<T>::setParameters( const std::vector<size_t> & indvec ) {
 template<class T>
 void Tabulator<T>::setParameters( const std::vector<double> & valvec ) {
    m_parameters = valvec;
+   m_parChanged.resize( valvec.size() );
    for (size_t i=0; i<valvec.size(); i++) {
       m_parChanged[i] = true;
    }
@@ -316,6 +337,7 @@ double Tabulator<T>::getValue( const std::vector<double> & parvec ) {
       //      std::cout << "ind<0!" << std::endl;
       return this->calcValue();
    }
+   std::cout << "getValue: " << parvec[0] << "  " << parvec[1] << "   " << ind << "   " << m_tabValues[ind] << std::endl;
    return this->interpolate( ind );
 }
 
@@ -323,6 +345,18 @@ template<class T>
 double Tabulator<T>::interpolate( size_t ind ) const {
    std::cout << "DEF INT!" << std::endl;
   return m_tabValues[ind]; // no interpolation
+}
+
+template<class T>
+double Tabulator<T>::deriv( size_t tabind, size_t parind ) const {
+   std::cout << "DEF DERIV!" << std::endl;
+   return 0;
+}
+
+template<class T>
+double Tabulator<T>::deriv2( size_t tabind, size_t parind ) const {
+   std::cout << "DEF DERIV2!" << std::endl;
+   return 0;
 }
 
 #endif

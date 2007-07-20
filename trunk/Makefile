@@ -2,7 +2,7 @@
  # Project: Pole++                                                    #
  ###################################################################### 
 .SUFFIXES: .cxx .h .icc .o
-MAKEFLAGS = --no-print-directory -r -s
+#MAKEFLAGS = --no-print-directory -r -s
 #MAKEFLAGS = --warn-undefined-variables --debug
 
 include Makefile.arch
@@ -11,7 +11,7 @@ include Makefile.arch
 PACKAGE=Pole++
 LIBVERS=.1
 LD_LIBRARY_PATH:=.:$(ROOTSYS)/lib:$(LD_LIBRARY_PATH)
-OBJDIR=/work/scratch/${PACKAGE}/obj
+OBJDIR=~/scratch0/${PACKAGE}/obj
 DEPDIR=$(OBJDIR)/dep
 VPATH= $(OBJDIR)
 INCLUDES += -I./  
@@ -27,9 +27,9 @@ SKIPHLIST = Tabulated.h
 LIBFILE      = lib$(PACKAGE).a${LIBVERS}
 SHLIBFILE    = lib$(PACKAGE).so${LIBVERS}
 GSLLIB       = -lgsl -lgslcblas
-
+ALLIBS       = $(GSLLIB) $(SHLIBFILE)
 UNAME = $(shell uname)
-
+DBGFLAG = -ggdb
 
 default: shlib
 
@@ -64,21 +64,21 @@ DOCLIST     = $(LIBCPPLIST) $(TOOLCPPLIST) $(HLIST) $(ARGLIST) $(SCRIPTLIST) \
 tools:          $(TOOLELIST)
 
 polelim:	polelim.o argsPole.o
-		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(ALLIBS)  -o $@
 polecov:	polecov.o argsCoverage.o
-		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(ALLIBS)  -o $@
 polebelt:	polebelt.o argsPole.o
-		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(ALLIBS)  -o $@
 poleconst:	poleconst.o argsPole.o
-		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(ALLIBS)  -o $@
 exptest:	exptest.o
-		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(ALLIBS)  -o $@
 obstest:	obstest.o
-		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(ALLIBS)  -o $@
 gsltest:	gsltest.o
-		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(GSLLIB) $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(ALLIBS)  -o $@
 pdftst:		pdftst.o
-		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(SHLIBFILE)  -o $@
+		$(CXX) $(CXXFLAGS) -Wall $(addprefix $(OBJDIR)/,$(notdir $^)) $(ALLIBS)  -o $@
 
 # documentation
 
@@ -89,20 +89,20 @@ docs:           Doxyfile ${DOCLIST}
 argsPole.o:     argsPole.cxx
 		@echo -n "Compiling $< ... "
 		@mkdir -p $(OBJDIR)
-		$(CXX) $(INCLUDES) -fPIC -Wall -g -c $< -o $(OBJDIR)/$(notdir $@)
+		$(CXX) $(INCLUDES) -fPIC -Wall $(DBGFLAG) -c $< -o $(OBJDIR)/$(notdir $@)
 		@echo "Done"
 
 argsCoverage.o: argsCoverage.cxx
 		@echo -n "Compiling $< ... "
 		@mkdir -p $(OBJDIR)
-		$(CXX) $(INCLUDES) -fPIC -Wall -g -c $< -o $(OBJDIR)/$(notdir $@)
+		$(CXX) $(INCLUDES) -fPIC -Wall $(DBGFLAG) -c $< -o $(OBJDIR)/$(notdir $@)
 		@echo "Done"
 
 # Implicit rule to compile all classes
-%.o : %.cxx 
+%.o : %.cxx
 	@echo -n "Compiling $< ... "
 	@mkdir -p $(OBJDIR)
-	$(CXX) $(INCLUDES) $(CXXFLAGS) -g -c $< -o $(OBJDIR)/$(notdir $@)
+	$(CXX) $(INCLUDES) $(CXXFLAGS) $(DBGFLAG) -c $< -o $(OBJDIR)/$(notdir $@)
 	@echo "Done"
 
 ##############################
@@ -137,7 +137,7 @@ $(LIBFILE): $(LIBOLIST)
 $(SHLIBFILE): $(LIBOLIST)
 	@echo -n "Building shared library $(SHLIBFILE) ... "
 	@rm -f $(SHLIBFILE)
-	$(LD) $(SOFLAGS) $(addprefix $(OBJDIR)/,$(LIBOLIST)) -o $(SHLIBFILE)
+	$(LD) $(SOFLAGS) $(DBGFLAG) $(addprefix $(OBJDIR)/,$(LIBOLIST)) -o $(SHLIBFILE)
 	@echo "Done"
 
 # Rule to make package
