@@ -441,7 +441,8 @@ namespace LIMITS {
   }
 
   double Pole::calcLhRatio(double s, int & nbMin, int & nbMax) {
-    double norm_p = 0;
+    double norm = 0;
+    double normPrev = 0;
     double lhSbest;
     bool upNfound  = false;
     bool lowNfound = false;
@@ -488,14 +489,117 @@ namespace LIMITS {
                   << lhSbest
                   << std::endl;
       }
+      normPrev = norm_p;
       norm_p += m_muProb[n]; // needs to be renormalised
+      if (m_verbose>2) {
+        std::cout << "LHSCAN: "
+                  << 1.0 - norm_p << "\t"
+                  << m_muProb[n] << "\t"
+                  << lowNfound << "\t"
+                  << upNfound << "\t"
+                  << nbMin << "\t"
+                  << nbMax << "\t"
+                  << nInBelt << "\t" << std::endl;
+      }
       //
       if ((!lowNfound) && (norm_p>m_minMuProb)) {
         lowNfound=true;
         nbMin = n;
         norm_p_low = norm_p;
       } else {
-        if ((nInBelt>1) && lowNfound && (norm_p>1.0-m_minMuProb)) {
+        if ((nInBelt>1) && lowNfound && ((norm_p>1.0-m_minMuProb)||(m_muProb[n]<1e-10))) {
+          upNfound = true;
+          nbMax = n-1;
+        }
+      }
+      if (lowNfound && (!upNfound)) nInBelt++;
+      n++;
+      //    std::cout << "calcLhRatio: " << n << ", p = " << m_muProb[n] << ", lhSbest = " << lhSbest << std::endl;
+    }
+    //
+    m_nBeltMinLast = nbMin;
+    if (nbMin<m_nBeltMinUsed) m_nBeltMinUsed = nbMin;
+    if (nbMax>m_nBeltMaxUsed) m_nBeltMaxUsed = nbMax;
+    //
+    if (m_verbose>2) {
+      std::cout << "LHRATIOSUM: " << norm_p << std::endl; 
+      if (expandedBelt) {
+        std::cout << "calcLhRatio() : expanded belt to " << m_nBeltUsed << std::endl;
+        std::cout << "                new size = " << m_muProb.size() << std::endl;
+      }
+    }
+    return norm_p;//-norm_p_min;
+  }
+
+
+  double Pole::calcLhRatioOLD(double s, int & nbMin, int & nbMax) {
+    double norm_p = 0;
+    double normPrev = 0;
+    double lhSbest;
+    bool upNfound  = false;
+    bool lowNfound = false;
+    int  nInBelt   = 0;
+    int n=0;
+    //
+    nbMin = 0; // m_nBeltMinLast; // NOTE if using nBeltMinLast -> have to be able to approx prob for s in the range 0...nminlast
+    nbMax = m_nBeltUsed-1;
+    double norm_p_low=0;// m_sumPlowLast; // approx
+    //  double norm_p_up=0;
+    //
+    //
+    //  double sumPmin=0.0;
+    //  double sumPtot=0.0;
+    // find lower and upper
+    bool expandedBelt=false;
+    while (!upNfound) {
+      if (n==m_nBeltUsed) { // expand nBelt
+        expandedBelt=true;
+        m_nBeltUsed++;
+        nbMax++;
+        m_muProb.push_back(0.0);
+        m_lhRatio.push_back(0.0);
+        if (usesFHC2()) {
+          m_bestMu.push_back(0.0);
+          m_bestMuProb.push_back(0.0);
+          findBestMu(n);
+        }
+      }
+      m_muProb[n] =  calcProb(n, s);
+      //
+      lhSbest = getLsbest(n);
+      if (lhSbest>0) {
+        m_lhRatio[n]  = m_muProb[n]/lhSbest;
+      } else {
+        m_lhRatio[n]  = 0.0;
+      }
+      if (m_verbose>8) {
+        std::cout << "LHRATIO: " << "\t" << n << "\t"
+                  << s << "\t"
+                  << m_lhRatio[n] << "\t"
+                  << m_muProb[n] << "\t"
+                  << getSbest(n) << "\t"
+                  << lhSbest
+                  << std::endl;
+      }
+      normPrev = norm_p;
+      norm_p += m_muProb[n]; // needs to be renormalised
+      if (m_verbose>2) {
+        std::cout << "LHSCAN: "
+                  << 1.0 - norm_p << "\t"
+                  << m_muProb[n] << "\t"
+                  << lowNfound << "\t"
+                  << upNfound << "\t"
+                  << nbMin << "\t"
+                  << nbMax << "\t"
+                  << nInBelt << "\t" << std::endl;
+      }
+      //
+      if ((!lowNfound) && (norm_p>m_minMuProb)) {
+        lowNfound=true;
+        nbMin = n;
+        norm_p_low = norm_p;
+      } else {
+        if ((nInBelt>1) && lowNfound && ((norm_p>1.0-m_minMuProb)||(m_muProb[n]<1e-10))) {
           upNfound = true;
           nbMax = n-1;
         }
@@ -1948,7 +2052,7 @@ namespace LIMITS {
   }
 
   void Pole::initTabIntegral() {
-    m_poleIntTable.setVerbose(true);
+    m_poleIntTable.setVerbose(false);
     m_poleIntTable.setName("PoleIntegratorTable");
     m_poleIntTable.setDescription("Table over (n,s) of pole integration");
     m_poleIntTable.setFunction( &m_poleIntegrator );
@@ -1967,12 +2071,11 @@ namespace LIMITS {
                                  s_tabNobsInd);
     m_poleIntTable.tabulate();
 
-    std::cout << "TABTST: " << calcProb(0,0.0) << std::endl;;
-    std::cout << "TABTST: " << calcProb(8,1.1) << std::endl;;
-    std::cout << "TABTST: " << calcProb(8,1.2) << std::endl;;
-    std::cout << "TABTST: " << calcProb(8,1.8) << std::endl;;
-    std::cout << "TABTST: " << calcProb(8,1.9) << std::endl;
-    exit(-1);
+    std::cout << "TABTST: " << calcProb(0,0.0) << "\n" << std::endl;
+    std::cout << "TABTST: " << calcProb(8,1.111111) << "\n" << std::endl;
+    std::cout << "TABTST: " << calcProb(8,1.2) << "\n" << std::endl;
+    std::cout << "TABTST: " << calcProb(8,1.8) << "\n" << std::endl;
+    std::cout << "TABTST: " << calcProb(8,1.9) << "\n" << std::endl;
   }
 
   void Pole::initAnalysis() {

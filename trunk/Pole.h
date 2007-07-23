@@ -760,78 +760,25 @@ inline double Tabulator<LIMITS::PoleIntegrator>::calcValue() {
   return m_function->result();
 }
 
-template<>
-inline double Tabulator<LIMITS::PoleIntegrator>::deriv( size_t tabind, size_t parind ) const {
-  if (int(parind)==LIMITS::Pole::s_tabNobsInd) return 0;
-  //
-  size_t nvals = m_tabValues.size();
-  size_t sper = m_tabPeriod[parind];
-  double h = m_tabStep[parind];
-  double f0,fp1,fm1;
-  double rval;
-  f0 = m_tabValues[tabind];
-  std::cout << "period = " << sper << "   h = " << h << "    f0 = " << f0 << std::endl;
-  if (sper>tabind) { // ind-1 does not exist
-    if (tabind+sper<nvals) { // ind+1 is ok
-      fp1 = m_tabValues[tabind+sper];
-      rval = (fp1-f0)/h;
-    } else { // ind+1 is not OK!!!
-      rval = 0;
-    }
-  } else { //
-    fm1 = m_tabValues[tabind-sper];
-    if (tabind+sper<nvals) { // ind+1 is ok
-      fp1 = m_tabValues[tabind+sper];
-      std::cout << "fp1 = " << fp1 << "  fm1 = " << fm1 << std::endl;
-      rval = (fp1-fm1)/(2.0*h);
-    } else { // ind+1 is not OK!!!
-      rval = (f0-fm1)/h;
-    }
-  }
-  return rval;
-}
-
-template<>
-inline double Tabulator<LIMITS::PoleIntegrator>::deriv2( size_t tabind, size_t parind ) const {
-  if (int(parind)==LIMITS::Pole::s_tabNobsInd) return 0;
-  //
-  size_t nvals = m_tabValues.size();
-  size_t sper = m_tabPeriod[parind];
-  double h = m_tabStep[parind];
-  double f0,fp1,fm1;
-  double rval;
-  f0 = m_tabValues[tabind];
-  std::cout << "period = " << sper << "   h = " << h << "    f0 = " << f0 << std::endl;
-  if (sper>tabind) { // ind-1 does not exist
-    if (tabind+sper<nvals) { // ind+1 is ok
-      fp1 = m_tabValues[tabind+sper];
-      rval = (fp1-2.0*f0)/(h*h);
-    } else { // ind+1 is not OK!!!
-      rval = 0;
-    }
-  } else { //
-    fm1 = m_tabValues[tabind-sper];
-    if (tabind+sper<nvals) { // ind+1 is ok
-      fp1 = m_tabValues[tabind+sper];
-      std::cout << "fp1 = " << fp1 << "  fm1 = " << fm1 << std::endl;
-      rval = (fp1+fm1-2.0*f0)/(h*h);
-    } else { // ind+1 is not OK!!!
-      rval = (fm1-2.0*f0)/(h*h); // NOT OK!!!!
-    }
-  }
-  return rval;
-}
 
 template<>
 inline double Tabulator<LIMITS::PoleIntegrator>::interpolate( size_t ind ) const {
-  double df     = deriv( ind, LIMITS::Pole::s_tabSigInd ); // derivative wrt S
-  double d2f    = deriv2( ind, LIMITS::Pole::s_tabSigInd ); // derivative2 wrt S
-  double s     = m_parameters[LIMITS::Pole::s_tabSigInd];
-  double f0    = m_tabValues[ind];                  // f() at discretized mean
-  double corr1 = df*s;
-  double corr2 = d2f*s*s/2.0;
-  std::cout << "pole interp: " << f0 << " , " << corr1 << " , " << corr2 << std::endl;
-  return f0 + corr1 + corr2;
+  double df    = deriv( ind, LIMITS::Pole::s_tabSigInd );  // derivative wrt S
+  double d2f   = deriv2( ind, LIMITS::Pole::s_tabSigInd ); // derivative2 wrt S
+  double f0    = m_tabValues[ind];                         // f() at discretized mean
+  double x0;
+  int    ix0   = calcParIndex(ind,LIMITS::Pole::s_tabSigInd);
+  if ( ix0 < 0 ) {
+    std::cout << "ERROR: calcParIndex return bad index!" << std::endl;
+    return f0;
+  }
+  x0 = m_tabMin[LIMITS::Pole::s_tabSigInd] + static_cast<double>(ix0*m_tabStep[LIMITS::Pole::s_tabSigInd]);
+  double x     = m_parameters[LIMITS::Pole::s_tabSigInd];
+  double dx    = x-x0;
+  double corr1 = df*dx;
+  double corr2 = d2f*dx*dx/2.0;
+  //  std::cout << "pole interp: " << ix0 << " , " << x << " , " << x0 << " -> " << f0 << " + " << corr1 << " + " << corr2 << std::endl;
+  return  f0 + corr1 + corr2;
 }
 #endif
 

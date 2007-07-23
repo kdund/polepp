@@ -47,6 +47,7 @@ void Tabulator<T>::setTabNPar( size_t npars ) {
    m_tabNsteps.resize(npars);
    m_tabMaxInd.resize(npars);
    m_tabPeriod.resize(npars);
+   m_tabNTabSteps.resize(npars);
    m_tabulated = false;
 }
 
@@ -101,6 +102,7 @@ void Tabulator<T>::clrTable() {
    m_tabValues.clear();
    m_tabMaxInd.clear();
    m_tabPeriod.clear();
+   m_tabNTabSteps.clear();
    m_parameters.clear();
    m_parChanged.clear();
 }
@@ -112,14 +114,16 @@ void Tabulator<T>::initTable() {
    m_parIndex.resize( m_tabMin.size() );
    size_t tabsize = 1;
    for (size_t i=m_tabMin.size(); i>0; i--) {
-      m_tabPeriod[i-1] = tabsize;
+      m_tabNTabSteps[i-1] = tabsize;
       tabsize *= m_tabNsteps[i-1];
+      m_tabPeriod[i-1] = tabsize;
    }
    m_tabValues.resize( tabsize );
 }
 
 template<class T>
 void Tabulator<T>::printTable() const {
+   return;
    size_t npars = m_tabMin.size();
    size_t nsize=0;
    size_t xminlen=0;
@@ -203,7 +207,7 @@ void Tabulator<T>::tabulate() {
       setParameters( indvec, indvecPrev );
       m_tabValues[ind++] = calcValue();
       if (m_verbose) {
-        std::cout << "TAB: " << std::flush;
+         std::cout << "TAB: " << ind-1 << "      " << std::flush;
         for (size_t i=0; i<indvec.size(); i++) {
           std::cout << m_parameters[i] << "   " << std::flush;
         }
@@ -213,6 +217,14 @@ void Tabulator<T>::tabulate() {
       //      std::cout << "POIS: " << m_tabValues.back() << std::endl;
    } while (Combination::next_vector(indvec,m_tabMaxInd));
    m_tabulated = true;
+}
+
+template<class T>
+int Tabulator<T>::calcParIndex( const size_t tabind, const size_t parind ) const {
+   if (!m_tabulated) return -1;
+   int rval = static_cast<int>((tabind % m_tabPeriod[parind])/m_tabNTabSteps[parind]);
+   //   std::cout << "tabind, parind = " << tabind << "   " << parind << " => " << rval << std::endl;
+   return rval;
 }
 
 template<class T>
@@ -337,26 +349,74 @@ double Tabulator<T>::getValue( const std::vector<double> & parvec ) {
       //      std::cout << "ind<0!" << std::endl;
       return this->calcValue();
    }
-   std::cout << "getValue: " << parvec[0] << "  " << parvec[1] << "   " << ind << "   " << m_tabValues[ind] << std::endl;
+   //   std::cout << "getValue: " << parvec[0] << "  " << parvec[1] << "   " << ind << "   " << m_tabValues[ind] << std::endl;
    return this->interpolate( ind );
+}
+
+template<typename T>
+inline double Tabulator<T>::deriv( size_t tabind, size_t parind ) const {
+  //
+  size_t nvals = m_tabValues.size();
+  size_t sper = m_tabNTabSteps[parind];
+  double h = m_tabStep[parind];
+  double f0,fp1,fm1;
+  double rval;
+  f0 = m_tabValues[tabind];
+  //  std::cout << "N(steps in tab) = " << sper << "   h = " << h << "    f0 = " << f0 << std::endl;
+  if (sper>tabind) { // ind-1 does not exist
+    if (tabind+sper<nvals) { // ind+1 is ok
+      fp1 = m_tabValues[tabind+sper];
+      rval = (fp1-f0)/h;
+    } else { // ind+1 is not OK!!!
+      rval = 0;
+    }
+  } else { //
+    fm1 = m_tabValues[tabind-sper];
+    if (tabind+sper<nvals) { // ind+1 is ok
+      fp1 = m_tabValues[tabind+sper];
+      //      std::cout << "fp1 = " << fp1 << "  fm1 = " << fm1 << std::endl;
+      rval = (fp1-fm1)/(2.0*h);
+    } else { // ind+1 is not OK!!!
+      rval = (f0-fm1)/h;
+    }
+  }
+  return rval;
+}
+
+template<typename T>
+inline double Tabulator<T>::deriv2( size_t tabind, size_t parind ) const {
+  //
+  size_t nvals = m_tabValues.size();
+  size_t sper = m_tabNTabSteps[parind];
+  double h = m_tabStep[parind];
+  double f0,fp1,fm1;
+  double rval;
+  f0 = m_tabValues[tabind];
+  //  std::cout << "period = " << sper << "   h = " << h << "    f0 = " << f0 << std::endl;
+  if (sper>tabind) { // ind-1 does not exist
+    if (tabind+sper<nvals) { // ind+1 is ok
+      fp1 = m_tabValues[tabind+sper];
+      rval = (fp1-2.0*f0)/(h*h);
+    } else { // ind+1 is not OK!!!
+      rval = 0;
+    }
+  } else { //
+    fm1 = m_tabValues[tabind-sper];
+    if (tabind+sper<nvals) { // ind+1 is ok
+      fp1 = m_tabValues[tabind+sper];
+      //      std::cout << "fp1 = " << fp1 << "  fm1 = " << fm1 << std::endl;
+      rval = (fp1+fm1-2.0*f0)/(h*h);
+    } else { // ind+1 is not OK!!!
+      rval = (fm1-2.0*f0)/(h*h); // NOT OK!!!!
+    }
+  }
+  return rval;
 }
 
 template<class T>
 double Tabulator<T>::interpolate( size_t ind ) const {
    std::cout << "DEF INT!" << std::endl;
   return m_tabValues[ind]; // no interpolation
-}
-
-template<class T>
-double Tabulator<T>::deriv( size_t tabind, size_t parind ) const {
-   std::cout << "DEF DERIV!" << std::endl;
-   return 0;
-}
-
-template<class T>
-double Tabulator<T>::deriv2( size_t tabind, size_t parind ) const {
-   std::cout << "DEF DERIV2!" << std::endl;
-   return 0;
 }
 
 #endif

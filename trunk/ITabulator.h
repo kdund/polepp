@@ -73,7 +73,8 @@ protected:
    virtual void setParameters( const std::vector<size_t> & indvec, const std::vector<size_t> & indvecLast) = 0;
    //! calculate the index in the table for a given vector of values
    virtual int calcTabIndex( const std::vector<double> & valvec ) = 0;
-   //! calculate the table index of the first position parameter index for the given table index and
+   //! calculate the parameter index for the given table index
+   virtual int calcParIndex( const size_t tabind, const size_t parind ) const = 0;
    //! to be called by tabulate() - to be implemented for each specific class
    virtual double calcValue() = 0;
    //! to be called by getValue() - interpolator - may be either a default function or defined per class
@@ -93,6 +94,7 @@ protected:
    std::vector<size_t> m_tabNsteps;   /**< number of steps */
    std::vector<size_t> m_tabMaxInd;   /**< number of steps - 1 ; not so nice */
    std::vector<size_t> m_tabPeriod;   /**< parameter period */
+   std::vector<size_t> m_tabNTabSteps;/**< parameter: number of steps in table until next value tabNStep = tabPeriod[i-1]  */
    std::vector<double> m_tabValues;   /**< the actual table */
    bool                m_tabulated;   /**< true if tabulate() is called successfully */
 
@@ -100,7 +102,7 @@ protected:
    std::string         m_description; /**< brief description */
 
    std::vector<double> m_parameters;  /**< vector containing the parameters set in tabulate() and used in calcValue() */
-   std::vector<double> m_parChanged;  /**< flags which parameters were changed since last vector in tabulate()        */
+   std::vector<bool>   m_parChanged;  /**< flags which parameters were changed since last vector in tabulate()        */
    std::vector<size_t> m_parIndex;    /**< indecis obtained by calcTabIndex() */
 
 };

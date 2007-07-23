@@ -65,7 +65,7 @@ void argsPole(LIMITS::Pole *pole, int argc, char *argv[]) {
     ValueArg<int>    gslIntNCalls( "","gslintncalls","number of calls in GSL integrator", false,10000,"int",cmd);
     ValueArg<double> tabPoleSMin( "","tabpolesmin", "Pole table: minimum signal", false,0.0,"float",cmd);
     ValueArg<double> tabPoleSMax( "","tabpolesmax", "Pole table: maximum signal", false,10.0,"float",cmd);
-    ValueArg<int>    tabPoleSNStep( "","tabpolesn",  "Pole table: number of signals", false,10,"int",cmd);
+    ValueArg<int>    tabPoleSNStep( "","tabpolesn",  "Pole table: number of signals", false,100,"int",cmd);
     ValueArg<int>    tabPoleNMin( "","tabpolenmin", "Pole table: minimum N(obs)", false, 0,"int",cmd);
     ValueArg<int>    tabPoleNMax( "","tabpolenmax", "Pole table: maximum N(obs)", false,10,"int",cmd);
 

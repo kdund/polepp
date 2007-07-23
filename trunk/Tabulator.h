@@ -102,6 +102,8 @@ protected:
    inline void setParameters( const std::vector<size_t> & indvec, const std::vector<size_t> & indvecLast );
    //! calculate the index in the table for a given vector of values
    inline int calcTabIndex( const std::vector<double> & valvec );
+   //! calculate the parameter index for the given table index
+   inline int calcParIndex( const size_t tabind, const size_t parind ) const;
    //! to be called by tabulate() - to be implemented for each specific class
    inline double calcValue();
    //! to be called by calcValue() - interpolator - may be either a default function or defined per class
