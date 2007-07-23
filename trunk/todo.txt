@@ -1,0 +1,62 @@
+1. OBS::Observable[Gauss,...] -> BaseType<T> -> Base<T>
+OK * remove all integration stuff
+OK * m_pdf and m_rndgen made const
+
+2. MEAS::Measurement<T>
+OK * remove all refs to integration of nuisance params
+   * remove calcProb() - move to class above - Pole
+OK * is getNuisanceIndex() correct???? YES!!!!!
+   * what is getSignalUnc() ???
+OK * getEffScale() - OK since it concerns the scaling of efficiency
+
+3. LIMITS::Pole
+   * remove all OLD integration
+OK * put in namespace LIMITS
+   * tabulate integral for (n,s) using Tabulate<LIMITS::PoleIntegrator>
+   * need instance of PoleIntegrator:
+OK   - m_poleIntegrator;
+OK   - setup of PoleIntegrator: AFTER SETUP OF MEASUREMENT!  - Pole::initIntegral()
+OK     setPole(this)
+OK     setFunction(poleFun)
+OK     setFunctionDim(ndim) ; ndim=2 for Pole (eff,bkg)
+OK     setFunctionParams() ; set ptr to parameters for gsl
+OK     setIntRanges() ; upper lower limit for eff/bkg based on mean/sigma
+OK     setNcalls()
+OK     setParameters() ; uses array set in setFunctionParams()
+OK     initialize()
+OK     m_gslIntNCalls - add this!
+
+   * need instance of Tabulate<LIMITS::PoleIntegrator>
+OK   - m_poleIntTable
+     - setup:                - Pole::initTabIntegral();
+       set name/desc
+       set function poleFun()
+       set number of tabulated pars
+       define tabulated pars: [0] = N(obs) [1] = signal
+       tabulate!
+
+   * normalise m_poleIntTable !!! m_nuisanceIntNorm in old code
+
+   * implement initIntegral()
+
+   * implement calcProb(x|s) in Pole
+     this is getting the value from m_poleIntTable.getValue( vec )
+     where vec[0] = N(obs) and vec[1] = signal
+
+   * use tabulated integral in Pole!
+     remove m_measurement.initIntNuisance, fillIntNuisance, initNuisanceWeights NOT NEEDED! -> see Pole::initAnalysis
+     
+   * add m_eff/bkgIntNSigma
+
+   * poleFun - use m_pdf->getValue() !!!!
+
+
+General comments
+----------------
+* integration over nuisance parameters should ALWAYS use the observed values and not the used pdf means.
+  the pdf mean is used only in conjunction with generating random events.
+
+* in calcIntRange - for Poisson, use nsigma (not urgent)
+
+* before the integral(n,s) was not tabulated but only the f(x)f(y)dxdy
+  this means that 
