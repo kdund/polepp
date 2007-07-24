@@ -89,16 +89,19 @@ namespace TOOLS {
   //
   // class Timer members
   //
-  void Timer::startTimer() {
+  void Timer::startTimer(const char *msg) {
     //
     m_stopTime = 0;
     m_estTime  = 0;
     //
     time(&m_startTime);
-    std::string tstamp;
-    TOOLS::makeTimeStamp( tstamp, m_startTime );
-    std::cout << "Start of run: " << tstamp << std::endl;
     m_runningTime = true;
+    //
+    if (msg) {
+      std::string tstamp;
+      TOOLS::makeTimeStamp( tstamp, m_startTime );
+      std::cout << msg << tstamp << std::endl;
+    }
   }
 
   bool Timer::checkTimer(int dt) {
@@ -118,25 +121,31 @@ namespace TOOLS {
     }
   }
 
-  void Timer::printTime(const char *msg, time_t t ) {
+  void Timer::printTime(time_t t, const char *msg ) {
     std::string tstamp;
     makeTimeStamp( tstamp, t );
-    std::cout << msg << tstamp << std::endl;
+    if (msg) std::cout << msg << std::flush;
+    std::cout << tstamp << std::endl;
   }
 
   void Timer::printCurrentTime(const char *msg) {
     std::string tstamp;
     makeTimeStamp( tstamp );
-    std::cout << msg << tstamp << std::endl;
+    if (msg) std::cout << msg << std::flush;
+    std::cout << tstamp << std::endl;
   }
 
-  void Timer::printUsedTime() {
+  void Timer::printUsedTime(const char *msg) {
     time_t loopTime  = getUsedTime();
     int hours,mins,secs;
     hours = static_cast<int>(loopTime/3600);
     mins = (loopTime - hours*3600)/60;
     secs =  loopTime - hours*3600-mins*60;
-    std::cout << "Used time: ";
+    if (msg) {
+       std::cout << msg << std::flush;
+    } else {
+       std::cout << "Used time: " << std::flush;
+    }
     std::cout << hours << "h " << mins << "m " << secs << "s" << std::endl;
   }
 
@@ -175,7 +184,7 @@ namespace TOOLS {
     }
   }
 
-  void Timer::printUsedClock(int norm) {
+  void Timer::printUsedClock(int norm, const char *msg) {
     clock_t stopClock;
     if (m_runningClock) {
       stopClock = clock();
@@ -183,7 +192,10 @@ namespace TOOLS {
       stopClock = m_stopClock;
     }
     double dt = getUsedClock(1e-3); // return time in ms
-    std::cout << "Total CPU time used (ms)     : " << dt << std::endl;
+    if (msg)
+      std::cout << msg << dt << std::endl;
+    else
+      std::cout << "Total CPU time used (ms)     : " << dt << std::endl;
     if (norm>0) std::cout << "Per event CPU time used (ms) : " << (dt/norm) << std::endl;
   }
 

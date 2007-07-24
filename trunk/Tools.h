@@ -16,6 +16,7 @@ namespace TOOLS {
   inline const char *boolChar(bool var, const char *tch, const char *fch);
   inline void coutFixed(int precision, int val);
   inline void coutFixed(int precision, double val);
+  template<typename T> inline void coutScientific(int precision, T val);
   inline void coutFixed(const char *msg, int precision, int val);
   inline void coutFixed(const char *msg, int precision, double val);
   void makeTimeStamp( std::string & stamp );
@@ -30,20 +31,20 @@ namespace TOOLS {
     Timer():m_runningTime(false),m_runningClock(false)  {}
     ~Timer() {}
 
-    void start() { startTimer(); startClock(); }
+    void start(const char *msg=0) { startTimer(msg); startClock(); }
     void stop() { stopTimer(); stopClock(); }
     void clear() { m_startTime=0; m_stopTime=0; m_estTime=0; m_startClock=0; m_stopClock=0; m_runningTime = false; m_runningClock = false; }
-    void startTimer();
+    void startTimer(const char *msg=0);
     bool checkTimer(int dt);
     void stopTimer();
     time_t calcEstimatedTime( int nloops, int ntotal );
-    void printTime(const char *msg, time_t t );
-    void printCurrentTime(const char *msg);
-    void printUsedTime();
+    void printTime( time_t t , const char *msg=0 );
+    void printCurrentTime(const char *msg=0);
+    void printUsedTime(const char *msg=0);
     void printEstimatedTime(int nloops, int ntotal );
     void startClock();
     void stopClock();
-    void printUsedClock(int norm);
+    void printUsedClock(int norm=0, const char *msg=0);
 
     clock_t getStartClock() { return m_startClock; }
     clock_t getStopClock()  { return (m_runningClock ? clock():m_stopClock); }
@@ -95,13 +96,18 @@ const char * TOOLS::boolChar(bool var, const char *tch, const char *fch) {
 # if __GNUC__ > 2
 void TOOLS::coutFixed(int precision, double val) {
   std::ios_base::fmtflags old = std::cout.flags();
-  std::cout << std::fixed << std::setprecision(precision) << val;
+  int oldprec = std::cout.precision(precision);
+  std::cout << std::fixed << val;
   std::cout.flags(old);
+  std::cout.precision(oldprec);
 }
+
 void TOOLS::coutFixed(int precision, int val) {
   std::ios_base::fmtflags old = std::cout.flags();
-  std::cout << std::fixed << std::setprecision(precision) << val;
+  int oldprec = std::cout.precision(precision);
+  std::cout << std::fixed << val;
   std::cout.flags(old);
+  std::cout.precision(oldprec);
 }
 
 void TOOLS::coutFixed(const char *msg, int precision, double val) {
@@ -116,6 +122,15 @@ void TOOLS::coutFixed(const char *msg, int precision, int val) {
   std::cout << std::fixed << std::setprecision(precision) << val;
   std::cout.flags(old);
 }
+
+template<typename T> void TOOLS::coutScientific(int precision, T val) {
+  std::ios_base::fmtflags old = std::cout.flags();
+  int oldprec = std::cout.precision(precision);
+  std::cout << std::scientific << val;
+  std::cout.flags(old);
+  std::cout.precision(oldprec);
+}
+
 # else
 void TOOLS::coutFixed(int precision, double val) {
   static char fmt[32];

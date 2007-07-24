@@ -2,7 +2,7 @@
  # Project: Pole++                                                    #
  ###################################################################### 
 .SUFFIXES: .cxx .h .icc .o
-#MAKEFLAGS = --no-print-directory -r -s
+MAKEFLAGS = --no-print-directory -r -s
 #MAKEFLAGS = --warn-undefined-variables --debug
 
 include Makefile.arch

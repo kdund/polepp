@@ -339,7 +339,7 @@ namespace PDF {
       Base::initTabulator();
       m_poisTabulator = new Tabulator<Poisson>("poissontab","tabulated poisson");
       m_iTabulator = m_poisTabulator;
-      m_poisTabulator->setVerbose(true);
+      m_poisTabulator->setVerbose(false);
       m_poisTabulator->setFunction( this );
       m_poisTabulator->setTabNPar(2); // two parameters to be tabulated (N, mean)
       m_tabVec.resize(2); // vector used by rawOrTab()

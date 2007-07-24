@@ -169,7 +169,7 @@ namespace LIMITS {
     inline void setParameters( std::vector<double> & pars );
 
     inline const Integrator *getIntegrator() const;
-    inline Integrator       &integrator();
+    inline Integrator       *integrator();
     //
     inline void   go();
     inline double result() const;
@@ -333,6 +333,9 @@ namespace LIMITS {
 
     //! set range in N(obs) for tabulated integral
     void setIntNobsRange( int nmin, int nmax )  { m_intTabNRange.setRange( nmin, nmax, 1 ); }
+
+    //! set tabulation flag
+    void setTabulateIntegral( bool f ) { m_tabulateIntegral = f; }
 
     //! set a scaling number to scale the output limits
     void setScaleLimit(double s) { m_scaleLimit = (s>0.0 ? s:1.0); }
@@ -525,6 +528,9 @@ namespace LIMITS {
     //    const double getBkgIntNorm() const { return m_measurement.getBkg()->getIntegral(); }
     //    const double getIntNorm() const { return m_poleIntTable.get(); }
     //
+    const Range<double> *getIntSigRange()  const { return &m_intTabSRange; }
+    const Range<int>    *getIntNobsRange() const { return &m_intTabNRange; }
+
     const double  getSbest(int n) const;
     const double  getLsbest(int n) const;
     const int     getNBeltUsed() const { return m_nBeltUsed; }
@@ -603,6 +609,7 @@ namespace LIMITS {
     Tabulator<PoleIntegrator> m_poleIntTable;   /**< the table of poleIntegrator   */
     Range<double>             m_intTabSRange;   /**< tabulated signal range */
     Range<int>                m_intTabNRange;   /**< tabulated N(obs) range */
+    bool                      m_tabulateIntegral; /**< flag; if true, tabulate the integral */
 
     ////////////////////////////////////////////////////
     //
@@ -658,7 +665,8 @@ namespace LIMITS {
     m_poleData.polePtr = 0;
   }
 
-  PoleIntegrator::~PoleIntegrator() {}
+  PoleIntegrator::~PoleIntegrator() {
+  }
 
   void PoleIntegrator::setPole( const Pole *pole ) {
     m_poleData.polePtr = pole;
@@ -694,7 +702,7 @@ namespace LIMITS {
   }
 
   const Integrator *PoleIntegrator::getIntegrator() const { return & m_integrator; }
-  Integrator       &PoleIntegrator::integrator()          { return   m_integrator; }
+  Integrator       *PoleIntegrator::integrator()          { return & m_integrator; }
 
   int    PoleIntegrator::getEffIndex()  const { return m_poleData.effIndex; }
   double PoleIntegrator::getEffIntMin() const { return (m_poleData.effIndex<0 ? m_poleData.effObs : m_integrator.getIntXmin( m_poleData.effIndex )); }

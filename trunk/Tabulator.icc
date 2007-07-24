@@ -123,7 +123,6 @@ void Tabulator<T>::initTable() {
 
 template<class T>
 void Tabulator<T>::printTable() const {
-   return;
    size_t npars = m_tabMin.size();
    size_t nsize=0;
    size_t xminlen=0;
@@ -134,23 +133,23 @@ void Tabulator<T>::printTable() const {
    size_t sz;
    size_t ntot=1;
    std::ostringstream xstr;
-
    std::ios_base::fmtflags old = std::cout.flags();
 
    for (size_t i=0; i<npars; i++) {
+      ntot *= m_tabNsteps[i];
       if (m_tabName[i].size()>nsize) nsize = m_tabName[i].size();
       xstr.str("");
-      xstr << std::fixed << std::setprecision(prec) << m_tabMin[i];
+      xstr << std::scientific << std::setprecision(prec) << m_tabMin[i];
       sz = xstr.str().size();
       if (sz>xminlen) xminlen=sz;
       //
       xstr.str("");
-      xstr << std::fixed << std::setprecision(prec) << m_tabMax[i];
+      xstr << std::scientific << std::setprecision(prec) << m_tabMax[i];
       sz = xstr.str().size();
       if (sz>xmaxlen) xmaxlen=sz;
 
       xstr.str("");
-      xstr << std::fixed << std::setprecision(prec) << m_tabStep[i];
+      xstr << std::scientific << std::setprecision(prec) << m_tabStep[i];
       sz = xstr.str().size();
       if (sz>steplen) steplen=sz;
 
@@ -159,7 +158,6 @@ void Tabulator<T>::printTable() const {
       sz = xstr.str().size();
       if (sz>nstepslen) nstepslen=sz;
       //
-      ntot *= m_tabNsteps[i];
    }
 
    //
@@ -176,12 +174,13 @@ void Tabulator<T>::printTable() const {
              << std::endl;
    std::cout << "-------------------------------------------------------------------" << std::endl;
    for (size_t i=0; i<npars; i++) {
-      std::cout << " " << std::setw(nsize) << m_tabName[i] << " | " << std::flush;
-      TOOLS::coutFixed(prec,m_tabMin[i]);
+      std::cout << " " <<  std::setw(nsize)
+                << m_tabName[i] << " | " << std::flush;
+      TOOLS::coutScientific(prec,m_tabMin[i]);
       std::cout << " | ";
-      TOOLS::coutFixed(prec,m_tabMax[i]);
+      TOOLS::coutScientific(prec,m_tabMax[i]);
       std::cout << " | ";
-      TOOLS::coutFixed(prec,m_tabStep[i]);
+      TOOLS::coutScientific(prec,m_tabStep[i]);
       std::cout << " | ";
       TOOLS::coutFixed(prec,int(m_tabNsteps[i]));
       std::cout << std::endl;

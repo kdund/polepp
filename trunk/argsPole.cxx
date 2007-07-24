@@ -33,8 +33,6 @@ void argsPole(LIMITS::Pole *pole, int argc, char *argv[]) {
     ValueArg<double> confLevel( "","cl",       "confidence level",false,0.9,"float",cmd);
     ValueArg<double> sTrue(     "","strue",   "s_true, only used if -C is active",false,1.0,"float",cmd);
     ValueArg<int>    method(    "m","method",     "method (1 - FHC2 (def), 2 - MBT)",false,1,"int",cmd);
-    SwitchArg        noTabulated("K","tab","Do not use tabulated poisson",false);
-    cmd.add(noTabulated);
     //
     ValueArg<double> minProb( "","minp",       "minimum probability",false,-1.0,"float",cmd);
     //
@@ -50,7 +48,7 @@ void argsPole(LIMITS::Pole *pole, int argc, char *argv[]) {
     //
     ValueArg<double> beCorr(    "", "corr",     "corr(bkg,eff)",false,0.0,"float",cmd);
    //
-    ValueArg<double> dMus(      "", "dmus",     "step size in findBestMu",false,0.002,"float",cmd);
+    ValueArg<double> dMus(      "", "dmus",     "step size in findBestMu",false,0.01,"float",cmd);
     ValueArg<int>    nMus(      "", "nmus",     "maximum number of steps in findBestMu",false,20,"float",cmd);
     //
     ValueArg<double> threshBS(   "","threshbs",     "binary search (limit) threshold" ,false,0.0001,"float",cmd);
@@ -60,20 +58,26 @@ void argsPole(LIMITS::Pole *pole, int argc, char *argv[]) {
     ValueArg<double> hypTestMax( "","hmax",   "hypothesis test max" ,false,35.0,"float",cmd);
     ValueArg<double> hypTestStep("","hstep",  "hypothesis test step" ,false,0.01,"float",cmd);
     //
-    ValueArg<double> effIntNSigma( "","effintnsigma","eff num sigma in integral", false,5.0,"float",cmd);
-    ValueArg<double> bkgIntNSigma( "","bkgintnsigma","bkg num sigma in integral", false,5.0,"float",cmd);
-    ValueArg<int>    gslIntNCalls( "","gslintncalls","number of calls in GSL integrator", false,10000,"int",cmd);
-    ValueArg<double> tabPoleSMin( "","tabpolesmin", "Pole table: minimum signal", false,0.0,"float",cmd);
-    ValueArg<double> tabPoleSMax( "","tabpolesmax", "Pole table: maximum signal", false,10.0,"float",cmd);
-    ValueArg<int>    tabPoleSNStep( "","tabpolesn",  "Pole table: number of signals", false,100,"int",cmd);
-    ValueArg<int>    tabPoleNMin( "","tabpolenmin", "Pole table: minimum N(obs)", false, 0,"int",cmd);
-    ValueArg<int>    tabPoleNMax( "","tabpolenmax", "Pole table: maximum N(obs)", false,10,"int",cmd);
+    ValueArg<double> effIntNSigma(  "","effintnsigma","eff num sigma in integral", false,5.0,"float",cmd);
+    ValueArg<double> bkgIntNSigma(  "","bkgintnsigma","bkg num sigma in integral", false,5.0,"float",cmd);
+    ValueArg<int>    gslIntNCalls(  "","gslintncalls","number of calls in GSL integrator", false,1000,"int",cmd);
+    //
+    ValueArg<double> tabPoleSMin(   "","tabpolesmin", "Pole table: minimum signal", false,0.0,"float",cmd);
+    ValueArg<double> tabPoleSMax(   "","tabpolesmax", "Pole table: maximum signal", false,10.0,"float",cmd);
+    ValueArg<int>    tabPoleSNStep( "","tabpolesn",   "Pole table: number of signals", false,100,"int",cmd);
+    ValueArg<int>    tabPoleNMin(   "","tabpolenmin", "Pole table: minimum N(obs)", false, 0,"int",cmd);
+    ValueArg<int>    tabPoleNMax(   "","tabpolenmax", "Pole table: maximum N(obs)", false,10,"int",cmd);
+    SwitchArg        tabPole(       "I","poletab",    "Pole table: tabulated",false);
+    cmd.add(tabPole);
 
     ValueArg<double> tabPoisMuMin( "","poismumin", "Poisson table: minimum mean value", false,0.0,"float",cmd);
     ValueArg<double> tabPoisMuMax( "","poismumax", "Poisson table: maximum mean value", false,35.0,"float",cmd);
     ValueArg<int>    tabPoisMuN(   "","poismun",   "Poisson table: number of mean value", false,72,"int",cmd);
     ValueArg<int>    tabPoisNmin(  "","poisnmin",  "Poisson table: minimum value of N", false,0,"int",cmd);
     ValueArg<int>    tabPoisNmax(  "","poisnmax",  "Poisson table: maximum value of N", false,35,"int",cmd);
+    SwitchArg        tabPois(     "P","poistab",   "Poisson table: tabulated",false);
+    cmd.add(tabPois);
+
     ValueArg<int>    doVerbose(   "V","verbose", "verbose pole",    false,0,"int",cmd);
 
     ValueArg<std::string> inputFile( "f" ,"infile", "input file with tabulated data: n eff(dist,mean,sigma) bkg(dist,mean,sigma)", false,"","string",cmd);
@@ -116,6 +120,8 @@ void argsPole(LIMITS::Pole *pole, int argc, char *argv[]) {
 
     pole->setIntSigRange( tabPoleSMin.getValue(), tabPoleSMax.getValue(), tabPoleSNStep.getValue());
     pole->setIntNobsRange(tabPoleNMin.getValue(), tabPoleNMax.getValue());
+    pole->setTabulateIntegral(tabPole.getValue());
+
     //
     pole->setBSThreshold(threshBS.getValue());
     pole->setPrecThreshold(threshPrec.getValue());
@@ -124,7 +130,7 @@ void argsPole(LIMITS::Pole *pole, int argc, char *argv[]) {
 
     pole->setMinMuProb(minProb.getValue());
     //
-    if (!noTabulated.getValue()) {
+    if (tabPois.getValue()) {
       PDF::gPoisson.initTabulator();
       PDF::gPoisson.setTabMean( tabPoisMuN.getValue(), tabPoisMuMin.getValue(), tabPoisMuMax.getValue() );
       PDF::gPoisson.setTabN(tabPoisNmin.getValue(),tabPoisNmax.getValue());
