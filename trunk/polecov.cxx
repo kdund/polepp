@@ -2,11 +2,12 @@
 #include <fstream>
 #include <iomanip>
 #include <signal.h>
+#include "Pole.h"
 #include "Coverage.h"
 #include "Tools.h"
 
 Coverage gCoverage;
-Pole     gPole;
+LIMITS::Pole     gPole;
 
 
 void my_sighandler(int a) {
@@ -14,7 +15,7 @@ void my_sighandler(int a) {
   TOOLS::makeTimeStamp(timestamp);
   //
   if (a==SIGUSR1) {
-    if (gCoverage.DoneOneLoop()) {
+    if (gCoverage.doneOneLoop()) {
       gCoverage.calcCoverage();
       gCoverage.outputCoverageResult(1);
     } else {
@@ -23,7 +24,7 @@ void my_sighandler(int a) {
   } else {
     std::cout << "WARNING (" << timestamp << " ) Job aborting (signal = " << a
 	      << " ). Will output data from unfinnished loop.\n" << std::endl;
-    if (gCoverage.DoneOneLoop()) {
+    if (gCoverage.doneOneLoop()) {
       gCoverage.calcCoverage();
       gCoverage.outputCoverageResult(0); // always output
       gCoverage.calcStatistics();        // only if collecting stats
@@ -36,7 +37,7 @@ void my_sighandler(int a) {
   }
 }
 
-extern void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]);
+extern void argsCoverage(Coverage *coverage, LIMITS::Pole *pole, int argc, char *argv[]);
 
 int main(int argc, char *argv[]) {
   // Trap LSF specific signals

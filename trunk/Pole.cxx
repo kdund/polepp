@@ -38,6 +38,7 @@ namespace LIMITS {
   }
 
   void Pole::initDefault() {
+    m_calcProbBuf.resize(2);
     m_cl             = 0.90;
     m_thresholdBS    = 0.001;
     m_thresholdPrec  = 0.01;
@@ -2050,12 +2051,29 @@ namespace LIMITS {
 
     if (m_tabulateIntegral) {
       TOOLS::Timer tt;
+      PDF::gPrintStat = true;
       std::cout << std::endl;
+      if (getObsPdf()) getObsPdf()->clrStat();
+      if (getEffPdf()) getEffPdf()->clrStat();
+      if (getBkgPdf()) getBkgPdf()->clrStat();
       tt.start("Tabulating integral : ");
       m_poleIntTable.tabulate();
       tt.stop();
       tt.printUsedClock();
       std::cout << std::endl;
+      if (getObsPdf()) {
+         std::cout << "Obs PDF statistics: " << std::endl;
+         getObsPdf()->printStat();
+      }
+      if (getEffPdf()) {
+         std::cout << "Eff PDF statistics: " << std::endl;
+         getEffPdf()->printStat();
+      }
+      if (getBkgPdf()) {
+         std::cout << "Bkg PDF statistics: " << std::endl;
+         getBkgPdf()->printStat();
+      }
+      PDF::gPrintStat = false;
     }
   }
 
@@ -2075,23 +2093,29 @@ namespace LIMITS {
     const std::string msgB("Calculating limit        : ");
     const std::string msgC("Total CPU time used (ms) : ");
     if (usesFHC2()) {
-      thetime.start(msgA.c_str());
-      findAllBestMu(); // loops
-      thetime.stop();
-      thetime.printUsedClock(0,msgC.c_str());
+      if (m_verbose>1) {
+        thetime.start(msgA.c_str());
+        findAllBestMu(); // loops
+        thetime.stop();
+        thetime.printUsedClock(0,msgC.c_str());
+      }
     }
     if (m_verbose>3 && m_verbose<10) {
       calcBelt();
     }
     //    if (m_verbose>0) std::cout << "Calculating limit" << std::endl;
-    thetime.start(msgB.c_str());
+    if (m_verbose>1) {
+      thetime.start(msgB.c_str());
+    }
     if (m_coverage) {
       rval=calcCoverageLimit();
     } else {
       rval=calcLimit();
     }
-    thetime.stop();
-    thetime.printUsedClock(0,msgC.c_str());
+    if (m_verbose>1) {
+      thetime.stop();
+      thetime.printUsedClock(0,msgC.c_str());
+    }
     // Should not do this - if probability is OK then the belt is also OK...?
     // The max N(Belt) is defined by a cutoff in probability (very small)
     //  if (m_nBeltMaxUsed==m_nBelt) rval=false; // reject limit if the full belt is used

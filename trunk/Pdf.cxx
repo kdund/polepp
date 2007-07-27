@@ -4,7 +4,7 @@
 namespace PDF {
   Poisson  gPoisson;
   Poisson  gPoissonTab;
-  PoisTab  gPoisTab(&gPoissonTab);
+  //  PoisTab  gPoisTab(&gPoissonTab);
   Gauss    gGauss;
   GaussTab gGaussTab(&gGauss);
 

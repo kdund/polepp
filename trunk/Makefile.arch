@@ -9,7 +9,7 @@
 ARCH         := $(shell root-config --arch)
 PLATFORM     := $(shell root-config --platform)
 
-OPTFLAG       = 
+OPTFLAG       = -O
 CXX           =
 ObjSuf        = o
 SrcSuf        = cxx

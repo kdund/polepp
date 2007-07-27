@@ -78,7 +78,13 @@ public:
    inline void tabulate();
    //! get the tabulated value with the given parameter vector
    inline double getValue( const std::vector<double> & valvec );
-      //! accessors
+   //! idem for one parameter
+   inline double getValue( double v1 );
+   //! idem for two parameters
+   inline double getValue( double v1, double v2 );
+   //! idem for two parameters
+   inline double getValue( double v1, double v2, double v3 );
+   //! accessors
    inline const char *getName()        const;
    inline const char *getDescription() const;
    inline size_t getTabNPar()    const;
@@ -97,7 +103,7 @@ protected:
    //! sets the parameter values given
    inline void setParameters( const std::vector<double> & valvec );
    //! sets the parameter values given (index)
-   inline bool setParameters( const std::vector<size_t> & indvec );
+   inline void setParameters( const std::vector<size_t> & indvec );
    //! sets the parameter values given, using cache
    inline void setParameters( const std::vector<size_t> & indvec, const std::vector<size_t> & indvecLast );
    //! calculate the index in the table for a given vector of values

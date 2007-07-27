@@ -1,5 +1,5 @@
 #define DO_COVERAGE
-#undef  DO_COVERAGE
+//#undef  DO_COVERAGE
 
 #ifdef DO_COVERAGE
 
@@ -24,7 +24,7 @@ public:
   //
   // Setup basic parameters
   //
-  void setPole(Pole *pole) { m_pole = pole;}
+  void setPole(LIMITS::Pole *pole) { m_pole = pole;}
   void setSeed(unsigned int r=0);
   void setNloops(int n) {m_nLoops = (n<1 ? 1:n);}
   // call these first - sets the scan ranges of the true s, eff and bkg.
@@ -60,7 +60,7 @@ public:
   //
   void setVerbose(int v=0) { m_verbose = v; }
 
-  bool DoneOneLoop() { return m_doneOneLoop; }
+  bool doneOneLoop() { return m_doneOneLoop; }
   //
 private:
   void calcStats(std::vector<double> & vec, double & average, double & variance);
@@ -71,7 +71,7 @@ private:
   unsigned int m_rndSeed;
   RND::Random m_rnd;
   // pointer to Pole class
-  Pole  *m_pole;
+  LIMITS::Pole  *m_pole;
   // loop ranges
   Range<double>  m_sTrue;
   Range<double>  m_effTrue;

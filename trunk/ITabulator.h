@@ -47,6 +47,12 @@ public:
    virtual void tabulate() = 0;
    //! get the tabulated value with the given parameter vector
    virtual double getValue( const std::vector<double> & tabParams ) = 0;
+   //! idem for one parameter
+   virtual double getValue( double v1 ) = 0;
+   //! idem for two parameters
+   virtual double getValue( double v1, double v2 ) = 0;
+   //! idem for two parameters
+   virtual double getValue( double v1, double v2, double v3 ) = 0;
 
    //! accessors
    virtual const char *getName()        const = 0;
@@ -68,7 +74,7 @@ protected:
    //! sets the parameter values given
    virtual void setParameters( const std::vector<double> & valvec ) = 0;
    //! sets the parameter values given (index)
-   virtual bool setParameters( const std::vector<size_t> & indvec ) = 0;
+   virtual void setParameters( const std::vector<size_t> & indvec ) = 0;
    //! sets the parameter values given
    virtual void setParameters( const std::vector<size_t> & indvec, const std::vector<size_t> & indvecLast) = 0;
    //! calculate the index in the table for a given vector of values
@@ -86,6 +92,8 @@ protected:
 
    //
    bool                m_verbose;     /**< verbose flag */
+   size_t              m_tabNPars;    /**< number of parameters */
+   size_t              m_tabSize;     /**< total size of table */
    std::vector<int>    m_tabIndex;    /**< vector of parameter indecis - not used internally, just for external book keeping */
    std::vector<std::string> m_tabName;/**< vector of parameter names - not used internally, just for external book keeping */
    std::vector<double> m_tabMin;      /**< minimum of tabulated value */
@@ -94,7 +102,7 @@ protected:
    std::vector<size_t> m_tabNsteps;   /**< number of steps */
    std::vector<size_t> m_tabMaxInd;   /**< number of steps - 1 ; not so nice */
    std::vector<size_t> m_tabPeriod;   /**< parameter period */
-   std::vector<size_t> m_tabNTabSteps;/**< parameter: number of steps in table until next value tabNStep = tabPeriod[i-1]  */
+   std::vector<size_t> m_tabNTabSteps;/**< parameter: number of steps in table until next value tabNTabSteps = tabPeriod[i-1]  */
    std::vector<double> m_tabValues;   /**< the actual table */
    bool                m_tabulated;   /**< true if tabulate() is called successfully */
 

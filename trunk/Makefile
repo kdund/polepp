@@ -7,6 +7,8 @@ MAKEFLAGS = --no-print-directory -r -s
 
 include Makefile.arch
 
+CXXFLAGS := $(CXXFLAGS)
+
 # Internal configuration
 PACKAGE=Pole++
 LIBVERS=.1

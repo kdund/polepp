@@ -6,7 +6,7 @@
 
 
 using namespace TCLAP;
-void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
+void argsCoverage(Coverage *coverage, LIMITS::Pole *pole, int argc, char *argv[]) {
   if (coverage==0) return;
   if (pole==0) return;
   //
@@ -43,11 +43,11 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
     ValueArg<std::string> dump("","dump",    "dump filename",false,"","string",cmd);
 
     ValueArg<int>    verboseCov(   "V","verbcov", "verbose coverage",false,0,"int",cmd);
-    ValueArg<int>    verbosePol(   "P","verbpol", "verbose pole",    false,0,"int",cmd);
+    ValueArg<int>    verbosePol(   "W","verbpol", "verbose pole",    false,0,"int",cmd);
 
-    ValueArg<double> sMin(      "","smin",    "min s_true",         false,1.0,"float",cmd);
-    ValueArg<double> sMax(      "","smax",    "max s_true",         false,1.0,"float",cmd);
-    ValueArg<double> sStep(     "","sstep",   "step s_true",        false,1.0,"float",cmd);
+    ValueArg<double> sMin(      "","smin",    "min s_true",         false,0.0,"float",cmd);
+    ValueArg<double> sMax(      "","smax",    "max s_true",         false,0.2,"float",cmd);
+    ValueArg<double> sStep(     "","sstep",   "step s_true",        false,0.1,"float",cmd);
 
     ValueArg<int>    effDist(   "","effdist",   "efficiency distribution",false,2,"int",cmd);
     ValueArg<double> effSigma(  "","effsigma",  "sigma of efficiency",false,0.2,"float",cmd);
@@ -75,21 +75,31 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
 //     ValueArg<double> hypTestMax( "","hmax",   "hypothesis test max" ,false,35.0,"float",cmd);
 //     ValueArg<double> hypTestStep("","hstep",  "hypothesis test step" ,false,0.01,"float",cmd);
     //
-    ValueArg<double> effIntScale( "","effintscale","eff num sigma in integral", false,5.0,"float",cmd);
-    ValueArg<int>    effIntN(     "","effintn",    "eff: N points in integral", false,21, "int",cmd);
-    ValueArg<double> bkgIntScale( "","bkgintscale","bkg num sigma in integral", false,5.0,"float",cmd);
-    ValueArg<int>    bkgIntN(     "","bkgintn",    "bkg: N points in integral", false,21, "int",cmd);
+    ValueArg<double> effIntNSigma(  "","effintnsigma","eff num sigma in integral", false,5.0,"float",cmd);
+    ValueArg<double> bkgIntNSigma(  "","bkgintnsigma","bkg num sigma in integral", false,5.0,"float",cmd);
+    ValueArg<int>    gslIntNCalls(  "","gslintncalls","number of calls in GSL integrator", false,100,"int",cmd);
     //
-    ValueArg<double> tabPoisMin( "","poismin",  "minimum mean value in table", false,0.0,"float",cmd);
-    ValueArg<double> tabPoisMax( "","poismax",  "maximum mean value in table", false,100.0,"float",cmd);
-    ValueArg<int>    tabPoisNM(  "","poisnm",   "number of mean value in table", false,100000,"int",cmd);
-    ValueArg<int>    tabPoisNX(  "","poisnx",   "maximum value of N in table", false,200,"int",cmd);
-    //
+    ValueArg<double> tabPoleSMin(   "","tabpolesmin", "Pole table: minimum signal", false,0.0,"float",cmd);
+    ValueArg<double> tabPoleSMax(   "","tabpolesmax", "Pole table: maximum signal", false,1.0,"float",cmd);
+    ValueArg<int>    tabPoleSNStep( "","tabpolesn",   "Pole table: number of signals", false,10,"int",cmd);
+    ValueArg<int>    tabPoleNMin(   "","tabpolenmin", "Pole table: minimum N(obs)", false, 0,"int",cmd);
+    ValueArg<int>    tabPoleNMax(   "","tabpolenmax", "Pole table: maximum N(obs)", false,10,"int",cmd);
+    SwitchArg        tabPole(       "I","poletab",    "Pole table: tabulated",false);
+    cmd.add(tabPole);
+
+    ValueArg<double> tabPoisMuMin( "","poismumin", "Poisson table: minimum mean value", false,0.0,"float",cmd);
+    ValueArg<double> tabPoisMuMax( "","poismumax", "Poisson table: maximum mean value", false,35.0,"float",cmd);
+    ValueArg<int>    tabPoisMuN(   "","poismun",   "Poisson table: number of mean value", false,200,"int",cmd);
+    ValueArg<int>    tabPoisNmin(  "","poisnmin",  "Poisson table: minimum value of N", false,0,"int",cmd);
+    ValueArg<int>    tabPoisNmax(  "","poisnmax",  "Poisson table: maximum value of N", false,35,"int",cmd);
+    SwitchArg        tabPois(     "P","poistab",   "Poisson table: tabulated",false);
+    cmd.add(tabPois);
+
     cmd.parse(argc,argv);
     //
     // First set Pole
     //
-    pole->setPoisson(&PDF::gPoisTab);
+    pole->setPoisson(&PDF::gPoisson);
     pole->setGauss(&PDF::gGauss);
     pole->setGauss2D(&PDF::gGauss2D);
     pole->setLogNormal(&PDF::gLogNormal);
@@ -116,20 +126,31 @@ void argsCoverage(Coverage *coverage, Pole *pole, int argc, char *argv[]) {
 
     pole->setTrueSignal(sMin.getValue());
 
-    pole->getMeasurement().setEffInt(effIntScale.getValue(),effIntN.getValue());
-    pole->getMeasurement().setBkgInt(bkgIntScale.getValue(),bkgIntN.getValue());
+    //    pole->getMeasurement().setEffInt(effIntScale.getValue(),effIntN.getValue());
+    //    pole->getMeasurement().setBkgInt(bkgIntScale.getValue(),bkgIntN.getValue());
+
+    pole->setIntEffNSigma(effIntNSigma.getValue());
+    pole->setIntBkgNSigma(bkgIntNSigma.getValue());
+    pole->setIntGslNCalls(gslIntNCalls.getValue());
     //
+    pole->setIntSigRange( tabPoleSMin.getValue(), tabPoleSMax.getValue(), tabPoleSNStep.getValue());
+    pole->setIntNobsRange(tabPoleNMin.getValue(), tabPoleNMax.getValue());
+    pole->setTabulateIntegral(tabPole.getValue());
+
     pole->setBSThreshold(threshBS.getValue());
     pole->setPrecThreshold(threshPrec.getValue());
     //
-    pole->setTestHyp(0.0,1.0,0.1);//hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
+    pole->setHypTestRange(0.0,1.0,0.1);//hypTestMin.getValue(), hypTestMax.getValue(), hypTestStep.getValue());
 
     pole->setMinMuProb(minProb.getValue());
     //
-    if (!noTabulated.getValue()) {
-      PDF::gPoisTab.setRangeMean( tabPoisNM.getValue(), tabPoisMin.getValue(), tabPoisMax.getValue() );
-      PDF::gPoisTab.setRangeX(tabPoisNX.getValue()+1,0,tabPoisNX.getValue());
-      PDF::gPoisTab.tabulate();
+    if (tabPois.getValue()) {
+      PDF::gPrintStat = false;
+      PDF::gPoisson.initTabulator();
+      PDF::gPoisson.setTabMean( tabPoisMuN.getValue(), tabPoisMuMin.getValue(), tabPoisMuMax.getValue() );
+      PDF::gPoisson.setTabN(tabPoisNmin.getValue(),tabPoisNmax.getValue());
+      PDF::gPoisson.tabulate();
+      PDF::gPoisson.clrStat();
     }
     pole->initAnalysis();
 

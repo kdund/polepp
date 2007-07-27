@@ -574,8 +574,8 @@ namespace LIMITS {
 
     static const int      s_intEffInd = 0;
     static const int      s_intBkgInd = 1;
-    static const int      s_tabSigInd  = 0;
-    static const int      s_tabNobsInd = 1;
+    static const int      s_tabSigInd  = 1;
+    static const int      s_tabNobsInd = 0;
 
   private:
 
@@ -619,6 +619,7 @@ namespace LIMITS {
     // Arrays of best fit and limits
     //
     // POLE
+    std::vector<double> m_calcProbBuf;
     int     m_nBelt;        // beltsize used for explicit construction of conf. belt (calcBelt() etc)
     int     m_nBeltUsed;    // dynamic beltsize determined in calcLhRatio() - default = max(2,N(obs))
     int     m_nBeltMinUsed; // the minimum nBelt used for the calculation
@@ -752,11 +753,26 @@ namespace LIMITS {
 };
 
 inline double LIMITS::Pole::calcProb( int n, double s ) {
-  std::vector<double> v(2);
-  v[s_tabSigInd] = s;
-  v[s_tabNobsInd] = static_cast<double>(n);
-  return m_poleIntTable.getValue(v);
+  m_calcProbBuf[s_tabSigInd] = s;
+  m_calcProbBuf[s_tabNobsInd] = static_cast<double>(n);
+  return m_poleIntTable.getValue( m_calcProbBuf );
 }
+
+// template<>
+// inline double Tabulator<LIMITS::PoleIntegrator>::getValue(double n, double s) {
+//   size_t tabind;
+//   double nmin = m_tabMin[s_tabNobsInd];
+//   double nmax = m_tabMax[s_tabNobsInd];
+//   double smin = m_tabMin[s_tabSigInd];
+//   double smax = m_tabMax[s_tabSigInd];
+//   double nval = static_cast<double>(n);
+//   if ((n<nmin) || (n>nmax) || (s<smin) || (s>smax)) {
+    
+//   } else {
+    
+//   }
+//   return 0;
+// }
 
 template<>
 inline double Tabulator<LIMITS::PoleIntegrator>::calcValue() {

@@ -8,6 +8,8 @@
 #include "Tools.h"
 #include "Tabulator.h"
 
+#define USE_STAT
+//#undef  USE_STAT
 /*!
   
  */
@@ -94,7 +96,7 @@ namespace PDF {
     Base(const Base & other) { copy(other); m_statNraw=0; m_statNrawCache=0; m_statNtot=0; m_statNtab=0; m_iTabulator=0; }
     virtual ~Base() { this->printStat(); if (m_iTabulator) delete m_iTabulator;}
     //
-    virtual void clrStat() {  m_statNraw = 0; m_statNrawCache=0; m_statNtot=0; m_statNtab=0; }
+    virtual void clrStat() const {  m_statNraw = 0; m_statNrawCache=0; m_statNtot=0; m_statNtab=0; }
     virtual void setMean(double m)  { m_mean  = m; }
     virtual void setSigma(double s) { m_sigma = s; }
     //
@@ -288,13 +290,19 @@ namespace PDF {
     inline const double pdf(const double x) const {return (x>0.0 ? Gauss::getVal(log(x),m_logMean,m_logSigma)/x:0.0);}
     inline const double cdf(const double x) const { return 0; }
     inline const double getVal(const double x, const double m, const double s) const {
+#ifdef USE_STAT
       m_statNtot++;
+#endif
       if (x<=0) return 0.0;
+#ifdef USE_STAT
       m_statNraw++;
+#endif
       return Gauss::getVal(log(x),calcLogMean(m,s), calcLogSigma(m,s))/x;
     }
     inline const double getValLogN(const double x, const double m, const double s) const {
+#ifdef USE_STAT
       m_statNraw++;
+#endif
       return Gauss::getVal(x, m, s)/exp(x);
     }
   protected:
@@ -502,7 +510,9 @@ namespace PDF {
 	xind = int(m_dx>0 ? (x-m_xmin)/m_dx : 0);
 	ind = xind + mind*m_nX + sind*m_nX*m_nMean;
 	if (ind<m_nTotal) {
+#ifdef USE_STAT
           this->m_statNtab++;
+#endif
 	  return m_table[ind];
         }
       }
@@ -605,7 +615,9 @@ namespace PDF {
     void setSigma(double sigma) { this->m_pdf->setSigma(sigma); this->m_sigma = sigma; this->m_mean  = this->m_pdf->getMean(); }
 
     virtual const double getVal(int x, double m) const {
+#ifdef USE_STAT
       this->m_statNtot++;
+#endif
       //
       // check if table is created and that the requested values are within the table
       // if not, the value will be calculated using raw()
@@ -638,7 +650,9 @@ namespace PDF {
           }
           double corr1 = f0*alpha*dlmb;
           double corr2 = 0.5*f0*(alpha*alpha - beta)*dlmb*dlmb;
+#ifdef USE_STAT
           this->m_statNtab++;
+#endif
 	  return f0 + corr1 + corr2;
         }
         // This line should never be called - a BUG trap
@@ -654,7 +668,9 @@ namespace PDF {
       //
       // Call the raw() function
       //
+#ifdef USE_STAT
       this->m_statNraw++;
+#endif
       return this->m_pdf->getVal(x,m,0); // Poisson ignores sigma
     }
     //
@@ -692,14 +708,18 @@ namespace PDF {
     }
 
     virtual const double getVal(double x, double m, double s) const {
+#ifdef USE_STAT
       m_statNtot++;
+#endif
       if (m_table!=0) {
 	double mu = fabs((x-m)/s);
 	if (mu>m_xmax)
 	  return static_cast<Gauss *>(this->m_pdf)->phi(mu)/s;
 	int muind = int(m_dx>0 ? (mu-m_xmin)/m_dx : 0);
 	if (muind<m_nTotal) {
+#ifdef USE_STAT
           this->m_statNtab++;
+#endif
 	  return m_table[muind];
         }
       }
@@ -709,7 +729,9 @@ namespace PDF {
         exit(-1);
         return 0;
       }
+#ifdef USE_STAT
       m_statNraw++;
+#endif
       return this->m_pdf->getVal(x,m,s);
     }
   };
@@ -743,7 +765,9 @@ namespace PDF {
     return phi(mu)/this->m_sigma;
   }
   inline const double Gauss::getVal(const double x, const double mean, const double sigma) const {
+#ifdef USE_STAT
     m_statNraw++;
+#endif
     double mu = fabs((x-mean)/sigma); // symmetric around mu0
     return phi(mu)/sigma;
   }
@@ -788,8 +812,10 @@ namespace PDF {
     return raw(x,k,t);
   }
   inline const double Gamma::raw(const double x, const double k, const double theta) const {
+#ifdef USE_STAT
     m_statNtot++;
     m_statNraw++;
+#endif
     const double xt   = x/theta;
     double lnf = (k-1.0)*log(xt) - xt - log(theta) - lgamma(k);
     double prob;
@@ -819,24 +845,26 @@ namespace PDF {
 
   inline const double Poisson::rawCacheNP1() const {
     // will calculate Po(n+1|s) assuming that raw(0,s) has been called followed by rawCachedNP1() until n
+#ifdef USE_STAT
     m_statNtot++;
     m_statNrawCache++;
+#endif
     m_cacheN++;
     m_cacheValue *= m_cacheMean/static_cast<double>(m_cacheN);
     return m_cacheValue;
   }
 
   inline const double Poisson::raw(const int n, const double s) const {
+#ifdef USE_STAT
     m_statNtot++;
     m_statNraw++;
-    double prob;
-    double nlnl,lnn,lnf;
-    prob = 0.0;
-    nlnl = double(n)*log(s);  // n*ln(s)
-    lnn  = lgamma(n+1);       // ln(fac(n))
-    lnf  = nlnl - lnn - s;
+#endif
+    double prob = 0.0;
+    double nlnl = double(n)*log(s);  // n*ln(s)
+    double lnn  = lgamma(n+1);       // ln(fac(n))
+    double lnf  = nlnl - lnn - s;
     if (isinf(lnf) || isnan(lnf)) {
-        prob=(n==0 ? 1.0:0.0);
+      prob=(n==0 ? 1.0:0.0);
     } else {
       prob=exp(lnf);
     }
@@ -849,15 +877,18 @@ namespace PDF {
     return prob;
   }
 
-  inline const double Poisson::rawOrTab(const int n, const double s) const {
-    if (isTabulated()) {
-      m_statNtab++;
-      m_tabVec[0] = s;
-      m_tabVec[1] = static_cast<double>(n);
-      return m_poisTabulator->getValue( m_tabVec );
-    }
-    return raw(n,s);
-  }
+//   inline const double Poisson::rawOrTab(const int n, const double s) const {
+//     if (isTabulated()) {
+// #ifdef USE_STAT
+//       m_statNtab++;
+// #endif
+//       m_tabVec[0] = s;
+//       m_tabVec[1] = static_cast<double>(n);
+//       return m_poisTabulator->getValue( m_tabVec );
+//       //      return m_poisTabulator->getValue(static_cast<double>(n), s);
+//     }
+//     return raw(n,s);
+//   }
 
   inline const double Flat::pdf(double x) const {
     return raw(x,m_val);
@@ -873,12 +904,16 @@ namespace PDF {
   }
 
   inline const double Flat::raw(const double x, const double f) const {
+#ifdef USE_STAT
     m_statNraw++;
+#endif
     return (((x>=m_min) && (x<=m_max)) ? f:0);
   }
 
   inline const double Flat::raw(const double x, const double f, const double xmin, const double xmax) const {
+#ifdef USE_STAT
     m_statNraw++;
+#endif
     return (((x>=xmin) && (x<=xmax)) ? f:0);
   }
 //   template <typename T>
@@ -909,7 +944,7 @@ namespace PDF {
 #ifndef PDF_CXX
    extern Poisson  gPoisson;
    extern Poisson  gPoissonTab;
-   extern PoisTab  gPoisTab;
+   //   extern PoisTab  gPoisTab;
    extern Gauss    gGauss;
    extern GaussTab gGaussTab;
    
@@ -925,12 +960,9 @@ inline double Tabulator<PDF::Poisson>::calcValue() {
   // m_parameters contains:
   // [1] = N
   // [0] = s
-  //  std::cout << "Calling calcValue() : s = " << m_parameters[0] << " ; N = " << m_parameters[1] << std::endl;
   if (m_parChanged[1] && (!m_parChanged[0])) {
-    //    std::cout << "RAWCACHE!" << std::endl;
     return m_function->rawCacheNP1();
   } else {
-    //    std::cout << "RAW!" << std::endl;
     return m_function->raw( static_cast<int>(m_parameters[1]+0.5), m_parameters[0] );
   }
   return 0;
@@ -966,6 +998,89 @@ inline double Tabulator<PDF::Poisson>::interpolate( size_t ind ) const {
   double corr2 = 0.5*f0*(alpha*alpha - beta)*dlmb*dlmb;
   //  std::cout << "interp corr: " << corr1 << " , " << corr2 << std::endl;
   return f0 + corr1 + corr2;
+}
+
+template<>
+inline double Tabulator<PDF::Poisson>::getValue( double n, double s ) {
+   // [1] = N
+   // [0] = s
+   int ni = static_cast<int>(n);
+   m_parameters[0] = s;
+   m_parameters[1] = n;
+   m_parChanged[0] = true;
+   m_parChanged[1] = true;
+   const double smin    = m_tabMin[0];
+   //   const double smax    = m_tabMax[0];
+   const double sstep   = m_tabStep[0];
+   const int nsignal    = m_tabNsteps[0];
+   const int    nmin    = static_cast<int>(m_tabMin[1]);
+   const int    nmax    = static_cast<int>(m_tabMax[1]);
+   const int    nn      = nmax-nmin+1;
+   //
+   int indN = ni - nmin;
+   int indS = static_cast<int>(0.5+((s - smin)/sstep));
+   if ((indN<0) || (indN>=nn) || (indS<0) || (indS>=nsignal)) return calcValue();
+   int ind = indS*nn+indN;
+   return interpolate(ind);
+}
+
+template<>
+inline void Tabulator<PDF::Poisson>::tabulate() {
+   // [0] = N
+   // [1] = s
+   initTable();
+   printTable();
+   const double smin    = m_tabMin[0];
+   //   const double smax    = m_tabMax[0];
+   const double sstep   = m_tabStep[0];
+   const size_t nsignal = m_tabNsteps[0];
+   const int    nmin    = static_cast<int>(m_tabMin[1]);
+   const int    nmax    = static_cast<int>(m_tabMax[1]);
+   const int    nn      = nmax-nmin+1;
+   //
+   std::vector<double> pars(2);
+   for (size_t m=0; m<nsignal; m++) {
+      double mean = m*sstep+smin;
+      // start at n0 = int(mean) -> important if mean is very large
+      int n0 = static_cast<int>(mean);
+      if (n0<nmin) n0=nmin;
+      if (n0>nmax) n0=nmax;
+      int indn0 = n0-nmin;
+      int ind0 = m*nn;
+      pars[0] = mean;
+      pars[1] = static_cast<double>(n0);
+//       if (m<10) {
+//          std::cout << "mean = " << mean << " : " << smin << " : " << smax << " : " << sstep << std::endl;
+//          std::cout << "N    = " << n0   << " : " << nmin << " : " << nmax << " : " << nn    << std::endl;
+//       }
+//      int indtst = calcTabIndex( pars );
+      //    std::cout << "indtst, ind0 = " << indtst << " : " << ind0+indn0 << std::endl;
+      // set reference point at maximum
+      m_tabValues[ind0+indn0] = m_function->raw(n0,mean);
+
+      // set for all n>n0
+      for (int n=indn0+1; n<nn; n++) {
+         m_tabValues[ind0+n] = m_tabValues[ind0+n-1]*mean/static_cast<double>(n+nmin);
+      }
+      // set for all n<n0
+      for (int n=indn0-1; n>=0; n--) {
+         m_tabValues[ind0+n] = m_tabValues[ind0+n+1]*static_cast<double>(n+nmin+1)/mean;
+      }
+   }
+   m_tabulated = true;
+}
+
+inline const double PDF::Poisson::rawOrTab(const int n, const double s) const {
+   if (isTabulated()) {
+#ifdef USE_STAT
+      m_statNtab++;
+#endif
+//       m_tabVec[0] = s;
+//       m_tabVec[1] = static_cast<double>(n);
+//       return m_poisTabulator->getValue( m_tabVec );
+      return m_poisTabulator->getValue(static_cast<double>(n), s);
+   }
+   return raw(n,s);
 }
 
 
