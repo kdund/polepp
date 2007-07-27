@@ -1021,13 +1021,15 @@ inline double Tabulator<PDF::Poisson>::getValue( double n, double s ) {
    int indS = static_cast<int>(0.5+((s - smin)/sstep));
    if ((indN<0) || (indN>=nn) || (indS<0) || (indS>=nsignal)) return calcValue();
    int ind = indS*nn+indN;
+   m_parIndex[0] = indS;
+   m_parIndex[1] = indN;
    return interpolate(ind);
 }
 
 template<>
 inline void Tabulator<PDF::Poisson>::tabulate() {
-   // [0] = N
-   // [1] = s
+   // [1] = N
+   // [0] = s
    initTable();
    printTable();
    const double smin    = m_tabMin[0];
@@ -1057,7 +1059,6 @@ inline void Tabulator<PDF::Poisson>::tabulate() {
       //    std::cout << "indtst, ind0 = " << indtst << " : " << ind0+indn0 << std::endl;
       // set reference point at maximum
       m_tabValues[ind0+indn0] = m_function->raw(n0,mean);
-
       // set for all n>n0
       for (int n=indn0+1; n<nn; n++) {
          m_tabValues[ind0+n] = m_tabValues[ind0+n-1]*mean/static_cast<double>(n+nmin);
