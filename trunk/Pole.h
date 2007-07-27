@@ -698,8 +698,8 @@ namespace LIMITS {
   void PoleIntegrator::setParameters( std::vector<double> & pars ) {
     // parameter [s_tabNobsInd] = N(obs)
     // parameter [s_tabSigInd]  = signal
-    m_poleData.nobs    = static_cast<int>(pars[m_poleData.polePtr->s_tabNobsInd]+0.5);
-    m_poleData.signal  = pars[m_poleData.polePtr->s_tabSigInd];
+    this->m_poleData.nobs    = static_cast<int>(pars[this->m_poleData.polePtr->s_tabNobsInd]+0.5);
+    this->m_poleData.signal  = pars[this->m_poleData.polePtr->s_tabSigInd];
   }
 
   const Integrator *PoleIntegrator::getIntegrator() const { return & m_integrator; }
@@ -712,8 +712,8 @@ namespace LIMITS {
   double PoleIntegrator::getBkgIntMin() const { return (m_poleData.bkgIndex<0 ? m_poleData.bkgObs : m_integrator.getIntXmin( m_poleData.bkgIndex )); }
   double PoleIntegrator::getBkgIntMax() const { return (m_poleData.bkgIndex<0 ? m_poleData.bkgObs : m_integrator.getIntXmax( m_poleData.bkgIndex )); }
   //
-  void   PoleIntegrator::go()           { m_integrator.go(); }
-  double PoleIntegrator::result() const { return m_integrator.result(); }
+  void   PoleIntegrator::go()           { this->m_integrator.go(); }
+  double PoleIntegrator::result() const { return this->m_integrator.result(); }
   
   inline const double Pole::getSbest(int n) const {
     double rval = 0.0;
@@ -779,9 +779,9 @@ inline double Tabulator<LIMITS::PoleIntegrator>::calcValue() {
   // Tabulator parameters in std::vector<double> m_parameters
   // Pole::s_tabSigInd  = index for s
   // Pole::s_tabNobsInd = index for N(obs)
-  m_function->setParameters( m_parameters );
-  m_function->go();
-  return m_function->result();
+  this->m_function->setParameters( this->m_parameters );
+  this->m_function->go();
+  return this->m_function->result();
 }
 
 
@@ -789,15 +789,15 @@ template<>
 inline double Tabulator<LIMITS::PoleIntegrator>::interpolate( size_t ind ) const {
   double df    = deriv( ind, LIMITS::Pole::s_tabSigInd );  // derivative wrt S
   double d2f   = deriv2( ind, LIMITS::Pole::s_tabSigInd ); // derivative2 wrt S
-  double f0    = m_tabValues[ind];                         // f() at discretized mean
+  double f0    = this->m_tabValues[ind];                         // f() at discretized mean
   double x0;
   int    ix0   = calcParIndex(ind,LIMITS::Pole::s_tabSigInd);
   if ( ix0 < 0 ) {
     std::cout << "ERROR: calcParIndex return bad index!" << std::endl;
     return f0;
   }
-  x0 = m_tabMin[LIMITS::Pole::s_tabSigInd] + static_cast<double>(ix0*m_tabStep[LIMITS::Pole::s_tabSigInd]);
-  double x     = m_parameters[LIMITS::Pole::s_tabSigInd];
+  x0 = this->m_tabMin[LIMITS::Pole::s_tabSigInd] + static_cast<double>(ix0*this->m_tabStep[LIMITS::Pole::s_tabSigInd]);
+  double x     = this->m_parameters[LIMITS::Pole::s_tabSigInd];
   double dx    = x-x0;
   double corr1 = df*dx;
   double corr2 = d2f*dx*dx/2.0;

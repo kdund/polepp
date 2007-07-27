@@ -264,10 +264,10 @@ endif
 
 ifeq ($(ARCH),linux)
 # Linux with egcs, gcc 2.9x, gcc 3.x (>= RedHat 5.2)
-CXX           = g++
+CXX           = g++4
 ###CXXFLAGS      = $(OPTFLAG) -Wall -fPIC -Woverloaded-virtual
 CXXFLAGS      = $(OPTFLAG) -Wall -fPIC
-LD            = g++
+LD            = g++4
 LDFLAGS       = -O
 SOFLAGS       = -shared
 endif

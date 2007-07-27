@@ -2093,9 +2093,11 @@ namespace LIMITS {
     const std::string msgB("Calculating limit        : ");
     const std::string msgC("Total CPU time used (ms) : ");
     if (usesFHC2()) {
-      if (m_verbose>1) {
+      if (m_verbose>0) {
         thetime.start(msgA.c_str());
-        findAllBestMu(); // loops
+      }
+      findAllBestMu(); // loops
+      if (m_verbose>0) {
         thetime.stop();
         thetime.printUsedClock(0,msgC.c_str());
       }
@@ -2104,7 +2106,7 @@ namespace LIMITS {
       calcBelt();
     }
     //    if (m_verbose>0) std::cout << "Calculating limit" << std::endl;
-    if (m_verbose>1) {
+    if (m_verbose>0) {
       thetime.start(msgB.c_str());
     }
     if (m_coverage) {
@@ -2112,7 +2114,7 @@ namespace LIMITS {
     } else {
       rval=calcLimit();
     }
-    if (m_verbose>1) {
+    if (m_verbose>0) {
       thetime.stop();
       thetime.printUsedClock(0,msgC.c_str());
     }

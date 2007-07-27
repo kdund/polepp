@@ -63,16 +63,16 @@ void argsPole(LIMITS::Pole *pole, int argc, char *argv[]) {
     ValueArg<int>    gslIntNCalls(  "","gslintncalls","number of calls in GSL integrator", false,100,"int",cmd);
     //
     ValueArg<double> tabPoleSMin(   "","tabpolesmin", "Pole table: minimum signal", false,0.0,"float",cmd);
-    ValueArg<double> tabPoleSMax(   "","tabpolesmax", "Pole table: maximum signal", false,1.0,"float",cmd);
-    ValueArg<int>    tabPoleSNStep( "","tabpolesn",   "Pole table: number of signals", false,10,"int",cmd);
+    ValueArg<double> tabPoleSMax(   "","tabpolesmax", "Pole table: maximum signal", false,10.0,"float",cmd);
+    ValueArg<int>    tabPoleSNStep( "","tabpolesn",   "Pole table: number of signals", false,100,"int",cmd);
     ValueArg<int>    tabPoleNMin(   "","tabpolenmin", "Pole table: minimum N(obs)", false, 0,"int",cmd);
     ValueArg<int>    tabPoleNMax(   "","tabpolenmax", "Pole table: maximum N(obs)", false,10,"int",cmd);
     SwitchArg        tabPole(       "I","poletab",    "Pole table: tabulated",false);
     cmd.add(tabPole);
 
     ValueArg<double> tabPoisMuMin( "","poismumin", "Poisson table: minimum mean value", false,0.0,"float",cmd);
-    ValueArg<double> tabPoisMuMax( "","poismumax", "Poisson table: maximum mean value", false,35.0,"float",cmd);
-    ValueArg<int>    tabPoisMuN(   "","poismun",   "Poisson table: number of mean value", false,200,"int",cmd);
+    ValueArg<double> tabPoisMuMax( "","poismumax", "Poisson table: maximum mean value", false,50.0,"float",cmd);
+    ValueArg<int>    tabPoisMuN(   "","poismun",   "Poisson table: number of mean value", false,100,"int",cmd);
     ValueArg<int>    tabPoisNmin(  "","poisnmin",  "Poisson table: minimum value of N", false,0,"int",cmd);
     ValueArg<int>    tabPoisNmax(  "","poisnmax",  "Poisson table: maximum value of N", false,35,"int",cmd);
     SwitchArg        tabPois(     "P","poistab",   "Poisson table: tabulated",false);
