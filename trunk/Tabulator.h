@@ -2,10 +2,13 @@
 #define TABULATOR_H
 
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 #include <vector>
 #include <cmath>
 #include <cstdlib>
 #include <string>
+#include "Tools.h"
 #include "Combination.h"
 #include "ITabulator.h"
 

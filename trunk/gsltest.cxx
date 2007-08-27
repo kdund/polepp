@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cmath>
+#include "Tabulator.h"
 #include "Integrator.h"
 #include "Tools.h"
 
@@ -96,7 +97,16 @@ void display_results (char *title, double result, double error, double chisq)
    std::cout << "result  = " << result << std::endl;
    std::cout << "sigma   = " << error << std::endl;
    std::cout << "chisq/N = " << chisq << std::endl;
+   std::cout << "diff    = " << std::fabs(result-exact) << std::endl;
    std::cout << "diff    = " << std::fabs(result-exact)/error << std::endl;
+}
+
+void display_results_diff (char *title, double result, double error, double chisq)
+{
+   double exact = 1.3932039296856768591842462603255;
+   std::cout << title << ":\t" << std::flush;
+   std::cout << std::fabs(result-exact) << "\t"
+             << std::fabs(result-exact)/error << std::endl;
 }
 
 void simpleTst()
@@ -104,7 +114,7 @@ void simpleTst()
    std::vector<double> xl(3,0);
    std::vector<double> xu(3,M_PI);
    TOOLS::Timer timer;
-   unsigned int ncalls = 1000000;
+   unsigned int ncalls = 1000;
 //    IntegratorVegas vegasInt;
 //    vegasInt.setFunction(&g);
 //    vegasInt.setFunctionDim(3);
@@ -125,9 +135,8 @@ void simpleTst()
    plainInt.setNcalls(ncalls);
    plainInt.setIntRanges(xl,xu);
    plainInt.initialize();
-   plainInt.tabulate();
    timer.start();
-   plainInt.go();
+   //   plainInt.go();
    timer.stop();
    display_results ("plain integration", plainInt.result(), plainInt.error(), plainInt.chisq());
    timer.printUsedClock(0);
@@ -138,12 +147,12 @@ void simpleTst()
    miserInt.setFunctionParams(0);
    miserInt.setNcalls(ncalls);
    miserInt.setIntRanges(xl,xu);
-   miserInt.initialize();
-   timer.start();
-   miserInt.go();
-   timer.stop();
-   display_results ("miser integration", miserInt.result(), miserInt.error(), miserInt.chisq());
-   timer.printUsedClock(0);
+   //
+   for (int i=0; i<10; i++) {
+      miserInt.initialize();
+      miserInt.go();
+      display_results_diff ("MIS", miserInt.result(), miserInt.error(), miserInt.chisq());
+   }
 }
 
 void poleTst()
@@ -195,14 +204,6 @@ void poleTst()
    plainInt.setNcalls(ncalls);
    plainInt.setIntRanges(xl,xu);
    plainInt.initialize();
-   plainInt.addTabPar(0,0.0,10.0,2.0);
-   plainInt.addTabPar(1,0.0,1.0,0.2);
-   //   plainInt.addTabPar(2,0.0,5.0,0.2);
-   timer.start();
-   plainInt.tabulate();
-   timer.stop();
-   
-   timer.printUsedClock(0);
    timer.start();
    plainInt.go();
    timer.stop();
@@ -237,6 +238,7 @@ void poleTst()
 }     
 int main (int argc, char *argv[])
 {
-   poleTst();
+   //   poleTst();
+   simpleTst();
    return 0;
 }
