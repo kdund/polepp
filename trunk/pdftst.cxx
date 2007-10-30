@@ -80,7 +80,7 @@ void checkPois(PDF::Base * poisTab, PDF::Base * poisNoTab ) {
       ptab = poisTab->getVal(nr,ns);
       dp = fabs(2.0*100.0*(p-ptab)/(p+ptab));
       //
-      //      if (p>0.0) std::cout << "DIFF = " << p << std::endl;
+      if (dp>0.0) std::cout << "DIFF = " << dp << " , " << p << " , " << ptab << std::endl;
         dpsum  +=dp;
         dpsum2 +=dp*dp;
 	if (dp>dpmax) {
