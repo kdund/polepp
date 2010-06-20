@@ -1,4 +1,6 @@
 #include <iostream>
+#include <algorithm>
+
 namespace Combination {
   template<typename T> bool add(std::vector<T> & cnt, int elem, T vmax) {
     if (elem<0) return false;

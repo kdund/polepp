@@ -6,8 +6,9 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-ARCH         := $(shell root-config --arch)
-PLATFORM     := $(shell root-config --platform)
+#ARCH         := $(shell root-config --arch)
+ARCH         := $(shell uname)
+#PLATFORM     := $(shell root-config --platform)
 
 OPTFLAG       = -O
 CXX           =
@@ -262,8 +263,8 @@ LDFLAGS       = $(OPTFLAG)
 SOFLAGS       = -shared
 endif
 
-ifeq ($(ARCH),linux)
-# Linux with egcs, gcc 2.9x, gcc 3.x (>= RedHat 5.2)
+ifeq ($(ARCH),Linux)
+# Normal linux
 CXX           = g++
 ###CXXFLAGS      = $(OPTFLAG) -Wall -fPIC -Woverloaded-virtual
 CXXFLAGS      = $(OPTFLAG) -Wall -fPIC
