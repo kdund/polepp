@@ -1,0 +1,450 @@
+#ifdef OBSERVABLE_H
+
+#ifndef OBSERVABLE_ICC
+#define OBSERVABLE_ICC
+
+namespace OBS {
+
+  Base::Base():m_pdf(0),m_mean(0),m_sigma(0),
+               m_locked(false),m_valid(false),m_rndGen(0),
+               m_obsVal(0) {
+  }
+
+  Base::Base(const char *name, const char *description):
+    m_pdf(0),m_mean(0),m_sigma(0),
+    m_locked(false),m_valid(false),m_rndGen(0),
+    m_obsVal(0) {
+    if (name) m_name=name;
+    if (description) m_description=description;
+  }
+
+  Base::Base(const Base & other) { copy(other);}
+  //
+  Base::~Base() {}
+  //
+  void Base::setObservedValue( double v ) {
+    if (this->isDouble())   static_cast<BaseType<double> *>(this)->setObservedValue(v);
+    else if (this->isInt()) static_cast<BaseType<int> *>(this)->setObservedValue(static_cast<int>(v));
+    else {
+      std::cout << "FATAL: OBS::Base::setObservedValue(double): not supported type!" << std::endl;
+      exit(-1);
+    }
+  }
+  void Base::setObservedValue( int v ) {
+    if (this->isInt())         static_cast<BaseType<int> *>(this)->setObservedValue(v);
+    else if (this->isDouble()) static_cast<BaseType<double> *>(this)->setObservedValue(static_cast<int>(v));
+    else {
+      std::cout << "FATAL: OBS::Base::setObservedValue(int): not supported type!" << std::endl;
+      exit(-1);
+    }
+  }
+  void Base::getObservedValue( int & v ) const {
+    if (this->isInt())         static_cast<const BaseType<int> *>(this)->getObservedValue(v);
+    else if (this->isDouble()) v = static_cast<const int>(m_obsVal);
+    else {
+      std::cout << "FATAL: OBS::Base::getObservedValue(int): not supported type!" << std::endl;
+      exit(-1);
+    }
+  }
+
+  void   Base::getObservedValue( double & v ) const { v = m_obsVal; }
+
+  double Base::getObservedValue() const { return m_obsVal;}
+
+  // setting name, pdf and rdn generator
+  void         Base::setName(const char *name)               { m_name=name;}
+  void         Base::setDescription(const char *description) { m_description=description;}
+  void         Base::lock()                                  { m_locked = true; }
+  void         Base::unlock()                                { m_locked = false; }
+  void         Base::setPdf(const PDF::Base *pdf)            { m_pdf = pdf; validate(); }
+  void         Base::setPdfUseMean(double m)                 { m_mean = m; }
+  void         Base::setPdfUseSigma(double m)                { m_sigma = m; } //if (m_pdf) m_pdf->setSigma(m); }
+  void         Base::setRndGen(const RND::Random *rndgen)    { m_rndGen = rndgen; validate(); }
+  void         Base::validate()                              { m_valid = ((m_pdf!=0) && (m_rndGen!=0)); }
+
+  double Base::aprioriProb( double x ) const { return 1.0;}
+
+  // print out
+  void Base::dump() const {
+    //      std::cout << "OBS::Base::dump(): observable dump not yet implemented" << std::endl;
+    std::cout << "--------------------------------------------" << std::endl;
+    std::cout << "OBS::Base:dump()" << std::endl;
+    std::cout << "Name : " << this->getName() << std::endl;
+    std::cout << "Mean : " << this->getPdfUseMean() << std::endl;
+    std::cout << "Sigma: " << this->getPdfUseSigma() << std::endl;
+    std::cout << "Dist : " << PDF::distTypeStr(this->getPdfDist()) << std::endl;
+    std::cout << "Obs  : " << this->getObsVal() << std::endl;
+    std::cout << "--------------------------------------------" << std::endl;
+  }
+
+  const double Base::getPdfVal(double val) const {
+    return (this->m_pdf ? (this->m_pdf)->getVal(val,this->m_mean,this->m_sigma):0.0);
+  }
+  // accessors
+  const std::string & Base::getName()        const { return this->m_name;}
+  const std::string & Base::getDescription() const { return this->m_description;}
+  const double        Base::getPdfUseMean()  const { return this->m_mean; } //(m_pdf ? m_pdf->getMean():0); }
+  const double        Base::getPdfUseSigma() const { return this->m_sigma; } //(m_pdf ? m_pdf->getSigma():0); }
+  const PDF::DISTYPE  Base::getPdfDist()     const { return ( this->m_pdf ? this->m_pdf->getDist():PDF::DIST_UNDEF ); }
+  const PDF::Base    *Base::getPdf()         const { return this->m_pdf;}
+  const RND::Random  *Base::getRndGen()      const { return this->m_rndGen;}
+    
+  // status
+  const bool Base::constant() const { return ( m_locked || ((getPdfDist()==PDF::DIST_NONE) || (getPdfDist()==PDF::DIST_UNDEF)) ); }
+  const bool Base::locked()   const { return m_locked;}
+  const bool Base::valid()    const { return m_valid;}
+
+  bool Base::isInt()    const { return false; }
+  bool Base::isDouble() const { return false; }
+  bool Base::isFloat()  const { return false; }
+
+  // protected methods
+  const double  Base::getObsVal() const { return m_obsVal; } // users should not use this one - only set in BaseType<T>
+  void Base::copy(const Base & other) {
+    if (this != &other) {
+      m_pdf    = other.getPdf();
+      m_mean   = other.getPdfUseMean();
+      m_sigma  = other.getPdfUseSigma();
+      m_obsVal = other.getObsVal();
+      m_rndGen = other.getRndGen();
+      m_valid  = other.valid();
+      m_locked = other.locked();
+      m_name   = "COPY_" + other.getName();
+      m_description = "<Copy> : " + other.getDescription();
+    }
+  }
+
+  //////////////////////////////////
+
+
+  template <typename T>
+  BaseType<T>::BaseType():Base() {}
+  template <typename T>
+  BaseType<T>::BaseType( const char *name, const char *desc):
+    Base(name,desc) {
+    // set default rnd gen and pdf
+    this->m_rndGen = &RND::gRandom;
+    this->m_pdf    = 0;
+    this->validate();
+    this->setObsVal(0);
+  }
+
+  template <typename T>
+  BaseType<T>::BaseType(const BaseType<T> & other):Base() { this->copy(other);}
+  template <typename T>
+  BaseType<T>::~BaseType() {}
+    //
+  template <typename T>
+  T BaseType<T>::rnd() const { return m_observedValue; }
+  //
+  template <typename T>
+  BaseType<T> const & BaseType<T>::operator=(BaseType<T> const & rh) {
+    this->copy(rh);
+    return *this;
+  }
+
+  template <typename T>
+  BaseType<T> *BaseType<T>::clone() const {
+    BaseType<T> *obj = new BaseType<T>(*this);
+    return obj;
+  }
+
+  template <typename T>
+  const double BaseType<T>::getPdfVal(T val) {
+    return (this->m_pdf ? static_cast< PDF::BaseType<T> * >(this->m_pdf)->getVal(val,this->m_mean,this->m_sigma):0.0);
+  }
+
+  template <typename T>
+  T       BaseType<T>::operator()()       { return ( this->m_locked ? m_observedValue:rnd()); }
+  template <typename T>
+  double  BaseType<T>::operator()(T val)  { return this->getPdfVal(val); }
+  //
+  template <typename T>
+  void BaseType<T>::setObservedRnd()          { if (!this->m_locked) this->setObsVal(rnd());}
+  template <typename T>
+  void BaseType<T>::setObservedValue(T val)   { this->setObsVal(val); }
+  template <typename T>
+  void BaseType<T>::setObservedValue()        { this->setObsVal(static_cast<T>(this->getPdfUseMean())); }
+  //
+  template <typename T>
+  const double BaseType<T>::getObservedValue()        const { return m_obsVal; }
+  template <typename T>
+  const void   BaseType<T>::getObservedValue(T & val) const { val = m_observedValue; }
+
+  template <typename T>
+  void BaseType<T>::dump() const {
+    //      std::cout << "OBS::Base::dump(): observable dump not yet implemented" << std::endl;
+    std::cout << "--------------------------------------------" << std::endl;
+    std::cout << "OBS::BaseType<T>:dump()" << std::endl;
+    std::cout << "Name : " << this->getName() << std::endl;
+    std::cout << "Mean : " << this->getPdfUseMean() << std::endl;
+    std::cout << "Sigma: " << this->getPdfUseSigma() << std::endl;
+    std::cout << "Dist : " << PDF::distTypeStr(this->getPdfDist()) << std::endl;
+    std::cout << "Obs  : " << this->getObservedValue() << std::endl;
+    std::cout << "--------------------------------------------" << std::endl;
+  }
+  
+  template <typename T>
+  bool BaseType<T>::isInt()    const { return false; }
+  template <typename T>
+  bool BaseType<T>::isDouble() const { return false; }
+  template <typename T>
+  bool BaseType<T>::isFloat()  const { return false; }
+  
+  //
+  template <typename T>
+  void BaseType<T>::setObsVal( T val) {
+    m_obsVal = static_cast<double>(val);
+    m_observedValue = val;
+  }
+  template <typename T>
+  void BaseType<T>::copy(const BaseType<T> & other) {
+    if (this != &other) {
+      Base::copy(other);
+      other.getObservedValue(m_observedValue);
+    }
+  }
+
+  template<> inline bool BaseType<int>::isInt()         const { return true; }
+  template<> inline bool BaseType<double>::isDouble()   const { return true; }
+  template<> inline bool BaseType<float>::isFloat()     const { return true; }
+
+
+  ObservableGauss::ObservableGauss():BaseType<double>("gauss","Gaussian observable") {
+    m_pdf    = &PDF::gGauss;
+    validate();
+  }
+
+  ObservableGauss::ObservableGauss(const char *name, const char *desc):
+    BaseType<double>(name,desc) {
+    m_pdf    = &PDF::gGauss;
+    validate();
+  }
+
+  ObservableGauss::ObservableGauss(const ObservableGauss & other) {
+    BaseType<double>::copy(other);
+  }
+  ObservableGauss::~ObservableGauss() {};
+  //
+  ObservableGauss const & ObservableGauss::operator=(ObservableGauss const & rh) {
+    BaseType<double>::copy(rh);
+    return *this;
+  }
+  //
+  double ObservableGauss::rnd() const {
+    return (this->m_valid ? this->m_rndGen->gauss(this->m_mean,this->m_sigma):0);
+  }
+
+  ObservableGauss *ObservableGauss::clone() const {
+    ObservableGauss *obj = new ObservableGauss(*this);
+    return obj;
+  }
+
+  ////////////////////////////////////////////////////////////
+
+  ObservableLogN::ObservableLogN():
+    BaseType<double>("gauss","Gaussian observable") {
+    m_pdf    = &PDF::gLogNormal;
+    validate();
+  }
+    
+  ObservableLogN::ObservableLogN(const char *name, const char *desc):
+    BaseType<double>(name,desc) {
+    m_pdf    = &PDF::gLogNormal;
+    validate();
+  }
+
+  ObservableLogN::ObservableLogN(const ObservableLogN & other) {
+    BaseType<double>::copy(other);
+  }
+  ObservableLogN::~ObservableLogN() {};
+  //
+  ObservableLogN const & ObservableLogN::operator=(ObservableLogN const & rh) {
+    ObservableLogN::copy(rh);
+    return *this;
+  }
+  //
+  double ObservableLogN::rnd() const {
+    const PDF::LogNormal *pdf = static_cast<const PDF::LogNormal *>(m_pdf);
+    return (m_valid ? m_rndGen->logNormalLN(pdf->getLogMean(),pdf->getLogSigma()):0);
+  }
+
+  ObservableLogN *ObservableLogN::clone() const {
+    ObservableLogN *obj = new ObservableLogN(*this);
+    return obj;
+  }
+
+//   double ObservableLogN::transIntX(double x) {
+//     return exp(x);
+//   } TODO: THIS NEEDED????
+
+  //////////////////////////////////////////////////////////////////
+  
+  ObservablePois::ObservablePois():BaseType<int>("poisson","Poisson observable") {
+    m_pdf    = &PDF::gPoisson;
+    validate();
+    m_excludeZero=false;
+  }
+
+  ObservablePois::ObservablePois(const char *name, const char *desc):BaseType<int>(name,desc) {
+    m_pdf    = &PDF::gPoisson;
+    validate();
+    m_excludeZero=false;
+  }
+
+  ObservablePois::ObservablePois(const ObservablePois & other) {
+    BaseType<int>::copy(other);
+    m_excludeZero = other.getExcludeZeroFlag();
+  }
+  ObservablePois::~ObservablePois() {};
+
+  ObservablePois const & ObservablePois::operator=(ObservablePois const & rh) {
+    BaseType<int>::copy(rh);
+    m_excludeZero = rh.getExcludeZeroFlag();
+    return *this;
+  }
+  //
+  void ObservablePois::setExcludeZero() {
+    m_excludeZero = true;
+  }
+  void ObservablePois::setIncludeZero() {
+    m_excludeZero = false;
+  }
+  bool ObservablePois::getExcludeZeroFlag() const {
+    return m_excludeZero;
+  }
+
+  double ObservablePois::aprioriProb( double x ) const { // currently a simple implementation for poisson
+    double rval = 1.0;
+    if ((getPdfDist()==PDF::DIST_POIS) && (m_excludeZero)) {
+      if (x<0.5) rval = 0.0;
+    }
+    return rval;
+  }
+  void ObservablePois::setPdfUseMean(double m)  {
+    this->m_mean = m;
+    this->m_sigma = (m>0 ? sqrt(m):0.0);
+  }
+  void ObservablePois::setPdfUseSigma(double m) {
+    this->m_mean  = m*m;
+    this->m_sigma = m;
+  }
+  int ObservablePois::rnd() const {
+    return (this->m_valid ? this->m_rndGen->poisson(this->m_mean):0);
+  }
+
+  ObservablePois *ObservablePois::clone() const {
+    ObservablePois *obj = new ObservablePois(*this);
+    return obj;
+  }
+
+  ///////////////////////////////////////////////////////////
+
+  ObservableFlat::ObservableFlat():BaseType<double>("flat","Flat observable") {
+    m_pdf = &PDF::gFlat;
+    validate();
+  }
+
+  ObservableFlat::ObservableFlat(const char *name, const char *desc):BaseType<double>(name,desc) {
+    m_pdf = &PDF::gFlat;
+    validate();
+  }
+
+  ObservableFlat::ObservableFlat(const ObservableFlat & other) {
+    BaseType<double>::copy(other);
+  }
+  ObservableFlat::~ObservableFlat() {};
+  //
+  ObservableFlat const & ObservableFlat::operator=(ObservableFlat const & rh) {
+    BaseType<double>::copy(rh);
+    return *this;
+  }
+
+  void ObservableFlat::setPdfUseMean(double m)  {
+    Base::setPdfUseMean(m);
+    TOOLS::calcFlatRange(this->m_mean,this->m_sigma,m_xmin,m_xmax);
+  }
+  void ObservableFlat::setPdfUseSigma(double s) {
+    Base::setPdfUseSigma(s);
+    TOOLS::calcFlatRange(this->m_mean,this->m_sigma,m_xmin,m_xmax);
+  }
+  void ObservableFlat::setPdfRange(double xmin, double xmax) {
+    m_xmin = xmin;
+    m_xmax = xmax;
+    double mean,sigma;
+    TOOLS::calcFlatMeanSigma(xmin,xmax,mean,sigma);
+    Base::setPdfUseMean(mean);
+    Base::setPdfUseSigma(sigma);
+  }
+
+  double ObservableFlat::rnd() const {
+    return (m_valid ? m_rndGen->flatRange(m_xmin,m_xmax):0);
+  }
+
+  ObservableFlat *ObservableFlat::clone() const {
+    ObservableFlat *obj = new ObservableFlat(*this);
+    return obj;
+  }
+  //////////////////////////////////////////////////
+  Correlated::Correlated() {}
+  Correlated::~Correlated() {}
+  //
+  bool  Correlated::add(Base *obs) { return false;}
+  Base *Correlated::find(const char *name) {return 0;}
+  bool  Correlated::setCorrelation(const char *v1, const char *v2, double c) {return false;}
+  bool  Correlated::setCorrelation(const Base *v1, const Base *v2, double c) {return false;}
+    //
+  void  Correlated::rnd() const {} // generate random observation
+
+  //////////////////////////////////////////////////
+
+  Base *makeObservable(PDF::DISTYPE dist) {
+    Base *obs=0;
+    switch (dist) {
+    case PDF::DIST_UNDEF:
+    case PDF::DIST_NONE:
+      obs=new BaseType<double>();
+      obs->setPdf(0);
+      break;
+    case PDF::DIST_POIS:
+      obs=new ObservablePois();
+      obs->setPdf(&PDF::gPoisson);
+      break;
+    case PDF::DIST_GAUS:
+      obs=new ObservableGauss();
+      obs->setPdf(&PDF::gGauss);
+      break;
+    case PDF::DIST_FLAT:
+      obs=new ObservableFlat();
+      obs->setPdf(&PDF::gFlat);
+      break;
+    case PDF::DIST_LOGN:
+      obs=new ObservableLogN();
+      obs->setPdf(&PDF::gLogNormal);
+      break;
+    default:
+      std::cout << "FATAL: Unknown distribution = " << distTypeStr(dist) << std::endl;
+      exit(-1);
+      break;
+    }
+    if (obs) {
+      obs->setRndGen(&RND::gRandom);
+      obs->validate();
+    }
+    return obs;
+  };
+
+  /////////////////////
+  Base *clone( const Base *bptr ) {
+    if (bptr==0) return 0;
+    if (bptr->isInt())    return dynamic_cast<const BaseType<int> *>(bptr)->clone();
+    if (bptr->isDouble()) return dynamic_cast<const BaseType<double> *>(bptr)->clone();
+    if (bptr->isFloat())  return dynamic_cast<const BaseType<float> *>(bptr)->clone();
+    return 0;
+  }
+
+};
+
+#endif
+
+#endif

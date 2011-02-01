@@ -1,0 +1,410 @@
+#ifdef TABULATOR_H
+
+#ifndef TABULATOR_ICC
+#define TABULATOR_ICC
+
+template<class T>
+Tabulator<T>::Tabulator(const char *name, const char *desc) : ITabulator(name,desc) {
+  m_verbose = false;
+}
+
+template<class T>
+Tabulator<T>::Tabulator() : ITabulator() {
+  m_verbose = false;
+}
+
+template<class T>
+Tabulator<T>::~Tabulator() {
+}
+
+template<class T>
+void Tabulator<T>::setName( const char *name ) {
+   if (name) m_name = name;
+}
+
+template<class T>
+void Tabulator<T>::setDescription( const char *description ) {
+   if (description) m_description = description;
+}
+
+template<class T>
+void Tabulator<T>::setFunction(T *fun) {
+   m_function = fun;
+}
+
+template<class T>
+void Tabulator<T>::setVerbose( bool v ) {
+  m_verbose = v;
+}
+
+template<class T>
+void Tabulator<T>::setTabNPar( size_t npars ) {
+   m_tabName.resize(npars);
+   m_tabIndex.resize(npars);
+   m_tabMin.resize(npars);
+   m_tabMax.resize(npars);
+   m_tabStep.resize(npars);
+   m_tabNsteps.resize(npars);
+   m_tabMaxInd.resize(npars);
+   m_tabPeriod.resize(npars);
+   m_tabNTabSteps.resize(npars);
+   m_parameters.resize(npars);
+   m_parChanged.resize(npars, true );
+   m_parIndex.resize(npars);
+   m_tabNPars = npars;
+   m_tabulated = false;
+}
+
+template<class T>
+void Tabulator<T>::setTabPar( const char *name, int index, double xmin, double xmax, double step, size_t nsteps, int parInd ) {
+   std::string nameStr = (name ? std::string(name) : std::string("<nn>") );
+   if ((parInd<0) || (parInd-1>static_cast<int>(m_tabNPars))) { // push_back values
+      m_tabName.push_back( nameStr );
+      m_tabIndex.push_back(index);
+      m_tabMin.push_back(xmin);
+      m_tabMax.push_back(xmax);
+      m_tabStep.push_back(step);
+      m_tabNsteps.push_back(nsteps);
+      m_tabMaxInd.push_back(nsteps-1);
+   } else {
+      m_tabName[parInd]   = nameStr;
+      m_tabIndex[parInd]  = index;
+      m_tabMin[parInd]    = xmin;
+      m_tabMax[parInd]    = xmax;
+      m_tabStep[parInd]   = step;
+      m_tabNsteps[parInd] = nsteps;
+      m_tabMaxInd[parInd] = nsteps-1;
+   }
+   m_tabulated = false;
+}
+
+template<class T>
+void Tabulator<T>::addTabParStep( const char *name, int index, double xmin, double xmax, double step, int parInd ) {
+   if (xmax<=xmin) return; // FAIL!
+   if (step<=0)  return;
+   size_t nsteps = static_cast<size_t>(((xmax-xmin)/step)+1.5);
+   setTabPar( name, index, xmin, xmax, step, nsteps, parInd );
+}
+
+template<class T>
+void Tabulator<T>::addTabParNsteps( const char *name, int index, double xmin, double xmax, size_t nsteps, int parInd ) {
+   if (xmax<=xmin)  return; // FAIL!
+   if (nsteps<=0) return;
+   double step = ( nsteps>1 ? (xmax-xmin)/(static_cast<double>(nsteps-1)) : 0.0 );
+   setTabPar( name, index, xmin, xmax, step, nsteps, parInd );
+}
+
+template<class T>
+void Tabulator<T>::clrTable() {
+   m_tabulated = false;
+   m_tabName.clear();
+   m_tabIndex.clear();
+   m_tabMin.clear();
+   m_tabMax.clear();
+   m_tabStep.clear();
+   m_tabNsteps.clear();
+   m_tabValues.clear();
+   m_tabMaxInd.clear();
+   m_tabPeriod.clear();
+   m_tabNTabSteps.clear();
+   m_parameters.clear();
+   m_parChanged.clear();
+}
+
+template<class T>
+void Tabulator<T>::initTable() {
+   m_parameters.resize( m_tabNPars );
+   m_parChanged.resize( m_tabNPars, true );
+   m_parIndex.resize( m_tabNPars );
+   m_tabSize = 1;
+   for (size_t i=m_tabNPars; i>0; i--) {
+      m_tabNTabSteps[i-1] = m_tabSize;
+      m_tabSize *= m_tabNsteps[i-1];
+      m_tabPeriod[i-1] = m_tabSize;
+   }
+   m_tabValues.resize( m_tabSize );
+}
+
+template<class T>
+void Tabulator<T>::printTable() const {
+   size_t npars = m_tabNPars;
+   size_t nsize=0;
+   size_t xminlen=0;
+   size_t xmaxlen=0;
+   size_t steplen=0;
+   size_t nstepslen=0;
+   size_t prec = 2;
+   size_t sz;
+   size_t ntot=1;
+   std::ostringstream xstr;
+   std::ios_base::fmtflags old = std::cout.flags();
+
+   for (size_t i=0; i<npars; i++) {
+      ntot *= m_tabNsteps[i];
+      if (m_tabName[i].size()>nsize) nsize = m_tabName[i].size();
+      xstr.str("");
+      xstr << std::scientific << std::setprecision(prec) << m_tabMin[i];
+      sz = xstr.str().size();
+      if (sz>xminlen) xminlen=sz;
+      //
+      xstr.str("");
+      xstr << std::scientific << std::setprecision(prec) << m_tabMax[i];
+      sz = xstr.str().size();
+      if (sz>xmaxlen) xmaxlen=sz;
+
+      xstr.str("");
+      xstr << std::scientific << std::setprecision(prec) << m_tabStep[i];
+      sz = xstr.str().size();
+      if (sz>steplen) steplen=sz;
+
+      xstr.str("");
+      xstr << m_tabNsteps[i];
+      sz = xstr.str().size();
+      if (sz>nstepslen) nstepslen=sz;
+      //
+   }
+
+   //
+   std::cout << "\n--- TABLE SETTINGS ------------------------------------------------" << std::endl;
+   std::cout << " Table      :  " << m_name        << std::endl;
+   std::cout << " Decription :  " << m_description << std::endl;
+   std::cout << "-------------------------------------------------------------------" << std::endl;
+   std::cout << " " 
+             << std::setw(nsize)      << "Name" << " | "
+             << std::setw(xminlen)    << "Min"  << " | "
+             << std::setw(xmaxlen)    << "Max"  << " | "
+             << std::setw(steplen)    << "Step" << " | "
+             << std::setw(nstepslen)  << "N(steps)"
+             << std::endl;
+   std::cout << "-------------------------------------------------------------------" << std::endl;
+   for (size_t i=0; i<npars; i++) {
+      std::cout << " " <<  std::setw(nsize)
+                << m_tabName[i] << " | " << std::flush;
+      TOOLS::coutScientific(prec,m_tabMin[i]);
+      std::cout << " | ";
+      TOOLS::coutScientific(prec,m_tabMax[i]);
+      std::cout << " | ";
+      TOOLS::coutScientific(prec,m_tabStep[i]);
+      std::cout << " | ";
+      TOOLS::coutFixed(prec,int(m_tabNsteps[i]));
+      std::cout << std::endl;
+   }
+   std::cout << "-------------------------------------------------------------------" << std::endl;
+
+   size_t memtot = ntot*sizeof(double)/1024;
+   std::cout << " Total size in memory : " << memtot << " kB" << std::endl;
+   std::cout << "-------------------------------------------------------------------\n" << std::endl;
+   std::cout.flags(old);
+}
+
+// This will tabulate using calcValue() and the given ranges.
+template<class T>
+void Tabulator<T>::tabulate() {
+   initTable();
+   printTable();
+   std::vector<size_t> indvec(m_tabNPars,0);
+   std::vector<size_t> indvecPrev(m_tabNPars,1); // set to dummy =1 => makes it != indvec
+   // generate all possible combinations of N(steps)
+   int ind=0;
+   do {
+      setParameters( indvec, indvecPrev );
+      m_tabValues[ind++] = calcValue();
+      if (m_verbose) {
+        std::cout << "TAB: " << ind-1 << "      " << std::flush;
+        for (size_t i=0; i<m_tabNPars; i++) {
+          std::cout << m_parameters[i] << "   " << std::flush;
+        }
+        std::cout << m_tabValues[ind-1] << std::endl;
+      }
+      for (size_t i=0; i<m_tabNPars; i++) indvecPrev[i] = indvec[i];
+      //      indvecPrev = indvec;
+      //      std::cout << "POIS: " << m_tabValues.back() << std::endl;
+   } while (Combination::next_vector(indvec,m_tabMaxInd));
+   m_tabulated = true;
+}
+
+template<class T>
+int Tabulator<T>::calcParIndex( const size_t tabind, const size_t parind ) const {
+   if (!m_tabulated) return -1;
+   return static_cast<int>((tabind % m_tabPeriod[parind])/m_tabNTabSteps[parind]);
+}
+
+template<class T>
+int Tabulator<T>::calcTabIndex( const std::vector<double> & valvec ) {
+   bool fail=false;
+   int rval=0;
+   for (size_t i=m_tabNPars; i>0; --i) {
+      int ind    = i-1;
+      int nsteps = m_tabNsteps[ind];
+      int indpar = static_cast<int>(0.5+((valvec[ind] - m_tabMin[ind])/m_tabStep[ind]));
+      fail = ((indpar<0) || (indpar>=nsteps));
+      if (fail) {
+//          std::cout << "par = " << ind << "; indpar = " << indpar
+//                    << " : " << m_tabNTabSteps[ind]
+//                    << " : " << m_tabPeriod[ind]
+//                    << std::endl;
+         break;
+      }
+
+      m_parIndex[ind] = indpar;
+      rval += indpar*m_tabNTabSteps[ind];
+   }
+   if (fail) return -1;
+   return rval;
+}
+
+template<class T>
+void Tabulator<T>::setParameters( const std::vector<size_t> & indvec ) {
+   for (size_t i=0; i<m_tabNPars; i++) {
+     m_parameters[i] = m_tabMin[i] + static_cast<double>(indvec[i])*m_tabStep[i];
+   }
+}
+
+template<class T>
+void Tabulator<T>::setParameters( const std::vector<double> & valvec ) {
+   for (size_t i=0; i<m_tabNPars; i++) {
+      m_parameters[i] = valvec[i];
+      m_parChanged[i] = true;
+   }
+}
+
+template<class T>
+void Tabulator<T>::setParameters( const std::vector<size_t> & indvec, const std::vector<size_t> & indvecLast ) {
+   for (size_t i=0; i<m_tabNPars; i++) {
+     m_parameters[i] = m_tabMin[i] + static_cast<double>(indvec[i])*m_tabStep[i];
+     m_parChanged[i] = (indvec[i]!=indvecLast[i]);
+   }
+}
+
+template<class T>
+const char *Tabulator<T>::getName() const {
+  return m_name.c_str();
+}
+
+template<class T>
+const char *Tabulator<T>::getDescription() const {
+  return m_description.c_str();
+}
+
+template<class T>
+size_t Tabulator<T>::getTabNPar() const {
+  return m_tabNPars;
+}
+
+template<class T>
+double Tabulator<T>::getTabMin(size_t pind) const {
+  return m_tabMin[pind];
+}
+
+template<class T>
+double Tabulator<T>::getTabMax(size_t pind) const {
+  return m_tabMax[pind];
+}
+
+template<class T>
+double Tabulator<T>::getTabStep(size_t pind) const {
+  return m_tabStep[pind];
+}
+
+template<class T>
+size_t Tabulator<T>::getTabNsteps(size_t pind) const {
+  return m_tabNsteps[pind];
+}
+
+template<class T>
+bool Tabulator<T>::isTabulated() const {
+  return m_tabulated;
+}
+
+template<class T>
+double Tabulator<T>::calcValue() {
+   std::cout << "Unspecified type! -> Define calcValue()" << std::endl;
+   return 0;
+}
+
+template<class T>
+double Tabulator<T>::getValue( const std::vector<double> & parvec ) {
+   setParameters(parvec);
+   if (!m_tabulated) return calcValue(); // not tabulated
+   int ind = calcTabIndex(parvec);
+   if (ind<0) return calcValue(); // out of range
+   return interpolate(ind);
+}
+
+template<class T>
+double Tabulator<T>::getValue( double x1 ) {
+   std::cout << "WARNING: using undefined getValue() with ONE double parameter!" << std::endl;
+   return 0;
+}
+
+template<class T>
+double Tabulator<T>::getValue( double x1, double x2 ) {
+   std::cout << "WARNING: using undefined getValue() with TWO double parameters!" << std::endl;
+   return 0;
+}
+
+template<class T>
+double Tabulator<T>::getValue( double x1, double x2, double x3 ) {
+   std::cout << "WARNING: using undefined getValue() with THREE double parameters!" << std::endl;
+   return 0;
+}
+
+template<typename T>
+inline double Tabulator<T>::deriv( size_t tabind, size_t parind ) const {
+  //
+  const size_t sper = m_tabNTabSteps[parind];
+  const double h    = m_tabStep[parind];
+  const double f0   = m_tabValues[tabind];
+  double rval = 0;
+  //  std::cout << "N(steps in tab) = " << sper << "   h = " << h << "    f0 = " << f0 << std::endl;
+  if (sper>tabind) { // ind-1 does not exist
+    if (tabind+sper<m_tabSize) { // ind+1 is ok
+      rval = (m_tabValues[tabind+sper]-f0)/h;
+    } else { // ind+1 is not OK!!!
+      rval = 0;
+    }
+  } else { //
+    double fm1 = m_tabValues[tabind-sper];
+    if (tabind+sper<m_tabSize) { // ind+1 is ok
+      rval = (m_tabValues[tabind+sper]-fm1)/(2.0*h);
+    } else { // ind+1 is not OK!!!
+      rval = (f0-fm1)/h;
+    }
+  }
+  return rval;
+}
+
+template<typename T>
+inline double Tabulator<T>::deriv2( size_t tabind, size_t parind ) const {
+  //
+  const size_t sper = m_tabNTabSteps[parind];
+  const double h    = m_tabStep[parind];
+  const double f0 = m_tabValues[tabind];
+  double rval;
+  //
+  if (sper>tabind) { // ind-1 does not exist
+    if (tabind+sper<m_tabSize) { // ind+1 is ok
+      rval = ( m_tabValues[tabind+sper]-2.0*f0)/(h*h);
+    } else { // ind+1 is not OK!!!
+      rval = 0;
+    }
+  } else { //
+    double fm1 = m_tabValues[tabind-sper];
+    if (tabind+sper<m_tabSize) { // ind+1 is ok
+      rval = (m_tabValues[tabind+sper]+fm1-2.0*f0)/(h*h);
+    } else { // ind+1 is not OK!!!
+      rval = (fm1-2.0*f0)/(h*h); // NOT OK!!!!
+    }
+  }
+  return rval;
+}
+
+template<class T>
+double Tabulator<T>::interpolate( size_t ind ) const {
+   std::cout << "DEF INT!" << std::endl;
+  return m_tabValues[ind]; // no interpolation
+}
+
+#endif
+
+#endif
