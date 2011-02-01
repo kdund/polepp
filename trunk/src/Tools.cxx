@@ -65,10 +65,10 @@ namespace TOOLS {
           }
           if (ptot>maxp) nxmax = n;
           n++;
-          if (nprev>n) { // just a STUPID test; can be done better...
-            std::cerr << "Infinite loop caugh in Tools::calcIntRange() for Poisson - brutal exit" << std::endl;
-            exit(-1);
-          }
+          // if (nprev>n) { // just a STUPID test; can be done better...
+          //   std::cerr << "Infinite loop caugh in Tools::calcIntRange() for Poisson - brutal exit" << std::endl;
+          //   exit(-1);
+          // }
         }
         //
         xmin  = static_cast<double>(nxmin);

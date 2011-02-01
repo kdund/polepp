@@ -53,7 +53,7 @@ CPPFLAGS	+= -I/usr/local/appl_cluster/tclap/latest/include
 endif
 
 # List of objects
-OBJECTS		= $(SOURCES:%.cpp=$(OBJ_DIR)/%.o)
+OBJECTS		= $(SOURCES:%.cxx=$(OBJ_DIR)/%.o)
 #PYOBJS		= $(SOURCES)
 
 # Default build
@@ -66,7 +66,7 @@ $(BIN_DIR)/%: $(OBJECTS) Makefile $(BASE_DIR)/Makefile.rules
 	@$(LINK.cc) -o $@ $(OBJECTS) $(LDLIBS)
 
 # Build a shared library
-$(LIB_DIR)/%: $(OBJECTS) Makefile $(BASE_DIR)/Makefile.rules
+$(LIB_DIR)/%.so: $(OBJECTS) Makefile $(BASE_DIR)/Makefile.rules
 	@echo "  Linking $(@F)"
 	@mkdir -p $(@D)
 	@$(LINK.cc) -shared -o $@ $(OBJECTS) $(LDLIBS)
@@ -75,7 +75,7 @@ $(LIB_DIR)/%: $(OBJECTS) Makefile $(BASE_DIR)/Makefile.rules
 -include $(OBJECTS:%.o=%.d)
 
 # Build an object file
-$(OBJ_DIR)/%.o: %.cpp Makefile $(BASE_DIR)/Makefile.rules
+$(OBJ_DIR)/%.o: %.cxx Makefile $(BASE_DIR)/Makefile.rules
 	@echo "  Compiling $<"
 	@mkdir -p $(@D)
 	@$(COMPILE.cc) -o $@ $<
