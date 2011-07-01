@@ -33,6 +33,7 @@ CXXFLAGS	+= -I$(BASE_DIR)/src
 #CXXFLAGS	+= -pg
 #LDFLAGS		+= -pg
 
+LDLIBS		+= -lgsl
 # PoleLib flags
 ifeq ($(USE_POLELIB),1)
 POLELIB_DIR	= $(BASE_DIR)
