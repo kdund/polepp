@@ -37,6 +37,8 @@ namespace LIMITS {
     return fn*fe*fb;
   }
 
+  Pole::Pole() { initDefault(); }
+
   void Pole::initDefault() {
     m_calcProbBuf.resize(2);
     m_cl             = 0.90;

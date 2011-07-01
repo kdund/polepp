@@ -303,7 +303,7 @@ namespace PDF {
 #ifdef USE_STAT
       m_statNraw++;
 #endif
-      return Gauss::getVal(x, m, s)/exp(x);
+      return Gauss::getVal(x, m, s)/std::exp(x);
     }
   protected:
     double m_logMean;
@@ -758,7 +758,7 @@ namespace PDF {
   // };
 
   inline const double Gauss::phi(double mu) const {
-    return (1.0L/sqrt(2.0*M_PIl))*exp(-0.5L*mu*mu);
+    return (1.0L/sqrt(2.0*M_PIl))*std::exp(-0.5L*mu*mu);
   }
   inline const double Gauss::pdf(const double x) const {
     double mu = fabs((x-this->m_mean)/this->m_sigma); // symmetric around mu0
@@ -781,7 +781,7 @@ namespace PDF {
     double rval;
     rval  = getVal(x1,mu1,seff1)*seff1;
     rval *= getVal(x2,mu2,seff2)*seff2;
-    rval *= exp((x1-mu1)*(x2-mu2)*veffc);
+    rval *= std::exp((x1-mu1)*(x2-mu2)*veffc);
     rval *= 1.0/sdetC;
     return rval;
   }
@@ -790,7 +790,7 @@ namespace PDF {
     double rval;
     rval  = getVal(x1,mu1,seff1)*seff1;
     rval *= getVal(x2,mu2,seff2)*seff2;
-    rval *= exp((x1-mu1)*(x2-mu2)*veffc);
+    rval *= std::exp((x1-mu1)*(x2-mu2)*veffc);
     rval *= 1.0/sdetC;
     return rval;
   }
@@ -819,10 +819,10 @@ namespace PDF {
     const double xt   = x/theta;
     double lnf = (k-1.0)*log(xt) - xt - log(theta) - lgamma(k);
     double prob;
-    if (isinf(lnf) || isnan(lnf)) {
+    if (std::isinf(lnf) || std::isnan(lnf)) {
       prob=0;
     } else {
-      prob=exp(lnf);
+      prob=std::exp(lnf);
     }
     return prob;
   }
@@ -863,12 +863,12 @@ namespace PDF {
     double nlnl = double(n)*log(s);  // n*ln(s)
     double lnn  = lgamma(n+1);       // ln(fac(n))
     double lnf  = nlnl - lnn - s;
-    if (isinf(lnf) || isnan(lnf)) {
+    if (std::isinf(lnf) || std::isnan(lnf)) {
       prob=(n==0 ? 1.0:0.0);
     } else {
-      prob=exp(lnf);
+      prob=std::exp(lnf);
     }
-    if (isnan(prob)) {
+    if (std::isnan(prob)) {
       std::cout << "NaN in rawPoisson: " << n << ", " << s << ", " << prob << std::endl;
     }
     m_cacheN     = n;

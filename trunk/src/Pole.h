@@ -197,10 +197,7 @@ namespace LIMITS {
     /*! @name Constructors/destructor/initialisor */
     //@{
     //! main constructor
-    Pole() { initDefault(); }
-
-    //! destructor
-    ~Pole() {}
+    Pole();
 
     //! initialise to default
     void initDefault();

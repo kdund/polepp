@@ -1,4 +1,4 @@
-DIRS	= ./src ./tools/polelim
+DIRS	= ./src ./tools/polelim ./tools/polecov
 
 .PHONY: default all clean_all doc clean_doc clean $(DIRS)
 

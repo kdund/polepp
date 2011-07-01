@@ -1,6 +1,6 @@
 ROOT_DIR	= ../../
-USE_ARG_POLE	= 1
+USE_POLELIB	= 1
 SOURCES		= polecov.cxx
-TARGET		= $(LIB_DIR)/libpolelib.so
+TARGET		= $(BIN_DIR)/polecov
 
 include		../../Makefile.rules
