@@ -1,0 +1,106 @@
+#
+# Build rules
+#
+
+# Keep secondary files
+.SECONDARY:
+
+# Object directory
+OBJ_DIR		= .linux
+
+# Specify gcc
+CXX		= g++
+
+# Library and binary directories
+BASE_DIR	:= $(shell cd $(ROOT_DIR) ; pwd)
+LIB_DIR		:= $(shell mkdir -p $(BASE_DIR)/lib ; cd $(BASE_DIR)/lib ; pwd)
+BIN_DIR		:= $(shell mkdir -p $(BASE_DIR)/bin ; cd $(BASE_DIR)/bin ; pwd)
+
+# Default pre-processor flags
+CPPFLAGS	+= -DBASE_DIR="\"$(BASE_DIR)\""
+CPPFLAGS	+= -D_REENTRANT
+CPPFLAGS	+= -D_XOPEN_SOURCE
+
+# Default compiler flags
+CXXFLAGS	+= -fPIC
+CXXFLAGS	+= -MMD
+CXXFLAGS	+= -g
+CXXFLAGS	+= -Wall -Werror
+CXXFLAGS	+= -fexceptions -finline-functions
+CXXFLAGS	+= -O2
+CXXFLAGS	+= -I$(BASE_DIR)/src
+
+#CXXFLAGS	+= -pg
+#LDFLAGS	+= -pg
+
+# add GSL
+GSL_INCL	?= /usr/include
+GSL_LIB		?= /usr/lib
+LDLIBS		+= -L$(GSL_LIB) -lgsl
+CXXFLAGS	+= -I$(GSL_INCL)
+
+# PoleLib flags
+ifeq ($(USE_POLELIB),1)
+POLELIB_DIR	= $(BASE_DIR)
+CPPFLAGS	+= -I$(POLELIB_DIR)/src
+LDFLAGS		+= -L$(POLELIB_DIR)/lib -Wl,-rpath,$(POLELIB_DIR)/lib
+LDLIBS		+= -lpolelib
+endif
+
+# Fructose flags
+ifeq ($(USE_FRUCTOSE),1)
+FRUCTOSE_ROOT	= 
+CPPFLAGS	+= -I$(FRUCTOSE_ROOT)/include
+endif
+
+# TCLAP flags
+ifeq ($(USE_TCLAP),1)
+TCLAP_ROOT	?= /usr/include
+CPPFLAGS	+= -I$(TCLAP_ROOT)
+endif
+
+# List of objects
+OBJECTS		= $(SOURCES:%.cxx=$(OBJ_DIR)/%.o)
+#PYOBJS		= $(SOURCES)
+
+# Default build
+default:	all
+
+
+$(BIN_DIR)/%: $(OBJECTS) Makefile $(BASE_DIR)/Makefile.rules
+	@echo "  Linking $(@F)"
+	@mkdir -p $(@D)
+	@$(LINK.cc) -o $@ $(OBJECTS) $(LDLIBS)
+
+# Build a shared library
+$(LIB_DIR)/%.so: $(OBJECTS) Makefile $(BASE_DIR)/Makefile.rules
+	@echo "  Linking $(@F)"
+	@mkdir -p $(@D)
+	@$(LINK.cc) -shared -o $@ $(OBJECTS) $(LDLIBS)
+
+# Include dependency files
+-include $(OBJECTS:%.o=%.d)
+
+# Build an object file
+$(OBJ_DIR)/%.o: %.cxx Makefile $(BASE_DIR)/Makefile.rules
+	@echo "  Compiling $<"
+	@mkdir -p $(@D)
+	@$(COMPILE.cc) -o $@ $<
+
+# Main targets are phony
+.PHONY: default all clean_all doc clean_doc clean
+
+# Build target
+all:	$(TARGET)
+
+# Clean build
+clean_all:
+	@echo "  Cleaning"
+	@$(RM) -r $(OBJ_DIR) $(TARGET)
+
+# Build documentation
+doc clean_doc:
+	@$(MAKE) -C $(BASE_DIR) $@
+
+# Clean build
+clean: clean_all
