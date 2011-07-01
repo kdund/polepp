@@ -197,8 +197,8 @@ void Coverage::calcCoverage() {
   if (m_totalCount>0) {
     m_coverage = static_cast<double>(m_insideCount)/static_cast<double>(m_totalCount);
     if (m_insideCount>0) {
-      //      m_errCoverage = m_coverage*( (sqrt((1.0-m_pole->getCL())/static_cast<double>(m_insideCount))));
-      m_errCoverage = sqrt(m_coverage*(1.0-m_coverage)/static_cast<double>(m_totalCount));
+      //      m_errCoverage = m_coverage*( (std::sqrt((1.0-m_pole->getCL())/static_cast<double>(m_insideCount))));
+      m_errCoverage = std::sqrt(m_coverage*(1.0-m_coverage)/static_cast<double>(m_totalCount));
     }
   }
 }
@@ -337,10 +337,10 @@ void Coverage::calcStatistics() {
     //
     m_corrEffBkg = calcStatsCorr(m_effStat,m_bkgStat);
     if ((m_pole->getEffPdfDist()!=PDF::DIST_NONE) && (m_varEff>0)) {
-      m_corrEffBkg = m_corrEffBkg / sqrt(m_varEff);
+      m_corrEffBkg = m_corrEffBkg / std::sqrt(m_varEff);
     }
     if ((m_pole->getBkgPdfDist()!=PDF::DIST_NONE) && (m_varBkg>0)) {
-      m_corrEffBkg = m_corrEffBkg / sqrt(m_varBkg);
+      m_corrEffBkg = m_corrEffBkg / std::sqrt(m_varBkg);
     }
     //
     calcStats(m_nobsStat,m_aveNobs,m_varNobs);
@@ -353,24 +353,24 @@ void Coverage::printStatistics() {
     std::cout << "====== Statistics ======" << std::endl;
     std::cout << " N observed (mu,sig) =\t";
     TOOLS::coutFixed(6,m_aveNobs); std::cout << "\t";
-    TOOLS::coutFixed(6,sqrt(m_varNobs)); std::cout << std::endl;
+    TOOLS::coutFixed(6,std::sqrt(m_varNobs)); std::cout << std::endl;
     std::cout << " efficiency (mu,sig) =\t";
     TOOLS::coutFixed(6,m_aveEff); std::cout << "\t";
-    TOOLS::coutFixed(6,sqrt(m_varEff)); std::cout << std::endl;
+    TOOLS::coutFixed(6,std::sqrt(m_varEff)); std::cout << std::endl;
     std::cout << " background (mu,sig) =\t";
     TOOLS::coutFixed(6,m_aveBkg); std::cout << "\t";
-    TOOLS::coutFixed(6,sqrt(m_varBkg)); std::cout << std::endl;
+    TOOLS::coutFixed(6,std::sqrt(m_varBkg)); std::cout << std::endl;
     std::cout << " correlation coeff   =\t";
     TOOLS::coutFixed(6,m_corrEffBkg); std::cout << std::endl;
     std::cout << " lower lim. (mu,sig) =\t";
     TOOLS::coutFixed(6,m_aveLL); std::cout << "\t";
-    TOOLS::coutFixed(6,sqrt(m_varLL)); std::cout << std::endl;
+    TOOLS::coutFixed(6,std::sqrt(m_varLL)); std::cout << std::endl;
     std::cout << " upper lim. (mu,sig) =\t";
     TOOLS::coutFixed(6,m_aveUL); std::cout << "\t";
-    TOOLS::coutFixed(6,sqrt(m_varUL)); std::cout << std::endl;
+    TOOLS::coutFixed(6,std::sqrt(m_varUL)); std::cout << std::endl;
     std::cout << " Success rate        =\t";
     TOOLS::coutFixed(6,m_aveStatus); std::cout << "\t";
-    TOOLS::coutFixed(6,sqrt(m_varStatus)); std::cout << std::endl;
+    TOOLS::coutFixed(6,std::sqrt(m_varStatus)); std::cout << std::endl;
     std::cout << "========================" << std::endl;
   }
 }

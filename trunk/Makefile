@@ -1,12 +1,29 @@
 DIRS	= ./src ./tools/polelim ./tools/polecov
 
-.PHONY: default all clean_all doc clean_doc clean $(DIRS)
+.PHONY: default all clean_all doc clean_doc clean help $(DIRS)
 
-default: all
+default: help
 
 $(DIRS):
 	@echo "**** $@ ****"
 	@$(MAKE) -C $@ $(MAKE-TARGET)
+
+help:
+	@echo ""
+	@echo "make all      make all binaries"
+	@echo "make clean    cleanup"
+	@echo "make debug    make with added debug info"
+	@echo "make doc      create documentation"
+	@echo ""
+	@echo "User settable variables:"
+	@echo "  GSL_INCL   : GSL root directory   (def: /usr/include)"
+	@echo "  GSL_LIB    : GSL library path     (def: /usr/lib)"
+	@echo "  TCLAP_ROOT : TCLAP root directory (def: /usr/include)"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make all                             - make using all default values"
+	@echo "  make GSL_LIB=/usr/lib64 all          - change GSL path"
+	@echo ""
 
 debug:
 	USE_DEBUG = 1

@@ -275,7 +275,7 @@ namespace OBS {
   }
 
 //   double ObservableLogN::transIntX(double x) {
-//     return exp(x);
+//     return std::exp(x);
 //   } TODO: THIS NEEDED????
 
   //////////////////////////////////////////////////////////////////
@@ -323,7 +323,7 @@ namespace OBS {
   }
   void ObservablePois::setPdfUseMean(double m)  {
     this->m_mean = m;
-    this->m_sigma = (m>0 ? sqrt(m):0.0);
+    this->m_sigma = (m>0 ? std::sqrt(m):0.0);
   }
   void ObservablePois::setPdfUseSigma(double m) {
     this->m_mean  = m*m;

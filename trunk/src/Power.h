@@ -32,7 +32,7 @@ class Power {
   void updatePower();
   const double calcPower() {
     m_power = (m_nTotal>0 ? double(m_nOutside)/double(m_nTotal):0.0);
-    m_powerUnc = sqrt(m_power*(1.0-m_power)/static_cast<double>(m_nTotal));
+    m_powerUnc = std::sqrt(m_power*(1.0-m_power)/static_cast<double>(m_nTotal));
     return m_power;
   }
 

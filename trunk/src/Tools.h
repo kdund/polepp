@@ -69,7 +69,7 @@ namespace TOOLS {
 };
 
 void TOOLS::calcFlatRange( double mean, double sigma, double & xmin, double & xmax ) {
-  const double d = sqrt(12.0);
+  const double d = std::sqrt(12.0);
   double wh = 0.5*d*sigma;
   xmin = mean-wh;
   xmax = mean+wh;
@@ -77,7 +77,7 @@ void TOOLS::calcFlatRange( double mean, double sigma, double & xmin, double & xm
 
 void TOOLS::calcFlatMeanSigma(double xmin, double xmax, double & mean, double & sigma) {
   mean  = (xmax+xmin)/2.0;
-  sigma = (xmax-xmin)/sqrt(12.0);
+  sigma = (xmax-xmin)/std::sqrt(12.0);
 }
 
 

@@ -8,7 +8,7 @@
 # Object directory
 OBJ_DIR		= .linux
 
-# Use gcc4
+# Specify gcc
 CXX		= g++
 
 # Library and binary directories
@@ -31,9 +31,14 @@ CXXFLAGS	+= -O2
 CXXFLAGS	+= -I$(BASE_DIR)/src
 
 #CXXFLAGS	+= -pg
-#LDFLAGS		+= -pg
+#LDFLAGS	+= -pg
 
-LDLIBS		+= -lgsl
+# add GSL
+GSL_INCL	?= /usr/include
+GSL_LIB		?= /usr/lib
+LDLIBS		+= -L$(GSL_LIB) -lgsl
+CXXFLAGS	+= -I$(GSL_INCL)
+
 # PoleLib flags
 ifeq ($(USE_POLELIB),1)
 POLELIB_DIR	= $(BASE_DIR)
@@ -50,7 +55,8 @@ endif
 
 # TCLAP flags
 ifeq ($(USE_TCLAP),1)
-CPPFLAGS	+= -I/usr/local/appl_cluster/tclap/latest/include
+TCLAP_ROOT	?= /usr/include
+CPPFLAGS	+= -I$(TCLAP_ROOT)
 endif
 
 # List of objects

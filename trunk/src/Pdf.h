@@ -84,8 +84,8 @@ namespace PDF {
   //
   // Help functions for Log Normal dist
   //
-  inline const double calcLogMean(const double mean,const double sigma)  { return log(mean*mean/sqrt(sigma*sigma + mean*mean)); }
-  inline const double calcLogSigma(const double mean,const double sigma) { return sqrt(log((sigma*sigma/(mean*mean))+1)); }
+  inline const double calcLogMean(const double mean,const double sigma)  { return std::log(mean*mean/std::sqrt(sigma*sigma + mean*mean)); }
+  inline const double calcLogSigma(const double mean,const double sigma) { return std::sqrt(std::log((sigma*sigma/(mean*mean))+1)); }
   //
   class Base {
   public:
@@ -287,7 +287,7 @@ namespace PDF {
     inline const double getLogSigma() const { return m_logSigma; }
 
 
-    inline const double pdf(const double x) const {return (x>0.0 ? Gauss::getVal(log(x),m_logMean,m_logSigma)/x:0.0);}
+    inline const double pdf(const double x) const {return (x>0.0 ? Gauss::getVal(std::log(x),m_logMean,m_logSigma)/x:0.0);}
     inline const double cdf(const double x) const { return 0; }
     inline const double getVal(const double x, const double m, const double s) const {
 #ifdef USE_STAT
@@ -297,7 +297,7 @@ namespace PDF {
 #ifdef USE_STAT
       m_statNraw++;
 #endif
-      return Gauss::getVal(log(x),calcLogMean(m,s), calcLogSigma(m,s))/x;
+      return Gauss::getVal(std::log(x),calcLogMean(m,s), calcLogSigma(m,s))/x;
     }
     inline const double getValLogN(const double x, const double m, const double s) const {
 #ifdef USE_STAT
@@ -334,12 +334,12 @@ namespace PDF {
   class Poisson : public BaseType<int> {
   public:
     Poisson():BaseType<int>("Poisson",DIST_POIS,1.0,1.0) {}
-    Poisson(const double lambda):BaseType<int>("Poisson",DIST_POIS,lambda,sqrt(lambda)) {}
+    Poisson(const double lambda):BaseType<int>("Poisson",DIST_POIS,lambda,std::sqrt(lambda)) {}
     Poisson(const Poisson & other):BaseType<int>(other) {}
 
     virtual ~Poisson() {}
     //
-    void setMean(const double mean)   { this->m_mean = mean; this->m_sigma = sqrt(mean); }
+    void setMean(const double mean)   { this->m_mean = mean; this->m_sigma = std::sqrt(mean); }
     void setSigma(const double sigma) { this->m_mean = sigma*sigma; this->m_sigma = sigma; }
     
     void initTabulator() {
@@ -758,7 +758,7 @@ namespace PDF {
   // };
 
   inline const double Gauss::phi(double mu) const {
-    return (1.0L/sqrt(2.0*M_PIl))*std::exp(-0.5L*mu*mu);
+    return (1.0L/std::sqrt(2.0*M_PIl))*std::exp(-0.5L*mu*mu);
   }
   inline const double Gauss::pdf(const double x) const {
     double mu = fabs((x-this->m_mean)/this->m_sigma); // symmetric around mu0
@@ -773,7 +773,7 @@ namespace PDF {
   }
 
   inline const double Gauss2D::getVal2D(double x1, double mu1, double s1, double x2, double mu2, double s2, double corr) const {
-    double sdetC = sqrt(getDetC(s1,s2,corr));
+    double sdetC = std::sqrt(getDetC(s1,s2,corr));
     double seff1 = sdetC/s2;
     double seff2 = sdetC/s1;
     double veffc = (corr*s1*s2)/sdetC*sdetC;
@@ -817,7 +817,7 @@ namespace PDF {
     m_statNraw++;
 #endif
     const double xt   = x/theta;
-    double lnf = (k-1.0)*log(xt) - xt - log(theta) - lgamma(k);
+    double lnf = (k-1.0)*std::log(xt) - xt - std::log(theta) - lgamma(k);
     double prob;
     if (std::isinf(lnf) || std::isnan(lnf)) {
       prob=0;
@@ -860,7 +860,7 @@ namespace PDF {
     m_statNraw++;
 #endif
     double prob = 0.0;
-    double nlnl = double(n)*log(s);  // n*ln(s)
+    double nlnl = double(n)*std::log(s);  // n*ln(s)
     double lnn  = lgamma(n+1);       // ln(fac(n))
     double lnf  = nlnl - lnn - s;
     if (std::isinf(lnf) || std::isnan(lnf)) {

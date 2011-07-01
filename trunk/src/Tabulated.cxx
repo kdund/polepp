@@ -79,7 +79,7 @@ TabLog::TabLog():TabFun() {
 TabLog::~TabLog() {}
 
 double TabLog::F(double x) {
-  return log(x);
+  return std::log(x);
 }
 
 double TabLog::Log(double x) {

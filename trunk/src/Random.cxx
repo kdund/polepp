@@ -48,14 +48,14 @@ namespace RND {
   {
     // Generates a random integer N according to a Poisson law.
     // Coded from Los Alamos report LA-5061-MS
-    // Prob(N) = exp(-mean)*mean^N/Factorial(N)
+    // Prob(N) = std::exp(-mean)*mean^N/Factorial(N)
     //
     if (mean <= 0) return 0;
     // use a gaussian approximation for large values of mean
-    if (mean > 88) return static_cast<int>(gauss(0,1)*sqrt(mean) + mean +0.5);
+    if (mean > 88) return static_cast<int>(gauss(0,1)*std::sqrt(mean) + mean +0.5);
     //
     int N;
-    double expmean = exp(-mean);
+    double expmean = std::exp(-mean);
     double pir = 1;
     N = -1;
     while(1) {
@@ -79,21 +79,21 @@ namespace RND {
     y = rndm();
     z = rndm();
     x = z * 6.28318530717958623;
-    result = mean + sigma*sin(x)*sqrt(-2*log(y));
+    result = mean + sigma*sin(x)*std::sqrt(-2*std::log(y));
     
     return result;
   }
   
   double Random::logNormal(double mean, double sigma) const {
     // Return a number distributed following a lognormal with mean and sigma
-    double nmean = log(mean*mean/sqrt(sigma*sigma + mean*mean));
-    double nsigma = sqrt(log(sigma*sigma/mean/mean+1));
-    return exp(gauss() * nsigma + nmean);
+    double nmean = std::log(mean*mean/std::sqrt(sigma*sigma + mean*mean));
+    double nsigma = std::sqrt(std::log(sigma*sigma/mean/mean+1));
+    return std::exp(gauss() * nsigma + nmean);
   }
 
   double Random::logNormalLN(double logMean, double logSigma) const {
     // Return a number distributed following a lognormal with mean and sigma
-    return exp(gauss() * logSigma + logMean);
+    return std::exp(gauss() * logSigma + logMean);
   }
   
   double Random::flat(double mean, double sigma) const {

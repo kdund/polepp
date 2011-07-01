@@ -257,7 +257,7 @@ void Combine::makeCorrInt() {
     //    m_weightInt.resize(neff);
   } else {
     edetc = PDF::gGauss2D.getDetC(pole1->getEffSigma(),pole2->getEffSigma(),ecorr);
-    esdetc = sqrt(edetc);
+    esdetc = std::sqrt(edetc);
     eveffc = PDF::gGauss2D.getVeffCorr(edetc,pole1->getEffSigma(),pole2->getEffSigma(),ecorr);
     eseff1 = PDF::gGauss2D.getVeff(edetc,pole1->getEffSigma());
     eseff2 = PDF::gGauss2D.getVeff(edetc,pole2->getEffSigma());
@@ -286,7 +286,7 @@ void Combine::makeCorrInt() {
     nbkg = pole1->getBkgRangeInt()->n();
   } else {
     bdetc = PDF::gGauss2D.getDetC(pole1->getBkgSigma(),pole2->getBkgSigma(),bcorr);
-    bsdetc = sqrt(bdetc);
+    bsdetc = std::sqrt(bdetc);
     bveffc = PDF::gGauss2D.getVeffCorr(bdetc,pole1->getBkgSigma(),pole2->getBkgSigma(),bcorr);
     bseff1 = PDF::gGauss2D.getVeff(bdetc,pole1->getBkgSigma());
     bseff2 = PDF::gGauss2D.getVeff(bdetc,pole2->getBkgSigma());
