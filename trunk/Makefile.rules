@@ -36,7 +36,7 @@ CXXFLAGS	+= -I$(BASE_DIR)/src
 # add GSL
 GSL_INCL	?= /usr/include
 GSL_LIB		?= /usr/lib
-LDLIBS		+= -L$(GSL_LIB) -lgsl
+LDLIBS		+= -L$(GSL_LIB) -lgsl -lgslcblas
 CXXFLAGS	+= -I$(GSL_INCL)
 
 # PoleLib flags
