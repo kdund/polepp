@@ -90,7 +90,7 @@ namespace OBS {
   const RND::Random  *Base::getRndGen()      const { return this->m_rndGen;}
     
   // status
-  const bool Base::constant() const { return ( m_locked || ((getPdfDist()==PDF::DIST_NONE) || (getPdfDist()==PDF::DIST_UNDEF)) ); }
+  const bool Base::constant() const { return ( m_locked || (getPdfDist()==PDF::DIST_CONST) ); }
   const bool Base::locked()   const { return m_locked;}
   const bool Base::valid()    const { return m_valid;}
 
@@ -385,6 +385,44 @@ namespace OBS {
     ObservableFlat *obj = new ObservableFlat(*this);
     return obj;
   }
+
+
+
+  ///////////////////////////////////////////////////////////
+
+  ObservableConst::ObservableConst():BaseType<double>("const","Const observable") {
+    m_pdf = &PDF::gConstVal;
+    validate();
+  }
+
+  ObservableConst::ObservableConst(const char *name, const char *desc):BaseType<double>(name,desc) {
+    m_pdf = &PDF::gConstVal;
+    validate();
+  }
+
+  ObservableConst::ObservableConst(const ObservableConst & other) {
+    BaseType<double>::copy(other);
+  }
+  ObservableConst::~ObservableConst() {};
+  //
+  ObservableConst const & ObservableConst::operator=(ObservableConst const & rh) {
+    BaseType<double>::copy(rh);
+    return *this;
+  }
+
+  void ObservableConst::setPdfUseSigma(double ) {
+    Base::setPdfUseSigma(0);
+  }
+
+  double ObservableConst::rnd() const {
+    return (m_valid ? m_observedValue:0);
+  }
+
+  ObservableConst *ObservableConst::clone() const {
+    ObservableConst *obj = new ObservableConst(*this);
+    return obj;
+  }
+
   //////////////////////////////////////////////////
   Correlated::Correlated() {}
   Correlated::~Correlated() {}
@@ -402,9 +440,12 @@ namespace OBS {
     Base *obs=0;
     switch (dist) {
     case PDF::DIST_UNDEF:
-    case PDF::DIST_NONE:
       obs=new BaseType<double>();
       obs->setPdf(0);
+      break;
+    case PDF::DIST_CONST:
+      obs=new ObservableConst();
+      obs->setPdf(&PDF::gConstVal);
       break;
     case PDF::DIST_POIS:
       obs=new ObservablePois();

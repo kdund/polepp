@@ -20,7 +20,7 @@ void argsPole(LIMITS::Pole *pole, int argc, char *argv[]) {
     // Arg3 = version number given when --version is used
     std::string postMsg;
     std::ostringstream sstr;
-    int dist = static_cast<int>(PDF::DIST_NONE);
+    int dist = static_cast<int>(PDF::DIST_CONST);
     sstr << "Available distributions:" << std::endl;
     while (dist !=  static_cast<int>(PDF::DIST_LAST)) {
       sstr << " " << dist << std::setw(4) << " " << PDF::distTypeStr(static_cast<PDF::DISTYPE>(dist)) << std::endl;

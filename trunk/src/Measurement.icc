@@ -420,8 +420,11 @@ namespace MEAS {
         m_eff=0;
       }
     }
-    if (m_eff==0) 
+    if (m_eff==0) {
+      std::cout << "Making dist : " << dist << std::endl;
       m_eff = static_cast<OBS::Base *>(makeNuisance(dist));
+      std::cout << "Got dist : " << m_eff->getPdfDist() << std::endl;
+    }
     m_eff->setPdfUseSigma(sigma);
     m_eff->setPdfUseMean(eff);
     m_eff->setName("efficiency");

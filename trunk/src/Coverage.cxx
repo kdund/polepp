@@ -336,10 +336,10 @@ void Coverage::calcStatistics() {
     calcStats(m_status,m_aveStatus, m_varStatus);
     //
     m_corrEffBkg = calcStatsCorr(m_effStat,m_bkgStat);
-    if ((m_pole->getEffPdfDist()!=PDF::DIST_NONE) && (m_varEff>0)) {
+    if ((m_pole->getEffPdfDist()!=PDF::DIST_UNDEF) && (m_varEff>0)) {
       m_corrEffBkg = m_corrEffBkg / std::sqrt(m_varEff);
     }
-    if ((m_pole->getBkgPdfDist()!=PDF::DIST_NONE) && (m_varBkg>0)) {
+    if ((m_pole->getBkgPdfDist()!=PDF::DIST_UNDEF) && (m_varBkg>0)) {
       m_corrEffBkg = m_corrEffBkg / std::sqrt(m_varBkg);
     }
     //

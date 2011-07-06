@@ -81,9 +81,9 @@ namespace LIMITS {
     setEffObs();
     //  m_measurement.setEffPdf(1.0,0.1,PDF::DIST_GAUS);
     //  m_measurement.setEffObs(); // sets the mean from PDF as the observed efficiency
-    setBkgPdf(0.0,0.0,PDF::DIST_NONE);
+    setBkgPdf(0.0,0.0,PDF::DIST_CONST);
     setBkgObs();
-    //  m_measurement.setBkgPdf(0.0,0.0,PDF::DIST_NONE);
+    //  m_measurement.setBkgPdf(0.0,0.0,PDF::DIST_CONST);
     //  m_measurement.setBkgObs();
     setEffBkgPdfCorr(0.0);
     //
@@ -231,11 +231,11 @@ namespace LIMITS {
       change = true;
     }
     //
-    if (getEffPdfDist()==PDF::DIST_NONE) {
+    if (getEffPdfDist()==PDF::DIST_CONST) {
       m_measurement.setEffPdfSigma(0.0);
       change = true;
     }
-    if (getBkgPdfDist()==PDF::DIST_NONE) {
+    if (getBkgPdfDist()==PDF::DIST_CONST) {
       m_measurement.setBkgPdfSigma(0.0);
       change = true;
     }
@@ -293,7 +293,7 @@ namespace LIMITS {
   //   // remember, RangeInt for bkg and eff, LOGN, are in lnx, hence exp() is the true eff or bkg
   //   dsLow  = (m_measurement.getEffObs() - m_effRangeInt.min())/m_measurement.getEffPdfPdfSigma();
   //   dsHigh = (m_effRangeInt.max()  - m_measurement.getEffObs())/m_measurement.getEffPdfSigma();
-  //   if ( (m_measurement.getEffPdfDist()!=PDF::DIST_NONE) && ( ((dsLow<4.0)&&(m_effRangeInt.min()>0)) ||
+  //   if ( (m_measurement.getEffPdfDist()!=PDF::DIST_CONST) && ( ((dsLow<4.0)&&(m_effRangeInt.min()>0)) ||
   //                                    (dsHigh<4.0) ) ) {
   //     std::cout << "Not OK" << std::endl;
   //     std::cout << "  Efficiency range for integration does not cover 4 sigma around the true efficiency." << std::endl;
@@ -306,7 +306,7 @@ namespace LIMITS {
   //   std::cout << "Checking background integration - ";
   //   dsLow  = (m_measurement.getBkgObs() - getBkgIntMin())/m_measurement.getBkgPdfSigma();
   //   dsHigh = (getBkgIntMax()  - m_measurement.getBkgObs())/m_measurement.getBkgPdfSigma();
-  //   if ( (m_measurement.getBkgPdfDist()!=PDF::DIST_NONE) && ( ((dsLow<4.0)&&(getBkgIntMin()>0)) ||
+  //   if ( (m_measurement.getBkgPdfDist()!=PDF::DIST_CONST) && ( ((dsLow<4.0)&&(getBkgIntMin()>0)) ||
   // 			    (dsHigh<4.0) ) ) {
   //     std::cout << "Not OK" << std::endl;
   //     std::cout << "  Background range for integration does not cover 4 sigma around the true background." << std::endl;

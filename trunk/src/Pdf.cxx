@@ -11,5 +11,6 @@ namespace PDF {
   Gauss2D   gGauss2D;
   LogNormal gLogNormal;
   Flat      gFlat;
+  ConstVal  gConstVal;
 };
 

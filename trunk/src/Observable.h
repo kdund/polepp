@@ -25,6 +25,7 @@
   - OBS::ObservableLogN  : log-normal pdf inheriting from BaseType<double>
   - OBS::ObservablePois  : poisson pdf inheriting from BaseType<int>
   - OBS::ObservableFlat  : flat pdf inheriting from BaseType<double>
+  - OBS::ObservableConst : const value 'pdf' inheriting from BaseType<double>
 
   The user can then use the class to generate random observations using the given pdf characteristics.
   {
@@ -228,6 +229,23 @@ namespace OBS {
   private:
     double m_xmin;
     double m_xmax;
+  };
+
+
+  class ObservableConst : public BaseType<double> {
+  public:
+    inline ObservableConst();
+    inline ObservableConst(const char *name, const char *desc=0);
+    inline ObservableConst(const ObservableConst & other);
+    inline virtual ~ObservableConst();
+    //
+    inline ObservableConst const & operator=(ObservableConst const & rh);
+    //
+    inline void setPdfUseSigma(double s);
+
+    inline double rnd() const;
+
+    inline ObservableConst *clone() const;
   };
 
   // Correlated variables - UNDER DEVELOPMENT

@@ -34,7 +34,7 @@ namespace TOOLS {
     const double maxp = 0.9999;
     const double minp = 1.0-maxp;
     //
-    if (dist==PDF::DIST_NONE) {
+    if (dist==PDF::DIST_CONST) {
       xmin  = mean;
       xmax = mean;
     } else {
@@ -43,7 +43,7 @@ namespace TOOLS {
       case PDF::DIST_GAUS2D:
       case PDF::DIST_GAUS:
       case PDF::DIST_LOGN:
-        xmin  = mean - scale*sigma;
+        xmin = mean - scale*sigma;
         xmax = mean + scale*sigma;
         break;
       case PDF::DIST_FLAT:

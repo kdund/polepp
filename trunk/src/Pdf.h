@@ -32,7 +32,7 @@ namespace PDF {
   extern bool gPrintStat;
 #endif
   enum DISTYPE {
-    DIST_NONE=0,   /*!< No distrubution */
+    DIST_CONST=0,  /*!< No distrubution - const value */
     DIST_POIS,     /*!< Poisson */
     DIST_GAUS,     /*!< Gaussian */
     DIST_FLAT,     /*!< Flat */
@@ -43,7 +43,7 @@ namespace PDF {
     DIST_UNDEF=999 /*!< No distrubution defined*/
   };
   inline bool isConstant( DISTYPE dt) {
-    return ((dt==DIST_UNDEF) || (dt==DIST_NONE));
+    return (dt==DIST_CONST);
   }
   /*!
     Returns a string corresponding to the given DISTYPE.
@@ -54,8 +54,8 @@ namespace PDF {
     case DIST_UNDEF:
       rval = "Undefined";
       break;
-    case DIST_NONE:
-      rval = "None";
+    case DIST_CONST:
+      rval = "Const";
       break;
     case DIST_POIS:
       rval = "Poisson";
@@ -171,7 +171,7 @@ namespace PDF {
   class BaseType: public Base {
   public:
     BaseType():Base() {}
-    BaseType(const char *name, DISTYPE d=DIST_NONE, double m=0.0, double s=0.0):Base(name,d,m,s) {}
+    BaseType(const char *name, DISTYPE d=DIST_UNDEF, double m=0.0, double s=0.0):Base(name,d,m,s) {}
     BaseType(const BaseType<T> & other):Base() {
       if (this!=&other) {
 	Base::copy(other);
@@ -194,6 +194,25 @@ namespace PDF {
   template<> inline const bool BaseType<int>::isInt()       const { return true; }
   template<> inline const bool BaseType<double>::isDouble() const { return true; }
   template<> inline const bool BaseType<float>::isFloat()   const { return true; }
+
+
+  class ConstVal : public BaseType<double> {
+  public:
+    ConstVal():BaseType<double>("ConstVal",DIST_CONST,0.0,0.0) {}
+    ConstVal(double val):BaseType<double>("ConstVal",DIST_CONST,val,0.0) {}
+    ConstVal(const ConstVal & other):BaseType<double>(other) {}
+    virtual ~ConstVal() {};
+    //
+    void setMean(  const double m)  { Base::setMean(m); }
+    void setSigma( const double )   { Base::setSigma(0); }
+
+    inline const double pdf(double val) const;
+    inline const double cdf(double val) const { return 0; }
+
+    inline const double getVal(const double x, const double mean ) const;
+    inline const double getVal(const double x, const double mean, const double ) const;
+  };
+
 
   class Flat : public BaseType<double> {
   public:
@@ -761,8 +780,7 @@ namespace PDF {
     return (1.0L/std::sqrt(2.0*M_PIl))*std::exp(-0.5L*mu*mu);
   }
   inline const double Gauss::pdf(const double x) const {
-    double mu = fabs((x-this->m_mean)/this->m_sigma); // symmetric around mu0
-    return phi(mu)/this->m_sigma;
+    return this->getVal(x,this->m_mean,this->m_sigma);
   }
   inline const double Gauss::getVal(const double x, const double mean, const double sigma) const {
 #ifdef USE_STAT
@@ -903,6 +921,20 @@ namespace PDF {
     return rval;
   }
 
+  inline const double ConstVal::pdf(const double x ) const {
+    return this->getVal(x,this->m_mean);
+  }
+  inline const double ConstVal::getVal(const double x, const double mean, const double ) const {
+    return this->getVal(x,mean);
+  }
+  // NOTE: uses an arbitrary precision - add precision as option
+  inline const double ConstVal::getVal(const double x, const double mean ) const {
+    const double norm = 0.5*(fabs(x)+fabs(mean));
+    if (norm==0.0) return 1.0;
+    const double diff = fabs(x-mean)/norm;
+    return (diff<0.0000001 ? 1.0 : 0.0 );
+  }
+
   inline const double Flat::raw(const double x, const double f) const {
 #ifdef USE_STAT
     m_statNraw++;
@@ -942,15 +974,16 @@ namespace PDF {
 //
 
 #ifndef PDF_CXX
-   extern Poisson  gPoisson;
-   extern Poisson  gPoissonTab;
-   //   extern PoisTab  gPoisTab;
-   extern Gauss    gGauss;
-   extern GaussTab gGaussTab;
+  extern Poisson  gPoisson;
+  extern Poisson  gPoissonTab;
+  //   extern PoisTab  gPoisTab;
+  extern Gauss    gGauss;
+  extern GaussTab gGaussTab;
    
-   extern Gauss2D   gGauss2D;
-   extern LogNormal gLogNormal;
-   extern Flat      gFlat;
+  extern Gauss2D   gGauss2D;
+  extern LogNormal gLogNormal;
+  extern Flat      gFlat;
+  extern ConstVal  gConstVal;
 #endif
 
 };
