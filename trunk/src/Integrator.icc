@@ -92,10 +92,12 @@ void IntegratorVegas::initialize() {
 }
 
 void IntegratorVegas::go() {
-   gsl_monte_vegas_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
-                              m_gslMonteFun.dim, m_ncalls,
-                              m_gslRange, m_gslVegasState,
-                              &m_result, &m_error);
+  if (m_gslMonteFun.dim>0) {
+    gsl_monte_vegas_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
+			       m_gslMonteFun.dim, m_ncalls,
+			       m_gslRange, m_gslVegasState,
+			       &m_result, &m_error);
+  }
 }
 
 double IntegratorVegas::chisq() {
@@ -119,10 +121,12 @@ void IntegratorPlain::initialize() {
 }
 
 void IntegratorPlain::go() {
-   gsl_monte_plain_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
-                              m_gslMonteFun.dim, m_ncalls,
-                              m_gslRange, m_gslPlainState,
-                              &m_result, &m_error);
+  if (m_gslMonteFun.dim>0) {
+    gsl_monte_plain_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
+			       m_gslMonteFun.dim, m_ncalls,
+			       m_gslRange, m_gslPlainState,
+			       &m_result, &m_error);
+  }
 }
 
 double IntegratorPlain::chisq() {
@@ -146,10 +150,12 @@ void IntegratorMiser::initialize() {
 }
 
 void IntegratorMiser::go() {
-   gsl_monte_miser_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
-                              m_gslMonteFun.dim, m_ncalls,
-                              m_gslRange, m_gslMiserState,
-                              &m_result, &m_error);
+  if (m_gslMonteFun.dim>0) {
+    gsl_monte_miser_integrate (&m_gslMonteFun, &m_intXL[0], &m_intXU[0],
+			       m_gslMonteFun.dim, m_ncalls,
+			       m_gslRange, m_gslMiserState,
+			       &m_result, &m_error);
+  }
 }
 
 double IntegratorMiser::chisq() {

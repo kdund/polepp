@@ -421,9 +421,7 @@ namespace MEAS {
       }
     }
     if (m_eff==0) {
-      std::cout << "Making dist : " << dist << std::endl;
       m_eff = static_cast<OBS::Base *>(makeNuisance(dist));
-      std::cout << "Got dist : " << m_eff->getPdfDist() << std::endl;
     }
     m_eff->setPdfUseSigma(sigma);
     m_eff->setPdfUseMean(eff);
@@ -443,7 +441,9 @@ namespace MEAS {
         m_bkg=0;
       }
     }
-    if (m_bkg==0) m_bkg = static_cast< OBS::Base *>(makeNuisance(dist));
+    if (m_bkg==0) {
+      m_bkg = static_cast< OBS::Base *>(makeNuisance(dist));
+    }
     m_bkg->setPdfUseSigma(sigma);
     m_bkg->setPdfUseMean(bkg);
     m_bkg->setName("background");

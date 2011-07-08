@@ -140,6 +140,6 @@ void argsPole(LIMITS::Pole *pole, int argc, char *argv[]) {
     }
   }
   catch (ArgException e) {
-    std::cout << "ERROR: " << e.error() << " " << e.argId() << std::endl;
+    std::cerr << "ERROR: " << e.error() << " " << e.argId() << std::endl;
   }
 }

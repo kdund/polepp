@@ -412,6 +412,7 @@ namespace LIMITS {
     void setGauss(    const PDF::Gauss     *pdf)  {m_gauss=pdf;}
     void setGauss2D(  const PDF::Gauss2D   *pdf)  {m_gauss2d=pdf;}
     void setLogNormal(const PDF::LogNormal *pdf)  {m_logNorm=pdf;}
+    void setConstVal( const PDF::ConstVal  *pdf)  {m_constVal=pdf;}
     //@}
 
     /*! @name Initialising the calculation */
@@ -580,6 +581,7 @@ namespace LIMITS {
     const PDF::Gauss     *m_gauss;
     const PDF::Gauss2D   *m_gauss2d;
     const PDF::LogNormal *m_logNorm;
+    const PDF::ConstVal  *m_constVal;
     //
     int    m_verbose;
     int    m_printLimStyle;
@@ -677,17 +679,17 @@ namespace LIMITS {
     m_poleData.dbkgObs = pole->getBkgPdfSigma();
     bool effConst = PDF::isConstant(pole->getEffPdfDist());
     bool bkgConst = PDF::isConstant(pole->getBkgPdfDist());
-    if (effConst) {
-      m_poleData.effIndex=-1;
-      if (!bkgConst) m_poleData.effIndex=0;
+    m_poleData.effIndex=-1;
+    m_poleData.bkgIndex=-1;
+    if (!effConst) {
+      m_poleData.effIndex=pole->s_intEffInd; // ==0
     }
-    if (bkgConst) {
-      m_poleData.bkgIndex=-1;
-      if (!effConst) m_poleData.effIndex=0;
-    }
-    if ((!effConst) && (!bkgConst)) {
-      m_poleData.effIndex=pole->s_intEffInd;
-      m_poleData.bkgIndex=pole->s_intBkgInd;
+    if (!bkgConst) {
+      if (!effConst) {
+	m_poleData.bkgIndex=pole->s_intBkgInd; // ==1
+      } else {
+	m_poleData.bkgIndex=0;
+      }
     }
     
     m_integrator.setFunctionParams( &m_poleData );

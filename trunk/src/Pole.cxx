@@ -19,7 +19,7 @@ namespace LIMITS {
   {
     // k[0] = eff
     // k[1] = bkg
-    // params[0] = nobs
+    // params = &PoleData
     // params[1] = signal truth
     // params[2] = eff obs
     // params[3] = eff obs sigma
@@ -67,6 +67,7 @@ namespace LIMITS {
     m_gauss   = &PDF::gGauss;
     m_gauss2d = &PDF::gGauss2D;
     m_logNorm = &PDF::gLogNormal;
+    m_constVal= &PDF::gConstVal;
     //
     // Default observation
     //
@@ -2012,17 +2013,34 @@ namespace LIMITS {
   void Pole::initIntegral() {
     size_t ndim;
     m_poleIntegrator.setPole( this );
+    // get the array indices used in the GSL integrator
+    // if both efficiency and background are non-const:
+    //   array = [ eff, bkg ]
+    // if only efficiency is non-const:
+    //   array = [ eff ]
+    // if only background is non-const:
+    //   array = [ bkg ]
+    // 
+    // This array is passed to POLE::poleFun() as the first argument.
+    //
     int ei = m_poleIntegrator.getEffIndex();
     int bi = m_poleIntegrator.getBkgIndex();
+
+    // check the nr of dimensions
     if ( (bi<0) || (ei<0) ) {
       ndim = 1;
+      if ( (bi<0) && (ei<0) ) ndim = 0;
     } else ndim = 2;
+
+    // calculate integration ranges
     std::vector<double> xl(ndim);
     std::vector<double> xu(ndim);
     if (ei>=0)
       TOOLS::calcIntRange( *(m_measurement.getEff()), m_effIntNSigma, xl[ei],xu[ei] );
     if (bi>=0)
       TOOLS::calcIntRange( *(m_measurement.getBkg()), m_bkgIntNSigma, xl[bi],xu[bi] );
+
+    // init the integrator
     m_poleIntegrator.integrator()->setFunction( poleFun );
     m_poleIntegrator.integrator()->setFunctionDim(ndim);
     m_poleIntegrator.integrator()->setIntRanges(xl,xu);
