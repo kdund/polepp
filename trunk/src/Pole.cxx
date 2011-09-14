@@ -888,13 +888,13 @@ namespace LIMITS {
         std::vector< int > n2vec;
         int n1,n2;
         int nhyp = m_hypTest.n();
-        double sumP;
+	//        double sumP;
         m_nBeltMinLast = 0;
         if (m_verbose>-1) std::cout << "Make full construct" << std::endl;
         for (int i=0; i<nhyp; i++) {
           muTest = m_hypTest.min() + i*m_hypTest.step();
           //    if (m_verbose>-1) std::cout << "Hypothesis: " << muTest << std::endl;
-          sumP = calcBelt(muTest,n1,n2,false,false);
+          calcBelt(muTest,n1,n2,false,false);
           fullConstruct.push_back(m_muProb);
 
           n1vec.push_back(n1);
@@ -1084,7 +1084,7 @@ namespace LIMITS {
       double mutestPrev = mustart;  // start point
       double muhigh     = mustart;  // binary search, high point
       double mulow      = 0.0;      // idem, low point
-      double prevPrec   = 100000.0; // a dummy large value
+      //      double prevPrec   = 100000.0; // a dummy large value
       double precMin    = 100000.0;
       double prec       = 0;
       double dmu        = 0;
@@ -1140,7 +1140,7 @@ namespace LIMITS {
           muhigh = mutest;
         }
         mutestPrev = mutest;
-        prevPrec = prec;
+	//        prevPrec = prec;
         cn++;
         if (cn>1000) {
           done=true;
@@ -1395,11 +1395,11 @@ namespace LIMITS {
     double usescale = muscaleUp;
     double prevmu   = muhigh;
     double prec     = 0;
-    double prevPrec = 100000.0;
+    //    double prevPrec = 100000.0;
     double precMin  = 100000.0;
     int    cn       = 0;
     double mutest;
-    double muRoughLim;
+    //    double muRoughLim;
     double dmu;
     double mumax=-1.0;  // maximum mu established
     bool   mumaxFound = false;
@@ -1422,7 +1422,7 @@ namespace LIMITS {
     if (m_verbose>1)
       std::cout << "*** Upper limit scan: find a rough limit, starting at " << muhigh << std::endl;
     mutest = muhigh;
-    muRoughLim = mutest;
+    //    muRoughLim = mutest;
     while (!done) {
       dir = calcLimit(mutest,prec);
       if (m_verbose>1) {
@@ -1553,7 +1553,7 @@ namespace LIMITS {
         mulow = mutest;
       }
       prevmu   = mutest;
-      prevPrec = prec;
+      //      prevPrec = prec;
       cn++;
       if (cn>1000) { // TODO: change this to a more smart check
         done=true;

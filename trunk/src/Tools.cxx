@@ -25,7 +25,7 @@ namespace TOOLS {
     const double       mean  = obs.getObservedValue();
     const double       sigma = obs.getPdfUseSigma();
     bool positive = true; // only positive numbers in range
-    int    nprev;
+    //    int    nprev;
     int    n     = 0;
     int    nxmin = -1;
     int    nxmax = -1;
@@ -56,7 +56,7 @@ namespace TOOLS {
         // xmin  : max N for wich sum( p(n) ) < 1.0-maxp
         // xmax : min N for wich sum( p(n) ) > maxp
         while (nxmax<0) {
-          nprev=n;
+	  //          nprev=n;
           p = PDF::gPoisson.getVal( n, mean )*obs.aprioriProb(static_cast<double>(n));
           ptot += p;
           if ((n==0) && (ptot>minp)) nxmin=0;
@@ -185,12 +185,7 @@ namespace TOOLS {
   }
 
   void Timer::printUsedClock(int norm, const char *msg) {
-    clock_t stopClock;
-    if (m_runningClock) {
-      stopClock = clock();
-    } else {
-      stopClock = m_stopClock;
-    }
+    stopClock();
     double dt = getUsedClock(1e-3); // return time in ms
     if (msg)
       std::cout << msg << dt << std::endl;
